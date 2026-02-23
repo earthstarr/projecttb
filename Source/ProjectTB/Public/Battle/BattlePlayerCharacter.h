@@ -1,0 +1,26 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Battle/BattleCombatant.h"
+#include "BattlePlayerCharacter.generated.h"
+
+/**
+ * 플레이어 파티 캐릭터.
+ * Blueprint에서 검사/마법사/궁수로 서브클래싱.
+ * 메시, 애니메이션, StartingEffects/Abilities는 Blueprint에서 설정.
+ */
+UCLASS(BlueprintType, Blueprintable)
+class PROJECTTB_API ABattlePlayerCharacter : public ABattleCombatant
+{
+	GENERATED_BODY()
+
+public:
+	ABattlePlayerCharacter();
+
+	// 파티 내 인덱스 (0, 1, 2) — 하단 StatusWidget 슬롯에 대응
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Party")
+	int32 PartyIndex = 0;
+
+	virtual void OnTurnBegin_Implementation() override;
+	virtual void OnTurnEnd_Implementation() override;
+};

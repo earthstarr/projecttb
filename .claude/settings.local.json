@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -ExecutionPolicy Bypass -File \"D:/Unreal/extract_frames.ps1\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"D:/Unreal/extract_frames2.ps1\")",
+      "Bash(winget install:*)"
+    ]
+  }
+}
