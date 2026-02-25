@@ -28,8 +28,12 @@ UENUM(BlueprintType)
 enum class EAbilityAnimType : uint8
 {
 	Melee,   // 캐릭터가 타겟에게 이동 후 공격, 복귀
-	Ranged   // 제자리 캐스팅 + 타겟 위치에 이펙트 스폰
+	Ranged,  // 제자리 캐스팅 + AnimNotify 데미지
+	Impact   // 몽타주 종료 후 BattleImpactActor 스폰 → 내부 타이머로 데미지/종료
 };
+
+class ABattleImpactActor;
+class ABattleManager;
 
 /**
  * 모든 배틀 어빌리티의 기반 클래스.
@@ -85,18 +89,36 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage")
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
 
-	// TBDamageExecution에 SetByCaller로 전달될 배율
+	// 타격별 데미지 배율 (AnimNotify_OnHit의 HitIndex와 대응)
+	// 단타: [1.0] / 3연타 예시: [0.5, 0.5, 1.0]
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage")
-	float AbilityMultiplier = 1.0f;
+	TArray<float> HitMultipliers = {1.0f};
 
 	// Physical / Magic 태그 (TBDamageExecution에서 읽음, GE 스펙 소스 태그에 주입)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage")
 	FGameplayTag AbilityTypeTag;
 
+	// Impact 전용: 몽타주 종료 후 스폰할 BattleImpactActor 클래스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage", meta=(EditCondition="AnimationType==EAbilityAnimType::Impact"))
+	TSubclassOf<ABattleImpactActor> ImpactActorClass;
+	
+	// 노티파이로부터 호출받을 인터페이스
+	void RequestSpawnImpact(int32 HitIndex = 0);
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	bool bUseFixedWorldRotation = true; // Impact일 때 기본적으로 켬
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact", meta=(EditCondition="bUseFixedWorldRotation"))
+	FRotator FixedWorldRotation = FRotator(-90.f, 0.f, 0.f); // 기본값: 수직 하강
+
 	// ─── 유틸 ────────────────────────────────────────────────────────────────
 	// UI에서 비용 지불 가능 여부 확인 (그레이아웃 처리용)
 	UFUNCTION(BlueprintCallable, Category="Ability")
 	bool CanAffordCost(UAbilitySystemComponent* ASC) const;
+
+	// AnimNotify_OnHit → BattleCombatant::OnHitNotify → 여기서 호출
+	// HitIndex: HitMultipliers 배열 인덱스 (0부터 시작)
+	void ApplyDamage(int32 HitIndex);
 
 protected:
 	// GAS 비용 체크 override — CanAffordCost를 실제 활성화 전 검증에 연결
@@ -112,21 +134,28 @@ protected:
 		const FGameplayEventData* TriggerEventData) override;
 
 private:
-	// 몽타주 완료 시 호출 (데미지 적용 + 어빌리티 종료)
-	UFUNCTION()
-	void OnMontageCompleted();
+	UFUNCTION() void OnMontageCompleted();
+	UFUNCTION() void OnMontageBlendOut();
+	
+	// Impact: BattleImpactActor 델리게이트 수신
+	UFUNCTION() void OnImpactNotify();
+	UFUNCTION() void OnImpactFinished();
 
-	UFUNCTION()
-	void OnMontageBlendOut();
+	void SpawnImpactActor();
 
-	// GE 적용 + BattleManager 완료 알림 + EndAbility
-	void ApplyDamageAndFinish();
+	// 어빌리티 종료 처리 (원위치 복귀 + OnActionComplete + EndAbility)
+	void FinishAbility();
+
+	ABattleManager* GetBattleManager() const;
 
 	bool bAbilityFinished = false;
 	FVector OriginLocation = FVector::ZeroVector;
+	FRotator OriginRotation; // 원래 회전값을 저장할 변수
 
 	FTimerHandle PreMoveTimer;
 	FTimerHandle PreMontageTimer;
+
+	int32 PendingHitIndex = 0;
 
 	UFUNCTION() void DoTeleportToTarget();
 	UFUNCTION() void DoPlayMontage();

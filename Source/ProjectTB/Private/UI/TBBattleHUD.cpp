@@ -131,9 +131,7 @@ void ATBBattleHUD::HandleTurnBegin(ABattleCombatant* Combatant)
 	if (CharacterStatusWidget)
 		CharacterStatusWidget->SetActiveCharacter(Combatant);
 
-	if (Combatant)
-		if (APlayerController* PC = GetOwningPlayerController())
-			PC->SetViewTargetWithBlend(Combatant, 0.5f, VTBlend_Cubic);
+	// 카메라는 BattleManager의 고정 카메라 사용 — 턴별 전환 제거
 }
 
 void ATBBattleHUD::HandleTurnOrderUpdated(const TArray<ABattleCombatant*>& UpcomingTurns)

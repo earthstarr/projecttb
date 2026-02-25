@@ -4,6 +4,7 @@
 #include "Abilities/TBGameplayAbility.h"
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Camera/CameraActor.h"
 
 ABattleManager::ABattleManager()
 {
@@ -73,6 +74,15 @@ void ABattleManager::StartBattle(
 
 	BuildRoundOrder();
 	SetPhase(EBattlePhase::BattleStart);
+
+	// 고정 카메라로 전환
+	if (BattleCamera)
+	{
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		{
+			PC->SetViewTargetWithBlend(BattleCamera, 0.5f);
+		}
+	}
 
 	// 1초 후 첫 턴 시작 (BattleStart 연출 시간)
 	FTimerHandle StartTimer;

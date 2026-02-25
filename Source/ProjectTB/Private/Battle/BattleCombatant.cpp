@@ -108,6 +108,42 @@ TArray<UTBGameplayAbility*> ABattleCombatant::GetGrantedAbilities() const
 	return Result;
 }
 
+// ─── AnimNotify 데미지 연결 ────────────────────────────────────────────────────
+void ABattleCombatant::OnHitNotify(int32 HitIndex)
+{
+	if (!AbilitySystemComponent) return;
+
+	for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+	{
+		if (UTBGameplayAbility* Instance = Cast<UTBGameplayAbility>(Spec.GetPrimaryInstance()))
+		{
+			if (Instance->IsActive())
+			{
+				Instance->ApplyDamage(HitIndex);
+				return;
+			}
+		}
+	}
+}
+
+void ABattleCombatant::OnSpawnImpactNotify(int32 HitIndex)
+{
+	if (!AbilitySystemComponent) return;
+
+	for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+	{
+		if (UTBGameplayAbility* Instance = Cast<UTBGameplayAbility>(Spec.GetPrimaryInstance()))
+		{
+			if (Instance->IsActive())
+			{
+				// 어빌리티의 스폰 함수 호출
+				Instance->RequestSpawnImpact(HitIndex);
+				return;
+			}
+		}
+	}
+}
+
 // ─── 사망 처리 (AttributeSet에서 호출) ────────────────────────────────────────
 void ABattleCombatant::OnDeathInternal()
 {

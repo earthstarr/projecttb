@@ -4,7 +4,7 @@
 
 UTBAttributeSet::UTBAttributeSet()
 {
-	// 기본값 — StartingEffects(Blueprint GE)로 덮어씌워짐
+	// 기본값 — StartingEffects(Blueprint GE)로 덮어씌워진다
 	InitHP(100.f);
 	InitMaxHP(100.f);
 	InitMP(50.f);

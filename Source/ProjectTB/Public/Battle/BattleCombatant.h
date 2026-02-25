@@ -78,6 +78,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
 	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
 
+	// AnimNotify_OnHit → 현재 활성 어빌리티의 ApplyDamage 호출
+	// HitIndex: TBGameplayAbility::HitMultipliers 배열 인덱스
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	void OnHitNotify(int32 HitIndex);
+	
+	// ranged일때 스폰 노티파이
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	void OnSpawnImpactNotify(int32 HitIndex = 0);
+
 	// ─── 턴 알림 (Blueprint에서 오버라이드 가능) ──────────────────────────────
 	UFUNCTION(BlueprintNativeEvent, Category="Battle")
 	void OnTurnBegin();

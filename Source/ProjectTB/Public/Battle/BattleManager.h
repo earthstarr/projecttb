@@ -8,6 +8,7 @@ class ABattleCombatant;
 class ABattlePlayerCharacter;
 class ABattleEnemyCharacter;
 class UTBGameplayAbility;
+class ACameraActor;
 
 UENUM(BlueprintType)
 enum class EBattlePhase : uint8
@@ -102,6 +103,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
 	TArray<TObjectPtr<AActor>> EnemySpawnPoints;
+
+	// ─── 고정 카메라 (레벨에 배치된 CameraActor 참조) ────────────────────────
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	TObjectPtr<ACameraActor> BattleCamera;
 
 	// ─── 이벤트 델리게이트 ───────────────────────────────────────────────────
 	UPROPERTY(BlueprintAssignable, Category="Events")

@@ -1,0 +1,96 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "BattleImpactActor.generated.h"
+
+class UStaticMeshComponent;
+class UNiagaraComponent;
+class UNiagaraSystem;
+class UProjectileMovementComponent;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleImpact);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleImpactFinished);
+
+/**
+ * 몽타주 종료 후 스폰되어 시각 이펙트와 데미지 타이밍을 관리하는 액터.
+ * Blueprint 서브클래스에서 NiagaraComponent 등 비주얼을 추가한다.
+ *
+ * 흐름: BeginPlay → ImpactDelay 후 OnImpact 발생 (데미지) → TotalDuration 후 OnFinished 발생 (어빌리티 종료)
+ */
+UCLASS(BlueprintType, Blueprintable)
+class PROJECTTB_API ABattleImpactActor : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	ABattleImpactActor();
+
+	// 타겟 위치 기준 스폰 오프셋 (운석: Z=500 등 하늘에서 시작)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	FVector SpawnOffset = FVector::ZeroVector;
+	
+	// 날아갈 방향 (기본값은 전방 X축)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Impact")
+	FVector ShootDirection = FVector(1.0f, 0.0f, 0.0f);
+
+	// 스폰 후 데미지 발생까지 딜레이 (초) — 운석이 땅에 닿는 시점 등
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	float ImpactDelay = 1.0f;
+
+	// 이펙트 전체 재생 시간 (초) — 이 시간 후 OnFinished 발생 및 액터 제거
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	float TotalDuration = 2.0f;
+
+	// ImpactDelay 후 발생 → TBGameplayAbility::ApplyDamage 호출용
+	UPROPERTY(BlueprintAssignable, Category="Impact")
+	FOnBattleImpact OnImpact;
+
+	// TotalDuration 후 발생 → TBGameplayAbility::FinishAbility 호출용
+	UPROPERTY(BlueprintAssignable, Category="Impact")
+	FOnBattleImpactFinished OnFinished;
+
+	// ─── 비주얼 컴포넌트 (Blueprint에서 메시/이펙트 설정) ────────────────────
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Visual")
+	TObjectPtr<UStaticMeshComponent> MeshComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Visual")
+	TObjectPtr<UNiagaraComponent> ImpactNiagaraComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Visual")
+	TObjectPtr<UNiagaraComponent> TrailNiagaraComponent;
+
+	// Impact 시점에 재생할 Niagara 이펙트
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Visual")
+	TObjectPtr<UNiagaraSystem> ImpactEffect;
+	
+	// Niagara 트레일
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Visual")
+	TObjectPtr<UNiagaraComponent> TrailEffect;
+	
+	// 초기 속도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	float InitialSpeed = 0.0f;
+	
+	// 최대 속도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	float MaxSpeed = 0.0f;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement")
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;	
+
+protected:
+	virtual void BeginPlay() override;
+
+	// Impact 시점에 이펙트 재생 (Blueprint에서 오버라이드 가능)
+	UFUNCTION(BlueprintNativeEvent, Category="Impact")
+	void PlayImpactEffect();
+	virtual void PlayImpactEffect_Implementation();
+
+private:
+	UFUNCTION() void TriggerImpact();
+	UFUNCTION() void TriggerFinished();
+
+	FTimerHandle ImpactTimer;
+	FTimerHandle FinishedTimer;
+};
