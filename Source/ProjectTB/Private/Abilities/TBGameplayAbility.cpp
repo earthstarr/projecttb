@@ -236,7 +236,7 @@ void UTBGameplayAbility::SpawnImpactActor()
 		// 타겟을 향해 날아가도록 회전값 계산
 		FinalSpawnRotation = (Target->GetActorLocation() - FinalSpawnLocation).Rotation();
 	}
-
+	
 	// 스폰 전에 ShootDirection 설정을 위해 Deferred Spawn 사용
 	ABattleImpactActor* ImpactActor = GetWorld()->SpawnActorDeferred<ABattleImpactActor>(
 		ImpactActorClass, FTransform(FinalSpawnRotation, FinalSpawnLocation), nullptr, nullptr,
@@ -244,8 +244,12 @@ void UTBGameplayAbility::SpawnImpactActor()
 
 	if (ImpactActor)
 	{
-		// BeginPlay 전에 발사 방향 설정
-		ImpactActor->ShootDirection = FinalSpawnRotation.Vector();
+		// Ranged 타입만 발사 방향 설정 (타겟 방향)
+		// Impact 타입은 Blueprint에서 설정한 ShootDirection 사용 (ex: 아래 방향)
+		if (AnimationType != EAbilityAnimType::Impact)
+		{
+			ImpactActor->ShootDirection = FinalSpawnRotation.Vector();
+		}
 
 		ImpactActor->OnImpact.AddDynamic(this, &UTBGameplayAbility::OnImpactNotify);
 
