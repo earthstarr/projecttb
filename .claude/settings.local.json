@@ -6,7 +6,9 @@
       "Bash(winget install:*)",
       "Bash(\"/c/Users/KGA/AppData/Local/Programs/Microsoft VS Code/bin/code\":*)",
       "Bash(cat:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
