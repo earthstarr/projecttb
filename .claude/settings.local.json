@@ -8,7 +8,9 @@
       "Bash(cat:*)",
       "Bash(powershell -Command:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git lfs unlock:*)",
+      "Bash(git lfs locks:*)"
     ]
   }
 }
