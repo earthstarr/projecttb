@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "TBWorldCharacter.generated.h"
+#include "WorldCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
@@ -16,12 +16,12 @@ struct FInputActionValue;
  * Blueprint(BP_WorldCharacter)에서 메시·애니메이션을 설정.
  */
 UCLASS(BlueprintType, Blueprintable)
-class PROJECTTB_API ATBWorldCharacter : public ACharacter
+class PROJECTTB_API AWorldCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
-	ATBWorldCharacter();
+	AWorldCharacter();
 
 protected:
 	virtual void BeginPlay() override;
@@ -51,4 +51,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
 	TObjectPtr<UCameraComponent> Camera;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FVector2D InputMoveAxis;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector2D InputLookAxis;
 };

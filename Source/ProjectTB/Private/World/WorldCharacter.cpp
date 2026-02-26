@@ -1,4 +1,4 @@
-#include "World/TBWorldCharacter.h"
+#include "World/WorldCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -6,7 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 
-ATBWorldCharacter::ATBWorldCharacter()
+AWorldCharacter::AWorldCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -24,19 +24,19 @@ ATBWorldCharacter::ATBWorldCharacter()
 	Camera->bUsePawnControlRotation = false;
 
 	// ─── 이동 세팅 ───────────────────────────────────────────────────────────
-	// 카메라 방향 기준으로 이동, 캐릭터가 이동 방향 바라보게
+	// 기본적으로 카메라와 캐릭터 이동 별도로 구분, 캐릭터 Yaw 축 정면 방향만 카메라로 조작
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw   = false;
+	bUseControllerRotationYaw   = true;
 	bUseControllerRotationRoll  = false;
 
-	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
 	GetCharacterMovement()->RotationRate              = FRotator(0.f, 500.f, 0.f);
-	GetCharacterMovement()->MaxWalkSpeed              = 500.f;
+	GetCharacterMovement()->MaxWalkSpeed              = 400.f;
 	GetCharacterMovement()->JumpZVelocity             = 700.f;
 	GetCharacterMovement()->AirControl                = 0.35f;
 }
 
-void ATBWorldCharacter::BeginPlay()
+void AWorldCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -52,17 +52,17 @@ void ATBWorldCharacter::BeginPlay()
 	}
 }
 
-void ATBWorldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AWorldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		if (MoveAction)
-			EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATBWorldCharacter::HandleMove);
+			EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AWorldCharacter::HandleMove);
 
 		if (LookAction)
-			EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATBWorldCharacter::HandleLook);
+			EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &AWorldCharacter::HandleLook);
 
 		if (JumpAction)
 		{
@@ -72,23 +72,29 @@ void ATBWorldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	}
 }
 
-void ATBWorldCharacter::HandleMove(const FInputActionValue& Value)
+void AWorldCharacter::HandleMove(const FInputActionValue& Value)
 {
-	const FVector2D Axis = Value.Get<FVector2D>();
-	if (!Controller || Axis.IsNearlyZero()) return;
+	InputMoveAxis = Value.Get<FVector2D>();
+	
+	if (Controller == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Controller is nullptr"));
+	}
+	
+	if (!Controller || InputMoveAxis.IsNearlyZero()) return;
 
 	// 카메라 Yaw 기준으로 앞/오른쪽 방향 계산
 	const FRotator Yaw(0.f, Controller->GetControlRotation().Yaw, 0.f);
 	const FVector  Forward = FRotationMatrix(Yaw).GetUnitAxis(EAxis::X);
 	const FVector  Right   = FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y);
 
-	AddMovementInput(Forward, Axis.Y);
-	AddMovementInput(Right,   Axis.X);
+	AddMovementInput(Forward, InputMoveAxis.Y);
+	AddMovementInput(Right,   InputMoveAxis.X);
 }
 
-void ATBWorldCharacter::HandleLook(const FInputActionValue& Value)
+void AWorldCharacter::HandleLook(const FInputActionValue& Value)
 {
-	const FVector2D Axis = Value.Get<FVector2D>();
-	AddControllerYawInput(Axis.X);
-	AddControllerPitchInput(-Axis.Y);
+	InputLookAxis = Value.Get<FVector2D>();
+	AddControllerYawInput(InputLookAxis.X);
+	AddControllerPitchInput(-InputLookAxis.Y);
 }
