@@ -237,13 +237,14 @@ void UTBGameplayAbility::SpawnImpactActor()
 		FinalSpawnRotation = (Target->GetActorLocation() - FinalSpawnLocation).Rotation();
 	}
 
-	// 스폰
-	ABattleImpactActor* ImpactActor = GetWorld()->SpawnActor<ABattleImpactActor>(
-	   ImpactActorClass, FinalSpawnLocation, FinalSpawnRotation, Params);
+	// 스폰 전에 ShootDirection 설정을 위해 Deferred Spawn 사용
+	ABattleImpactActor* ImpactActor = GetWorld()->SpawnActorDeferred<ABattleImpactActor>(
+		ImpactActorClass, FTransform(FinalSpawnRotation, FinalSpawnLocation), nullptr, nullptr,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	if (ImpactActor)
 	{
-		// 발사 방향 설정 (액터의 전방 벡터)
+		// BeginPlay 전에 발사 방향 설정
 		ImpactActor->ShootDirection = FinalSpawnRotation.Vector();
 
 		ImpactActor->OnImpact.AddDynamic(this, &UTBGameplayAbility::OnImpactNotify);
@@ -252,6 +253,9 @@ void UTBGameplayAbility::SpawnImpactActor()
 		{
 			ImpactActor->OnFinished.AddDynamic(this, &UTBGameplayAbility::OnImpactFinished);
 		}
+
+		// Deferred Spawn 완료 (BeginPlay 호출)
+		ImpactActor->FinishSpawning(FTransform(FinalSpawnRotation, FinalSpawnLocation));
 	}
 }
 
