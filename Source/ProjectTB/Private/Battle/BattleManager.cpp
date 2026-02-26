@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraActor.h"
+#include "GameFramework/PlayerController.h"
 
 ABattleManager::ABattleManager()
 {
@@ -244,6 +245,13 @@ void ABattleManager::ExecuteAction(
 	SetPhase(EBattlePhase::ExecutingAction);
 	PendingTarget = Target; // 어빌리티가 GetPendingTarget()으로 읽기
 
+	// 어빌리티 CDO에서 카메라 설정을 읽어 액션 카메라 전환
+	if (UTBGameplayAbility* CDO = AbilityClass->GetDefaultObject<UTBGameplayAbility>())
+	{
+		if (CDO->bUseActionCamera)
+			SwitchToActionCamera(Caster, CDO);
+	}
+
 	UAbilitySystemComponent* ASC = Caster->GetAbilitySystemComponent();
 	if (!ASC) { OnActionComplete(); return; }
 
@@ -267,6 +275,8 @@ void ABattleManager::ExecuteAction(
 // ─── 액션 완료 (어빌리티가 EndAbility 후 호출) ────────────────────────────────
 void ABattleManager::OnActionComplete()
 {
+	ReturnToBattleCamera();
+
 	if (ABattleCombatant* Current = GetCurrentActor())
 		Current->OnTurnEnd();
 
@@ -356,4 +366,43 @@ void ABattleManager::OnCombatantDied(ABattleCombatant* Combatant)
 void ABattleManager::OnCombatantDamaged(ABattleCombatant* Combatant, float Damage)
 {
 	OnAnyDamageDealt.Broadcast(Combatant, Damage);
+}
+
+// ─── 카메라 전환 ──────────────────────────────────────────────────────────────
+void ABattleManager::SwitchToActionCamera(ABattleCombatant* Caster, const UTBGameplayAbility* AbilityCDO)
+{
+	if (!ActionCamera || !Caster || !AbilityCDO) return;
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC) return;
+
+	// 캐릭터 로컬 오프셋 → 월드 좌표로 변환
+	const FTransform CasterTransform = Caster->GetActorTransform();
+	const FVector    WorldLocation   = CasterTransform.TransformPosition(AbilityCDO->ActionCameraLocalOffset);
+	const FRotator   WorldRotation   = CasterTransform.TransformRotation(
+		AbilityCDO->ActionCameraLocalRotation.Quaternion()).Rotator();
+
+	ActionCamera->SetActorLocation(WorldLocation);
+	ActionCamera->SetActorRotation(WorldRotation);
+
+	// 캐릭터에 Attach — Melee처럼 캐릭터가 이동해도 카메라가 따라감
+	ActionCamera->AttachToActor(Caster, FAttachmentTransformRules::KeepWorldTransform);
+
+	PendingCameraBlendOutTime = AbilityCDO->CameraBlendOutTime;
+	bActionCameraActive = true;
+
+	PC->SetViewTargetWithBlend(ActionCamera, AbilityCDO->CameraBlendInTime, VTBlend_Cubic);
+}
+
+void ABattleManager::ReturnToBattleCamera()
+{
+	if (!bActionCameraActive || !BattleCamera) return;
+	bActionCameraActive = false;
+
+	if (ActionCamera)
+		ActionCamera->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (PC)
+		PC->SetViewTargetWithBlend(BattleCamera, PendingCameraBlendOutTime, VTBlend_Cubic);
 }

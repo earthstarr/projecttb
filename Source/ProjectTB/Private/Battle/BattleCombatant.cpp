@@ -3,8 +3,6 @@
 #include "Attributes/TBAttributeSet.h"
 #include "Abilities/TBGameplayAbility.h"
 #include "TBGameplayTags.h"
-#include "GameFramework/SpringArmComponent.h"
-#include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
 #include "UI/DamageNumberWidget.h"
 
@@ -14,19 +12,6 @@ ABattleCombatant::ABattleCombatant()
 
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AttributeSet           = CreateDefaultSubobject<UTBAttributeSet>(TEXT("AttributeSet"));
-
-	CameraSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraSpringArm"));
-	CameraSpringArm->SetupAttachment(GetRootComponent());
-	CameraSpringArm->TargetArmLength = 1000.f;
-	CameraSpringArm->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
-	CameraSpringArm->SetRelativeRotation(FRotator(-20.f, 0.f, 0.f));
-	CameraSpringArm->bUsePawnControlRotation = false;
-	CameraSpringArm->bInheritPitch = false;
-	CameraSpringArm->bInheritYaw   = false;
-	CameraSpringArm->bInheritRoll  = false;
-
-	BattleCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("BattleCamera"));
-	BattleCamera->SetupAttachment(CameraSpringArm, USpringArmComponent::SocketName);
 
 	DamageWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("DamageWidget"));
 	DamageWidgetComponent->SetupAttachment(GetRootComponent());
