@@ -104,9 +104,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
 	TArray<TObjectPtr<AActor>> EnemySpawnPoints;
 
-	// ─── 고정 카메라 (레벨에 배치된 CameraActor 참조) ────────────────────────
+	// ─── 카메라 ───────────────────────────────────────────────────────────────
+	// 전투 전체 고정 카메라 (레벨에 배치)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
 	TObjectPtr<ACameraActor> BattleCamera;
+
+	// 공격/스킬 실행 시 사용하는 카메라 (레벨에 하나 배치, BattleManager가 위치 제어)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	TObjectPtr<ACameraActor> ActionCamera;
 
 	// ─── 이벤트 델리게이트 ───────────────────────────────────────────────────
 	UPROPERTY(BlueprintAssignable, Category="Events")
@@ -142,7 +147,14 @@ private:
 
 	FTimerHandle EnemyActionTimer;
 
+	// 카메라 상태
+	bool  bActionCameraActive       = false;
+	float PendingCameraBlendOutTime = 0.5f;
+
 	// 내부 메서드
+	void SwitchToActionCamera(ABattleCombatant* Caster, const UTBGameplayAbility* AbilityCDO);
+	void ReturnToBattleCamera();
+
 	void SetPhase(EBattlePhase NewPhase);
 	void BuildRoundOrder();
 	void AdvanceTurn();

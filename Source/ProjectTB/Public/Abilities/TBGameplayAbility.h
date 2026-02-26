@@ -111,6 +111,26 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact", meta=(EditCondition="bUseFixedWorldRotation"))
 	FRotator FixedWorldRotation = FRotator(-90.f, 0.f, 0.f); // 기본값: 수직 하강
 
+	// ─── 액션 카메라 ──────────────────────────────────────────────────────────
+	// false면 기본 BattleCamera 유지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera")
+	bool bUseActionCamera = false;
+
+	// 시전 캐릭터 로컬 기준 카메라 위치/회전
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(EditCondition="bUseActionCamera"))
+	FVector ActionCameraLocalOffset = FVector(-250.f, 80.f, 100.f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(EditCondition="bUseActionCamera"))
+	FRotator ActionCameraLocalRotation = FRotator(-15.f, 0.f, 0.f);
+
+	// 액션 카메라로 전환할 때 블렌드 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(EditCondition="bUseActionCamera"))
+	float CameraBlendInTime = 0.3f;
+
+	// 기본 카메라로 복귀할 때 블렌드 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(EditCondition="bUseActionCamera"))
+	float CameraBlendOutTime = 0.5f;
+
 	// ─── 유틸 ────────────────────────────────────────────────────────────────
 	// UI에서 비용 지불 가능 여부 확인 (그레이아웃 처리용)
 	UFUNCTION(BlueprintCallable, Category="Ability")

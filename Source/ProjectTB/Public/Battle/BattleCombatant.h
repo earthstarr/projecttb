@@ -9,8 +9,6 @@ class UAbilitySystemComponent;
 class UTBAttributeSet;
 class UTBGameplayAbility;
 class UGameplayEffect;
-class USpringArmComponent;
-class UCameraComponent;
 class UWidgetComponent;
 class UDamageNumberWidget;
 
@@ -105,12 +103,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI")
 	TObjectPtr<UWidgetComponent> DamageWidgetComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
-	TObjectPtr<USpringArmComponent> CameraSpringArm;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
-	TObjectPtr<UCameraComponent> BattleCamera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
