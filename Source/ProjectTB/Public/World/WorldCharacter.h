@@ -44,12 +44,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> FreeLookAction;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> RunAction;
 	
 	// ─── 입력 핸들러 ─────────────────────────────────────────────────────────
 	void HandleMove(const FInputActionValue& Value);
 	void HandleLook(const FInputActionValue& Value);
 	void HandleFreeLookStart();
 	void HandleFreeLookEnd();
+	void HandleRunToggle();
 	
 	// ─── 카메라 ──────────────────────────────────────────────────────────────
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
@@ -58,9 +61,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
 	TObjectPtr<UCameraComponent> Camera;
 	
+	//──── 입력 값 ──────────────────────────────────────────────────────────────
+	
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D InputMoveAxis;
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D InputLookAxis;
+	
+	UPROPERTY(BlueprintReadOnly)
+	bool bRunning;
 };
