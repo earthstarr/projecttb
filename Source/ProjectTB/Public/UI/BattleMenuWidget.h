@@ -12,9 +12,10 @@ UENUM(BlueprintType)
 enum class EMenuState : uint8
 {
 	Hidden,
-	MainMenu,       // Attack / Abilities / Items
-	AbilityMenu,    // 어빌리티 목록
-	SelectingTarget // 타겟 선택
+	MainMenu,          // Attack / Abilities / Items
+	AbilityMenu,       // 어빌리티 목록
+	SelectingTarget,   // 단일 타겟 선택
+	SelectingTargetAll // 전체 타겟 선택 (확인만 누르면 됨)
 };
 
 /**
@@ -52,12 +53,19 @@ public:
 	void ShowTargetSelection(const TArray<ABattleCombatant*>& Targets);
 	virtual void ShowTargetSelection_Implementation(const TArray<ABattleCombatant*>& Targets);
 
+	// 전체 타겟 선택 (AllEnemies, AllAllies) — 확인만 누르면 실행
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Menu")
+	void ShowTargetSelectionAll(const TArray<ABattleCombatant*>& Targets);
+	virtual void ShowTargetSelectionAll_Implementation(const TArray<ABattleCombatant*>& Targets);
+
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Menu")
 	void HideMenu();
 	virtual void HideMenu_Implementation();
 
-	// ─── 키보드 입력 ────────────────────────────────────────────────────────
+	// ─── 입력 처리 ────────────────────────────────────────────────────────
+	virtual void NativeConstruct() override;
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
 	// 현재 타겟 목록 (SelectingTarget 상태에서 사용)
 	UPROPERTY(BlueprintReadOnly, Category="Menu")

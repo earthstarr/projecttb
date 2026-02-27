@@ -101,15 +101,20 @@ public:
 	// Impact 전용: 몽타주 종료 후 스폰할 BattleImpactActor 클래스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage", meta=(EditCondition="AnimationType==EAbilityAnimType::Impact"))
 	TSubclassOf<ABattleImpactActor> ImpactActorClass;
-	
+
 	// 노티파이로부터 호출받을 인터페이스
 	void RequestSpawnImpact(int32 HitIndex = 0);
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	bool bUseFixedWorldRotation = true; // Impact일 때 기본적으로 켬
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact", meta=(EditCondition="bUseFixedWorldRotation"))
 	FRotator FixedWorldRotation = FRotator(-90.f, 0.f, 0.f); // 기본값: 수직 하강
+
+	// ─── 전체 공격(AllEnemies/AllAllies) 이펙트 스폰 방식 ──────────────────────
+	// true: 각 타겟마다 ImpactActor 스폰 / false: 모든 타겟의 중간 위치에 하나만 스폰
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	bool bSpawnImpactPerTarget = false;
 
 	// ─── 액션 카메라 ──────────────────────────────────────────────────────────
 	// false면 기본 BattleCamera 유지
@@ -162,6 +167,12 @@ private:
 	UFUNCTION() void OnImpactFinished();
 
 	void SpawnImpactActor();
+
+	// 단일 타겟에 ImpactActor 스폰 (전체 공격에서 개별 스폰 시 사용)
+	void SpawnSingleImpactActor(AActor* Avatar, class ABattleCombatant* Target, const ABattleImpactActor* CDO, bool bBindFinished);
+
+	// 특정 위치에 ImpactActor 스폰 (전체 공격에서 중앙 스폰 시 사용)
+	void SpawnSingleImpactActorAtLocation(AActor* Avatar, const FVector& Location, const ABattleImpactActor* CDO, bool bBindFinished);
 
 	// 어빌리티 종료 처리 (원위치 복귀 + OnActionComplete + EndAbility)
 	void FinishAbility();

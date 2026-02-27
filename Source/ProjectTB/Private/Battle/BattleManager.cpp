@@ -193,6 +193,7 @@ void ABattleManager::PlayerSelectAttack()
 	UE_LOG(LogTemp, Display, TEXT("BattleManager: PlayerSelectAttack called, Phase=%d"), (int32)CurrentPhase);
 	if (CurrentPhase != EBattlePhase::PlayerTurn) return;
 	PendingAbilityClass = nullptr;
+	PendingTargetType = EAbilityTargetType::SingleEnemy; // 기본 공격은 항상 단일 적
 	UE_LOG(LogTemp, Display, TEXT("BattleManager: SetPhase SelectingTarget, Enemies=%d"), GetLivingEnemies().Num());
 	SetPhase(EBattlePhase::SelectingTarget);
 }
@@ -201,7 +202,28 @@ void ABattleManager::PlayerSelectAbility(TSubclassOf<UTBGameplayAbility> Ability
 {
 	if (CurrentPhase != EBattlePhase::PlayerTurn) return;
 	PendingAbilityClass = AbilityClass;
-	SetPhase(EBattlePhase::SelectingTarget);
+
+	// CDO에서 TargetType 확인
+	UTBGameplayAbility* CDO = AbilityClass->GetDefaultObject<UTBGameplayAbility>();
+	if (!CDO) return;
+
+	PendingTargetType = CDO->TargetType;
+
+	switch (CDO->TargetType)
+	{
+	case EAbilityTargetType::Self:
+		// 타겟 선택 없이 바로 실행 (자기 자신)
+		ExecuteAction(GetCurrentActor(), GetCurrentActor(), AbilityClass);
+		break;
+
+	case EAbilityTargetType::SingleEnemy:
+	case EAbilityTargetType::AllEnemies:
+	case EAbilityTargetType::SingleAlly:
+	case EAbilityTargetType::AllAllies:
+		// UI에서 타겟 선택/확인
+		SetPhase(EBattlePhase::SelectingTarget);
+		break;
+	}
 }
 
 void ABattleManager::PlayerSelectTarget(ABattleCombatant* Target)

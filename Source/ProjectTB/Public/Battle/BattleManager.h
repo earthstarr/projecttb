@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Abilities/TBGameplayAbility.h"
 #include "BattleManager.generated.h"
 
 class ABattleCombatant;
@@ -91,6 +92,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	ABattleCombatant* GetPendingTarget() const { return PendingTarget; }
 
+	// 현재 선택 중인 타겟 타입 (UI에서 사용)
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	EAbilityTargetType GetPendingTargetType() const { return PendingTargetType; }
+
 	// ─── 테스트용 자동 시작 ───────────────────────────────────────────────────
 	// 레벨에 배치된 모든 Player/EnemyCharacter를 자동 감지해서 전투 시작
 	// GameInstance 방식 구현 후 false로 설정
@@ -142,8 +147,9 @@ private:
 	int32 CurrentRoundIndex = 0;
 
 	// 진행 중인 액션 데이터
-	ABattleCombatant*              PendingTarget      = nullptr;
+	ABattleCombatant*               PendingTarget       = nullptr;
 	TSubclassOf<UTBGameplayAbility> PendingAbilityClass = nullptr;
+	EAbilityTargetType              PendingTargetType   = EAbilityTargetType::SingleEnemy;
 
 	FTimerHandle EnemyActionTimer;
 

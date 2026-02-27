@@ -4,6 +4,7 @@
 #include "UI/CharacterStatusWidget.h"
 #include "Battle/BattleCombatant.h"
 #include "Battle/BattlePlayerCharacter.h"
+#include "Abilities/TBGameplayAbility.h"
 #include "Kismet/GameplayStatics.h"
 
 ATBBattleHUD::ATBBattleHUD() {}
@@ -66,10 +67,10 @@ void ATBBattleHUD::BindToBattleManager()
 	if (CharacterStatusWidget)
 		CharacterStatusWidget->InitializeParty(BattleManager->GetPlayerParty());
 
-	// 배틀씬: 마우스 잠금, 커서 숨김, UI 키보드 입력만 허용
+	// 배틀씬: UI 전용 입력 모드 (마우스 클릭으로 포커스 빠지는 것 방지)
 	if (APlayerController* PC = GetOwningPlayerController())
 	{
-		FInputModeGameAndUI InputMode;
+		FInputModeUIOnly InputMode;
 		if (BattleMenuWidget)
 			InputMode.SetWidgetToFocus(BattleMenuWidget->TakeWidget());
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
@@ -94,7 +95,14 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 		if (BattleMenuWidget)
 		{
 			BattleMenuWidget->ShowMainMenu(BattleManager->GetCurrentActor());
-			BattleMenuWidget->SetUserFocus(GetOwningPlayerController());
+			// 매 턴마다 입력 모드와 포커스 재설정 (카메라 전환 후 포커스 손실 방지)
+			if (APlayerController* PC = GetOwningPlayerController())
+			{
+				FInputModeUIOnly InputMode;
+				InputMode.SetWidgetToFocus(BattleMenuWidget->TakeWidget());
+				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+				PC->SetInputMode(InputMode);
+			}
 		}
 		// MP/Stamina 포함 전체 상태 갱신
 		if (CharacterStatusWidget)
@@ -104,7 +112,27 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 
 	case EBattlePhase::SelectingTarget:
 		if (BattleMenuWidget)
-			BattleMenuWidget->ShowTargetSelection(BattleManager->GetLivingEnemies());
+		{
+			const EAbilityTargetType TargetType = BattleManager->GetPendingTargetType();
+			switch (TargetType)
+			{
+			case EAbilityTargetType::SingleEnemy:
+				BattleMenuWidget->ShowTargetSelection(BattleManager->GetLivingEnemies());
+				break;
+			case EAbilityTargetType::AllEnemies:
+				BattleMenuWidget->ShowTargetSelectionAll(BattleManager->GetLivingEnemies());
+				break;
+			case EAbilityTargetType::SingleAlly:
+				BattleMenuWidget->ShowTargetSelection(BattleManager->GetLivingPlayers());
+				break;
+			case EAbilityTargetType::AllAllies:
+				BattleMenuWidget->ShowTargetSelectionAll(BattleManager->GetLivingPlayers());
+				break;
+			default:
+				BattleMenuWidget->ShowTargetSelection(BattleManager->GetLivingEnemies());
+				break;
+			}
+		}
 		break;
 
 	case EBattlePhase::ExecutingAction:
