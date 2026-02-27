@@ -42,14 +42,35 @@ void UTBGameplayAbility::ActivateAbility(
 		OriginRotation = Avatar->GetActorRotation();
 	}
 
-	// ─── 시전자가 적을 바라보게 회전 ───
+	// ─── 시전자가 타겟을 바라보게 회전 ───
 	ABattleManager* BM = GetBattleManager();
-	ABattleCombatant* Target = BM ? BM->GetPendingTarget() : nullptr;
 
-	if (Avatar && Target)
+	if (Avatar && BM)
 	{
-		// 높이(Z) 차이를 무시하고 수평 방향으로만 회전 (캐릭터가 뒤집히지 않게)
-		FVector Dir = Target->GetActorLocation() - Avatar->GetActorLocation();
+		FVector LookAtLocation = FVector::ZeroVector;
+
+		// AllEnemies/AllAllies는 모든 타겟의 중앙을 바라봄
+		if (TargetType == EAbilityTargetType::AllEnemies)
+		{
+			TArray<ABattleCombatant*> Enemies = BM->GetLivingEnemies();
+			for (ABattleCombatant* E : Enemies)
+				if (E) LookAtLocation += E->GetActorLocation();
+			if (!Enemies.IsEmpty()) LookAtLocation /= Enemies.Num();
+		}
+		else if (TargetType == EAbilityTargetType::AllAllies)
+		{
+			TArray<ABattleCombatant*> Allies = BM->GetLivingPlayers();
+			for (ABattleCombatant* A : Allies)
+				if (A) LookAtLocation += A->GetActorLocation();
+			if (!Allies.IsEmpty()) LookAtLocation /= Allies.Num();
+		}
+		else if (ABattleCombatant* Target = BM->GetPendingTarget())
+		{
+			LookAtLocation = Target->GetActorLocation();
+		}
+
+		// 높이(Z) 차이를 무시하고 수평 방향으로만 회전
+		FVector Dir = LookAtLocation - Avatar->GetActorLocation();
 		Dir.Z = 0.f;
 
 		if (!Dir.IsNearlyZero())
@@ -150,22 +171,45 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 	ABattleManager* BM = GetBattleManager();
 	if (!BM) return;
 
-	ABattleCombatant* Target = BM->GetPendingTarget();
-	if (!Target) return;
-
-	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
-	if (!TargetASC) return;
-
 	const float Multiplier = HitMultipliers.IsValidIndex(HitIndex) ? HitMultipliers[HitIndex] : 1.0f;
 
-	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
-		CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, DamageEffectClass, 1.f);
+	// TargetType에 따라 단일/전체 타겟 처리
+	TArray<ABattleCombatant*> Targets;
 
-	if (AbilityTypeTag.IsValid())
-		SpecHandle.Data->CapturedSourceTags.GetSpecTags().AddTag(AbilityTypeTag);
+	switch (TargetType)
+	{
+	case EAbilityTargetType::AllEnemies:
+		Targets = BM->GetLivingEnemies();
+		break;
+	case EAbilityTargetType::AllAllies:
+	case EAbilityTargetType::Self:
+		Targets = BM->GetLivingPlayers();
+		break;
+	case EAbilityTargetType::SingleEnemy:
+	case EAbilityTargetType::SingleAlly:
+	default:
+		if (ABattleCombatant* SingleTarget = BM->GetPendingTarget())
+			Targets.Add(SingleTarget);
+		break;
+	}
 
-	SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_AbilityMultiplier, Multiplier);
-	TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	// 모든 타겟에 GE 적용
+	for (ABattleCombatant* Target : Targets)
+	{
+		if (!Target) continue;
+
+		UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
+		if (!TargetASC) continue;
+
+		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
+			CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, DamageEffectClass, 1.f);
+
+		if (AbilityTypeTag.IsValid())
+			SpecHandle.Data->CapturedSourceTags.GetSpecTags().AddTag(AbilityTypeTag);
+
+		SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_AbilityMultiplier, Multiplier);
+		TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	}
 }
 
 // ─── 어빌리티 종료 ────────────────────────────────────────────────────────────
@@ -206,46 +250,84 @@ void UTBGameplayAbility::SpawnImpactActor()
 	if (!ImpactActorClass) return;
 
 	ABattleManager* BM = GetBattleManager();
-	ABattleCombatant* Target = BM ? BM->GetPendingTarget() : nullptr;
 	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
 
-	if (!Avatar || !Target) return;
-
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (!Avatar || !BM) return;
 
 	const ABattleImpactActor* CDO = ImpactActorClass->GetDefaultObject<ABattleImpactActor>();
+
+	// 전체 공격(AllEnemies/AllAllies)일 때 스폰 위치 결정
+	TArray<ABattleCombatant*> SpawnTargets;
+	bool bIsAllTargetType = (TargetType == EAbilityTargetType::AllEnemies || TargetType == EAbilityTargetType::AllAllies);
+
+	if (bIsAllTargetType)
+	{
+		if (TargetType == EAbilityTargetType::AllEnemies)
+			SpawnTargets = BM->GetLivingEnemies();
+		else
+			SpawnTargets = BM->GetLivingPlayers();
+
+		if (SpawnTargets.IsEmpty()) return;
+
+		if (bSpawnImpactPerTarget)
+		{
+			// 각 타겟마다 ImpactActor 스폰
+			for (int32 i = 0; i < SpawnTargets.Num(); ++i)
+			{
+				ABattleCombatant* Target = SpawnTargets[i];
+				if (!Target) continue;
+
+				SpawnSingleImpactActor(Avatar, Target, CDO, i == 0); // 첫 번째만 OnFinished 바인딩
+			}
+			return;
+		}
+		else
+		{
+			// 모든 타겟의 중간 위치에 하나만 스폰
+			FVector CenterLocation = FVector::ZeroVector;
+			for (ABattleCombatant* T : SpawnTargets)
+			{
+				if (T) CenterLocation += T->GetActorLocation();
+			}
+			CenterLocation /= SpawnTargets.Num();
+
+			// 중간 위치에 가상 타겟처럼 스폰 (PendingTarget 대신 사용)
+			SpawnSingleImpactActorAtLocation(Avatar, CenterLocation, CDO, true);
+			return;
+		}
+	}
+
+	// 단일 타겟 (기존 로직)
+	ABattleCombatant* Target = BM->GetPendingTarget();
+	if (!Target) return;
+
+	SpawnSingleImpactActor(Avatar, Target, CDO, true);
+}
+
+void UTBGameplayAbility::SpawnSingleImpactActor(AActor* Avatar, ABattleCombatant* Target, const ABattleImpactActor* CDO, bool bBindFinished)
+{
+	if (!Target) return;
 
 	FVector FinalSpawnLocation;
 	FRotator FinalSpawnRotation;
 
 	if (AnimationType == EAbilityAnimType::Impact)
 	{
-		// Impact 타입: 월드 절대 좌표 기준
-		// 타겟 위치에 오프셋을 그대로 더함 (시전자의 회전값 무시)
 		FinalSpawnLocation = Target->GetActorLocation() + (CDO ? CDO->SpawnOffset : FVector::ZeroVector);
-
-		// 회전값은 액터에 설정된 기본값 사용
 		FinalSpawnRotation = CDO ? CDO->GetActorRotation() : FRotator(-90.f, 0.f, 0.f);
 	}
 	else // Ranged 타입
 	{
-		// 원거리는 시전자의 손 위치 등 '방향'이 중요하므로 기존 로직 유지
 		FinalSpawnLocation = Avatar->GetActorLocation() + Avatar->GetActorRotation().RotateVector(CDO ? CDO->SpawnOffset : FVector::ZeroVector);
-
-		// 타겟을 향해 날아가도록 회전값 계산
 		FinalSpawnRotation = (Target->GetActorLocation() - FinalSpawnLocation).Rotation();
 	}
-	
-	// 스폰 전에 ShootDirection 설정을 위해 Deferred Spawn 사용
+
 	ABattleImpactActor* ImpactActor = GetWorld()->SpawnActorDeferred<ABattleImpactActor>(
 		ImpactActorClass, FTransform(FinalSpawnRotation, FinalSpawnLocation), nullptr, nullptr,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	if (ImpactActor)
 	{
-		// Ranged 타입만 발사 방향 설정 (타겟 방향)
-		// Impact 타입은 Blueprint에서 설정한 ShootDirection 사용 (ex: 아래 방향)
 		if (AnimationType != EAbilityAnimType::Impact)
 		{
 			ImpactActor->ShootDirection = FinalSpawnRotation.Vector();
@@ -253,12 +335,34 @@ void UTBGameplayAbility::SpawnImpactActor()
 
 		ImpactActor->OnImpact.AddDynamic(this, &UTBGameplayAbility::OnImpactNotify);
 
-		if (AnimationType == EAbilityAnimType::Impact)
+		if (AnimationType == EAbilityAnimType::Impact && bBindFinished)
 		{
 			ImpactActor->OnFinished.AddDynamic(this, &UTBGameplayAbility::OnImpactFinished);
 		}
 
 		// Deferred Spawn 완료 (BeginPlay 호출)
+		ImpactActor->FinishSpawning(FTransform(FinalSpawnRotation, FinalSpawnLocation));
+	}
+}
+
+void UTBGameplayAbility::SpawnSingleImpactActorAtLocation(AActor* Avatar, const FVector& Location, const ABattleImpactActor* CDO, bool bBindFinished)
+{
+	FVector FinalSpawnLocation = Location + (CDO ? CDO->SpawnOffset : FVector::ZeroVector);
+	FRotator FinalSpawnRotation = CDO ? CDO->GetActorRotation() : FRotator(-90.f, 0.f, 0.f);
+
+	ABattleImpactActor* ImpactActor = GetWorld()->SpawnActorDeferred<ABattleImpactActor>(
+		ImpactActorClass, FTransform(FinalSpawnRotation, FinalSpawnLocation), nullptr, nullptr,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	if (ImpactActor)
+	{
+		ImpactActor->OnImpact.AddDynamic(this, &UTBGameplayAbility::OnImpactNotify);
+
+		if (bBindFinished)
+		{
+			ImpactActor->OnFinished.AddDynamic(this, &UTBGameplayAbility::OnImpactFinished);
+		}
+
 		ImpactActor->FinishSpawning(FTransform(FinalSpawnRotation, FinalSpawnLocation));
 	}
 }

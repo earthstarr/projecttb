@@ -4,6 +4,24 @@
 #include "Abilities/TBGameplayAbility.h"
 #include "Framework/Application/SlateApplication.h"
 
+void UBattleMenuWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	// 키보드 포커스를 받을 수 있도록 설정
+	SetIsFocusable(true);
+}
+
+FReply UBattleMenuWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	// 마우스 클릭 시 포커스 유지 — 클릭을 처리하고 다른 위젯으로 포커스가 빠지지 않도록
+	if (APlayerController* PC = GetOwningPlayer())
+	{
+		SetUserFocus(PC);
+	}
+	return FReply::Handled();
+}
+
 FReply UBattleMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey Key = InKeyEvent.GetKey();
@@ -41,8 +59,24 @@ void UBattleMenuWidget::ShowTargetSelection_Implementation(const TArray<ABattleC
 {
 	CurrentTargets.Reset();
 	for (ABattleCombatant* T : Targets) CurrentTargets.Add(T);
-	MenuState    = EMenuState::SelectingTarget;
-	SelectedIndex = 0;
+
+	// SelectingTargetAll에서 호출된 경우 MenuState를 덮어쓰지 않음
+	if (MenuState != EMenuState::SelectingTargetAll)
+	{
+		MenuState = EMenuState::SelectingTarget;
+		SelectedIndex = 0;
+	}
+}
+
+void UBattleMenuWidget::ShowTargetSelectionAll_Implementation(const TArray<ABattleCombatant*>& Targets)
+{
+	// 상태 먼저 설정 — ShowTargetSelection_Implementation에서 덮어쓰지 않도록
+	MenuState = EMenuState::SelectingTargetAll;
+	SelectedIndex = -1;  // Blueprint에서 전체 선택임을 인식 (< 0이면 모든 타겟 하이라이트)
+
+	// Blueprint의 ShowTargetSelection 이벤트 호출 (UI 표시용)
+	// ShowTargetSelection_Implementation은 MenuState가 SelectingTargetAll이면 덮어쓰지 않음
+	ShowTargetSelection(Targets);
 }
 
 void UBattleMenuWidget::HideMenu_Implementation()
@@ -112,6 +146,12 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 			BattleManager->PlayerSelectTarget(CurrentTargets[SelectedIndex]);
 		break;
 
+	case EMenuState::SelectingTargetAll:
+		// 전체 타겟 — 첫 번째 타겟을 넘기면 BattleManager에서 All 처리
+		if (!CurrentTargets.IsEmpty())
+			BattleManager->PlayerSelectTarget(CurrentTargets[0]);
+		break;
+
 	default:
 		break;
 	}
@@ -123,6 +163,8 @@ void UBattleMenuWidget::CancelSelection_Implementation()
 
 	if (MenuState == EMenuState::AbilityMenu)
 		ShowMainMenu(CurrentCombatant);  // 어빌리티 메뉴 → 메인 메뉴로 복귀
+	else if (MenuState == EMenuState::SelectingTarget || MenuState == EMenuState::SelectingTargetAll)
+		BattleManager->PlayerCancel();
 	else
 		BattleManager->PlayerCancel();
 }
