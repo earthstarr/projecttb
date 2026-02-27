@@ -14,7 +14,8 @@ void UBattleMenuWidget::NativeConstruct()
 
 FReply UBattleMenuWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	// 마우스 클릭 시 포커스 유지 — 클릭을 처리하고 다른 위젯으로 포커스가 빠지지 않도록
+	// 이 함수는 위젯 영역 내에서만 호출됨 — 뷰포트 클릭 시에는 호출 안됨
+	UE_LOG(LogTemp, Warning, TEXT("BattleMenuWidget::NativeOnMouseButtonDown called"));
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		SetUserFocus(PC);

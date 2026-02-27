@@ -6,6 +6,7 @@
 #include "Battle/BattleCombatant.h"
 #include "Battle/BattleImpactActor.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
 
 UTBGameplayAbility::UTBGameplayAbility()
 {
@@ -101,10 +102,36 @@ void UTBGameplayAbility::DoTeleportToTarget()
 	ABattleManager* BM = GetBattleManager();
 	if (!BM) { FinishAbility(); return; }
 
-	if (ABattleCombatant* Target = BM->GetPendingTarget())
-	{
-		OriginLocation = Avatar->GetActorLocation();
+	OriginLocation = Avatar->GetActorLocation();
 
+	// AllEnemies/AllAllies: 모든 타겟의 중심으로 이동
+	if (TargetType == EAbilityTargetType::AllEnemies || TargetType == EAbilityTargetType::AllAllies)
+	{
+		TArray<ABattleCombatant*> Targets;
+		if (TargetType == EAbilityTargetType::AllEnemies)
+			Targets = BM->GetLivingEnemies();
+		else
+			Targets = BM->GetLivingPlayers();
+
+		if (!Targets.IsEmpty())
+		{
+			// 모든 타겟의 중심 계산
+			FVector CenterLocation = FVector::ZeroVector;
+			for (ABattleCombatant* T : Targets)
+				if (T) CenterLocation += T->GetActorLocation();
+			CenterLocation /= Targets.Num();
+
+			const FVector Dir = (OriginLocation - CenterLocation).GetSafeNormal();
+			const FVector AttackPos = CenterLocation + Dir * 200.f;
+			Avatar->SetActorLocation(FVector(AttackPos.X, AttackPos.Y, OriginLocation.Z));
+
+			const FVector LookDir = (CenterLocation - AttackPos).GetSafeNormal();
+			Avatar->SetActorRotation(LookDir.Rotation());
+		}
+	}
+	// SingleEnemy/SingleAlly: 단일 타겟으로 이동
+	else if (ABattleCombatant* Target = BM->GetPendingTarget())
+	{
 		const FVector Dir = (OriginLocation - Target->GetActorLocation()).GetSafeNormal();
 		const FVector AttackPos = Target->GetActorLocation() + Dir * 200.f;
 		Avatar->SetActorLocation(FVector(AttackPos.X, AttackPos.Y, OriginLocation.Z));
@@ -423,4 +450,20 @@ bool UTBGameplayAbility::CanAffordCost(UAbilitySystemComponent* ASC) const
 	case EAbilityCostType::HP:      return Attrs->GetHP()      >  CostAmount;
 	default:                        return true;
 	}
+}
+
+// ─── Hit 이펙트 스폰 (AnimNotify_AbilityEffect에서 호출) ─────────────────────────
+void UTBGameplayAbility::SpawnHitEffect()
+{
+	if (!HitEffect) return;
+
+	AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
+	if (!Avatar) return;
+
+	// 플레이어 위치 + 오프셋 (로컬 방향 기준)
+	const FVector SpawnLocation = Avatar->GetActorLocation() + Avatar->GetActorRotation().RotateVector(HitEffectOffset);
+	const FRotator SpawnRotation = Avatar->GetActorRotation();
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(), HitEffect, SpawnLocation, SpawnRotation);
 }
