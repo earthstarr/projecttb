@@ -34,6 +34,7 @@ void UWorldAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	FVector WorldVelocity = OwningCharacter->GetVelocity();						//월드 좌표 기준 속도
 	FRotator CharacterRotation = OwningCharacter->GetActorRotation();			//월드 기준 회전값
 	FVector LocalVelocity = CharacterRotation.UnrotateVector(WorldVelocity);	//회전된 정면을 기준으로 재계산
+	LocalVelocity.Normalize();
 	
 	//실제 캐릭터의 정면에 대한 방향
 	GroundSpeedForward = LocalVelocity.X;

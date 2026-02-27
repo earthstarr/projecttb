@@ -69,6 +69,12 @@ void AWorldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 			EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &ACharacter::Jump);
 			EIC->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 		}
+		
+		if (FreeLookAction)
+		{
+			EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleFreeLookStart);
+			EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleFreeLookEnd);
+		}
 	}
 }
 
@@ -97,4 +103,14 @@ void AWorldCharacter::HandleLook(const FInputActionValue& Value)
 	InputLookAxis = Value.Get<FVector2D>();
 	AddControllerYawInput(InputLookAxis.X);
 	AddControllerPitchInput(-InputLookAxis.Y);
+}
+
+void AWorldCharacter::HandleFreeLookStart()
+{
+	bUseControllerRotationYaw = false;
+}
+
+void AWorldCharacter::HandleFreeLookEnd()
+{
+	bUseControllerRotationYaw = true;
 }

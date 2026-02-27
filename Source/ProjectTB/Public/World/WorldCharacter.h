@@ -41,10 +41,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> JumpAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> FreeLookAction;
+	
+	
 	// ─── 입력 핸들러 ─────────────────────────────────────────────────────────
 	void HandleMove(const FInputActionValue& Value);
 	void HandleLook(const FInputActionValue& Value);
-
+	void HandleFreeLookStart();
+	void HandleFreeLookEnd();
+	
 	// ─── 카메라 ──────────────────────────────────────────────────────────────
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
