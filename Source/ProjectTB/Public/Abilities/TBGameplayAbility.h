@@ -5,6 +5,8 @@
 #include "TBGameplayTags.h"
 #include "TBGameplayAbility.generated.h"
 
+class UNiagaraSystem;
+
 UENUM(BlueprintType)
 enum class EAbilityCostType : uint8
 {
@@ -115,6 +117,18 @@ public:
 	// true: 각 타겟마다 ImpactActor 스폰 / false: 모든 타겟의 중간 위치에 하나만 스폰
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	bool bSpawnImpactPerTarget = false;
+
+	// ─── Hit 이펙트 (Melee/Ranged 타격 시 플레이어 위치에 스폰) ─────────────────
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Visual")
+	TObjectPtr<UNiagaraSystem> HitEffect;
+
+	// Hit 이펙트 스폰 오프셋 (플레이어/시전자 기준)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Visual")
+	FVector HitEffectOffset = FVector::ZeroVector;
+
+	// AnimNotify_AbilityEffect에서 호출 — 시전자 위치에 HitEffect 스폰
+	UFUNCTION(BlueprintCallable, Category="Visual")
+	void SpawnHitEffect();
 
 	// ─── 액션 카메라 ──────────────────────────────────────────────────────────
 	// false면 기본 BattleCamera 유지

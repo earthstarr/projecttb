@@ -73,9 +73,13 @@ void ATBBattleHUD::BindToBattleManager()
 		FInputModeUIOnly InputMode;
 		if (BattleMenuWidget)
 			InputMode.SetWidgetToFocus(BattleMenuWidget->TakeWidget());
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		PC->SetInputMode(InputMode);
 		PC->bShowMouseCursor = false;
+		
+		// 클릭 무시
+		PC->bEnableClickEvents = false;
+		PC->bEnableMouseOverEvents= false;
 	}
 }
 
@@ -102,6 +106,7 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 				InputMode.SetWidgetToFocus(BattleMenuWidget->TakeWidget());
 				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
 				PC->SetInputMode(InputMode);
+				PC->bShowMouseCursor = false;
 			}
 		}
 		// MP/Stamina 포함 전체 상태 갱신

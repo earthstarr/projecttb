@@ -34,6 +34,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Impact")
 	FVector ShootDirection = FVector(1.0f, 0.0f, 0.0f);
 
+	// Impact 시점에 이동 정지 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	bool bStopOnImpact = true;
+
 	// 스폰 후 데미지 발생까지 딜레이 (초) — 운석이 땅에 닿는 시점 등
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	float ImpactDelay = 1.0f;

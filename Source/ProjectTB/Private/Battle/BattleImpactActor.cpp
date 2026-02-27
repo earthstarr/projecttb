@@ -60,6 +60,12 @@ void ABattleImpactActor::BeginPlay()
 
 void ABattleImpactActor::TriggerImpact()
 {
+	// Impact 시점에 이동 정지
+	if (bStopOnImpact && ProjectileMovement)
+	{
+		ProjectileMovement->StopMovementImmediately();
+	}
+
 	PlayImpactEffect();
 	OnImpact.Broadcast();
 }
