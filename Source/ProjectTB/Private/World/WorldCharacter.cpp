@@ -26,9 +26,9 @@ AWorldCharacter::AWorldCharacter()
 	// ─── 이동 세팅 ───────────────────────────────────────────────────────────
 	// 기본적으로 카메라와 캐릭터 이동 별도로 구분, 캐릭터 Yaw 축 정면 방향만 카메라로 조작
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw   = true;
+	bUseControllerRotationYaw   = false;
 	bUseControllerRotationRoll  = false;
-
+	
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	GetCharacterMovement()->RotationRate              = FRotator(0.f, 500.f, 0.f);
 	GetCharacterMovement()->MaxWalkSpeed              = 400.f;
@@ -72,8 +72,13 @@ void AWorldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		
 		if (FreeLookAction)
 		{
-			EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleFreeLookStart);
-			EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleFreeLookEnd);
+			EIC->BindAction(FreeLookAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleFreeLookStart);
+			EIC->BindAction(FreeLookAction, ETriggerEvent::Completed,   this, &AWorldCharacter::HandleFreeLookEnd);
+		}
+		
+		if (RunAction)
+		{
+			EIC->BindAction(RunAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleRunToggle);
 		}
 	}
 }
@@ -107,10 +112,18 @@ void AWorldCharacter::HandleLook(const FInputActionValue& Value)
 
 void AWorldCharacter::HandleFreeLookStart()
 {
-	bUseControllerRotationYaw = false;
+	//bUseControllerRotationYaw = true;
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 }
 
 void AWorldCharacter::HandleFreeLookEnd()
 {
-	bUseControllerRotationYaw = true;
+	//bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+}
+
+void AWorldCharacter::HandleRunToggle()
+{
+	//달리기 토글
+	bRunning == true ? bRunning = false : bRunning = true;
 }
