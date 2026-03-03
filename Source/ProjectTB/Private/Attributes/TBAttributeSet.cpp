@@ -20,6 +20,7 @@ UTBAttributeSet::UTBAttributeSet()
 	InitCriticalMultiplier(1.5f);
 	InitIncomingDamage(0.f);
 	InitIncomingHeal(0.f);
+	InitIncomingCritical(0.f);
 }
 
 void UTBAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -42,25 +43,36 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	// ─── IncomingDamage → HP 차감 ───────────────────────────────────────────
-	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
+	// ─── IncomingCritical 처리 후 IncomingDamage → HP 차감 ──────────────────
+	// IncomingCritical이 마지막에 처리되므로, 여기서 데미지를 실제로 적용한다.
+	if (Data.EvaluatedData.Attribute == GetIncomingCriticalAttribute())
 	{
 		const float DamageValue = GetIncomingDamage();
-		SetIncomingDamage(0.f); // 메타 어트리뷰트 초기화
+		const bool bIsCritical = GetIncomingCritical() > 0.f;
+		SetIncomingDamage(0.f);
+		SetIncomingCritical(0.f);
 
 		if (DamageValue > 0.f)
 		{
 			const float NewHP = FMath::Max(GetHP() - DamageValue, 0.f);
-			UE_LOG(LogTemp, Display, TEXT("TBAttributeSet: Damage=%.1f, HP %.1f → %.1f"), DamageValue, GetHP(), NewHP);
+			UE_LOG(LogTemp, Display, TEXT("TBAttributeSet: Damage=%.1f%s, HP %.1f → %.1f"),
+				DamageValue, bIsCritical ? TEXT(" (CRIT)") : TEXT(""), GetHP(), NewHP);
 			SetHP(NewHP);
 
 			if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
 			{
-				Combatant->OnDamageReceivedInternal(DamageValue);
+				Combatant->OnDamageReceivedInternal(DamageValue, bIsCritical);
 				if (NewHP <= 0.f)
 					Combatant->OnDeathInternal();
 			}
 		}
+	}
+	// ─── MP/Stamina 직접 변경 (코스트 GE 등) → 즉시 UI 갱신 ────────────────
+	else if (Data.EvaluatedData.Attribute == GetMPAttribute() ||
+	         Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	{
+		if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
+			Combatant->OnStatChangedInternal();
 	}
 	// ─── IncomingHeal → HP 회복 ─────────────────────────────────────────────
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealAttribute())
@@ -69,6 +81,10 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		SetIncomingHeal(0.f);
 
 		if (HealValue > 0.f)
+		{
 			SetHP(FMath::Min(GetHP() + HealValue, GetMaxHP()));
+			if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
+				Combatant->OnHealReceivedInternal(HealValue);
+		}
 	}
 }

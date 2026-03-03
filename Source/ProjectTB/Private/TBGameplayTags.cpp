@@ -10,9 +10,10 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Battle_Phase_Victory,    "Battle.Phase.Victory")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Battle_Phase_Defeat,     "Battle.Phase.Defeat")
 
 // ─── Combatant State ────────────────────────────────────────────────────────
-UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Dead,    "Combatant.State.Dead")
-UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Stunned, "Combatant.State.Stunned")
-UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Acting,  "Combatant.State.Acting")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Dead,       "Combatant.State.Dead")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Stunned,    "Combatant.State.Stunned")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Acting,     "Combatant.State.Acting")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Defending,  "Combatant.State.Defending")
 
 // ─── Ability Type ───────────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Type_Physical, "Ability.Type.Physical")
@@ -28,6 +29,12 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Cost_HP,      "Ability.Cost.HP")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Effect_Damage_Physical, "Effect.Damage.Physical")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Effect_Damage_Magic,    "Effect.Damage.Magic")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Effect_Heal,            "Effect.Heal")
+
+// ─── Status Effect ──────────────────────────────────────────────────────────
+UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Burn,   "Status.Burn")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Poison, "Status.Poison")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Regen,  "Status.Regen")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Stun,   "Status.Stun")
 
 // ─── SetByCaller Data ───────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Data_AbilityMultiplier, "Data.AbilityMultiplier")

@@ -5,6 +5,12 @@
 #include "TBGameplayTags.h"
 #include "Components/WidgetComponent.h"
 #include "UI/DamageNumberWidget.h"
+#include "UI/StatusIconPanelWidget.h"
+#include "GameplayEffect.h"
+#include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Kismet/GameplayStatics.h"
 
 ABattleCombatant::ABattleCombatant()
 {
@@ -13,11 +19,26 @@ ABattleCombatant::ABattleCombatant()
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AttributeSet           = CreateDefaultSubobject<UTBAttributeSet>(TEXT("AttributeSet"));
 
+	// 데미지 위젯용 앵커 컴포넌트 (위젯은 런타임에 동적 생성)
 	DamageWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("DamageWidget"));
 	DamageWidgetComponent->SetupAttachment(GetRootComponent());
-	DamageWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 100.f)); // 머리 위
-	DamageWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);           // 항상 카메라 향함
+	DamageWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
+	DamageWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	DamageWidgetComponent->SetVisibility(false);
+
+	TargetIndicatorComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("TargetIndicator"));
+	TargetIndicatorComponent->SetupAttachment(GetRootComponent());
+	TargetIndicatorComponent->SetRelativeLocation(FVector(0.f, 0.f, 200.f)); // 머리 위
+	TargetIndicatorComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	TargetIndicatorComponent->SetVisibility(false);
+
+	StatusIconComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("StatusIconPanel"));
+	StatusIconComponent->SetupAttachment(GetRootComponent());
+	StatusIconComponent->SetRelativeLocation(FVector(0.f, 0.f, 240.f)); // 타겟인디케이터 위
+	StatusIconComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	StatusIconComponent->SetDrawAtDesiredSize(true);
+	StatusIconComponent->SetPivot(FVector2D(0.5f, 1.0f)); // 가로 중앙, 세로 하단 기준
+	StatusIconComponent->SetVisibility(false);
 }
 
 UAbilitySystemComponent* ABattleCombatant::GetAbilitySystemComponent() const
@@ -29,6 +50,15 @@ void ABattleCombatant::BeginPlay()
 {
 	Super::BeginPlay();
 	InitAbilitySystem();
+
+	// StatusIconPanel 위젯 초기화 및 델리게이트 바인딩
+	if (StatusIconComponent && StatusIconWidgetClass)
+	{
+		StatusIconComponent->SetWidgetClass(StatusIconWidgetClass);
+		StatusIconComponent->InitWidget();
+		if (UStatusIconPanelWidget* Panel = Cast<UStatusIconPanelWidget>(StatusIconComponent->GetUserWidgetObject()))
+			Panel->InitWithCombatant(this);
+	}
 }
 
 void ABattleCombatant::InitAbilitySystem()
@@ -74,7 +104,15 @@ float ABattleCombatant::GetMP()         const { return AttributeSet ? AttributeS
 float ABattleCombatant::GetMaxMP()      const { return AttributeSet ? AttributeSet->GetMaxMP()      : 0.f; }
 float ABattleCombatant::GetStamina()    const { return AttributeSet ? AttributeSet->GetStamina()    : 0.f; }
 float ABattleCombatant::GetMaxStamina() const { return AttributeSet ? AttributeSet->GetMaxStamina() : 0.f; }
-float ABattleCombatant::GetSpeed()      const { return AttributeSet ? AttributeSet->GetSpeed()      : 0.f; }
+float ABattleCombatant::GetMagicAttack() const { return AttributeSet ? AttributeSet->GetMagicAttack() : 0.f; }
+float ABattleCombatant::GetSpeed() const
+{
+	float Base = AttributeSet ? AttributeSet->GetSpeed() : 0.f;
+	// 독 상태 → Speed 30% 감소 (다음 라운드 BuildRoundOrder에 반영)
+	if (AbilitySystemComponent && AbilitySystemComponent->HasMatchingGameplayTag(TAG_Status_Poison))
+		Base *= 0.7f;
+	return Base;
+}
 bool  ABattleCombatant::IsDead()        const { return GetHP() <= 0.f; }
 
 TArray<UTBGameplayAbility*> ABattleCombatant::GetGrantedAbilities() const
@@ -129,6 +167,25 @@ void ABattleCombatant::OnSpawnImpactNotify(int32 HitIndex)
 	}
 }
 
+// ─── 방어 상태 ────────────────────────────────────────────────────────────────
+void ABattleCombatant::SetDefending(bool bDefending)
+{
+	if (!AbilitySystemComponent) return;
+	if (bDefending)
+		AbilitySystemComponent->AddLooseGameplayTag(TAG_Combatant_State_Defending);
+	else
+		AbilitySystemComponent->RemoveLooseGameplayTag(TAG_Combatant_State_Defending);
+
+	// 아이콘 UI 갱신 트리거 (방어 아이콘 표시/해제)
+	OnStatusEffectsChanged.Broadcast(this);
+}
+
+bool ABattleCombatant::IsDefending() const
+{
+	if (!AbilitySystemComponent) return false;
+	return AbilitySystemComponent->HasMatchingGameplayTag(TAG_Combatant_State_Defending);
+}
+
 // ─── 사망 처리 (AttributeSet에서 호출) ────────────────────────────────────────
 void ABattleCombatant::OnDeathInternal()
 {
@@ -146,32 +203,224 @@ void ABattleCombatant::DestroyAfterDeath()
 	Destroy();
 }
 
-void ABattleCombatant::OnDamageReceivedInternal(float Damage)
+void ABattleCombatant::OnDamageReceivedInternal(float Damage, bool bIsCritical)
 {
-	OnDamageReceived.Broadcast(this, Damage);
-	ShowDamageNumber(Damage);
+	OnDamageReceived.Broadcast(this, Damage, bIsCritical);
+	SpawnDamageNumber(Damage, false, bIsCritical);
 }
 
-void ABattleCombatant::ShowDamageNumber(float Damage)
+void ABattleCombatant::OnStatChangedInternal()
 {
-	if (!DamageWidgetComponent) return;
-
-	// 위젯 클래스가 설정된 경우 최초 1회 세팅
-	if (DamageNumberWidgetClass && !DamageWidgetComponent->GetWidget())
-		DamageWidgetComponent->SetWidgetClass(DamageNumberWidgetClass);
-
-	if (UDamageNumberWidget* Widget = Cast<UDamageNumberWidget>(DamageWidgetComponent->GetUserWidgetObject()))
-		Widget->SetDamage(Damage);
-
-	DamageWidgetComponent->SetVisibility(true);
-
-	// 기존 타이머 초기화 후 2초 뒤 숨기기
-	GetWorldTimerManager().ClearTimer(DamageHideTimer);
-	GetWorldTimerManager().SetTimer(DamageHideTimer, this, &ABattleCombatant::HideDamageNumber, 2.0f, false);
+	OnStatChanged.Broadcast(this);
 }
 
-void ABattleCombatant::HideDamageNumber()
+void ABattleCombatant::OnHealReceivedInternal(float Heal)
 {
-	if (DamageWidgetComponent)
-		DamageWidgetComponent->SetVisibility(false);
+	OnHealReceived.Broadcast(this, Heal);
+	SpawnDamageNumber(Heal, true);
+}
+
+void ABattleCombatant::SpawnDamageNumber(float Value, bool bIsHeal, bool bIsCritical)
+{
+	if (!DamageNumberWidgetClass) return;
+
+	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+	if (!PC) return;
+
+	// 기존 위젯들을 위로 밀어올림
+	for (UDamageNumberWidget* ExistingWidget : ActiveDamageNumbers)
+	{
+		if (ExistingWidget)
+		{
+			ExistingWidget->MoveUp(DamageNumberStackSpacing);
+		}
+	}
+
+	// 새 위젯 생성
+	UDamageNumberWidget* NewWidget = CreateWidget<UDamageNumberWidget>(PC, DamageNumberWidgetClass);
+	if (!NewWidget) return;
+
+	// 데미지/힐 값 설정
+	if (bIsHeal)
+	{
+		NewWidget->SetHeal(Value);
+	}
+	else
+	{
+		NewWidget->SetDamage(Value, bIsCritical);
+	}
+
+	// 캐릭터를 따라가도록 설정 (카메라 이동 대응)
+	NewWidget->SetFollowTarget(this, 100.f);
+
+	// Viewport에 추가
+	NewWidget->AddToViewport(100);
+
+	// 수명 타이머 시작
+	NewWidget->StartLifespan(1.5f);
+
+	// 완료 델리게이트 바인딩
+	NewWidget->OnFinished.BindLambda([this, NewWidget]()
+	{
+		OnDamageNumberRemoved(NewWidget);
+	});
+
+	ActiveDamageNumbers.Add(NewWidget);
+}
+
+void ABattleCombatant::OnDamageNumberRemoved(UDamageNumberWidget* Widget)
+{
+	ActiveDamageNumbers.Remove(Widget);
+}
+
+void ABattleCombatant::ShowTargetIndicator()
+{
+	if (!TargetIndicatorComponent) return;
+	if (TargetIndicatorWidgetClass && !TargetIndicatorComponent->GetWidget())
+		TargetIndicatorComponent->SetWidgetClass(TargetIndicatorWidgetClass);
+	TargetIndicatorComponent->SetVisibility(true);
+}
+
+void ABattleCombatant::HideTargetIndicator()
+{
+	if (TargetIndicatorComponent)
+		TargetIndicatorComponent->SetVisibility(false);
+}
+
+// ─── 상태이상 시스템 ──────────────────────────────────────────────────────────
+
+void ABattleCombatant::ApplyStatusEffect(const FStatusEffectInstance& NewEffect)
+{
+	if (!NewEffect.StatusTag.IsValid() || NewEffect.RemainingTurns <= 0) return;
+
+	ActiveStatusEffects.Add(NewEffect);
+
+	// GAS Loose Tag 즉시 반영 (없으면 추가)
+	if (AbilitySystemComponent && !AbilitySystemComponent->HasMatchingGameplayTag(NewEffect.StatusTag))
+		AbilitySystemComponent->AddLooseGameplayTag(NewEffect.StatusTag);
+
+	// 상태이상 아이콘 패널 활성화
+	if (StatusIconComponent)
+	{
+		if (StatusIconWidgetClass && !StatusIconComponent->GetWidget())
+			StatusIconComponent->SetWidgetClass(StatusIconWidgetClass);
+		StatusIconComponent->SetVisibility(true);
+	}
+
+	OnStatusEffectsChanged.Broadcast(this);
+}
+
+bool ABattleCombatant::TickStatusEffects()
+{
+	if (ActiveStatusEffects.IsEmpty()) return false;
+
+	bool bWasStunned = false;
+	bool bChanged    = false;
+
+	// 역순 순회 (RemoveAt 시 안전)
+	for (int32 i = ActiveStatusEffects.Num() - 1; i >= 0; --i)
+	{
+		FStatusEffectInstance& Effect = ActiveStatusEffects[i];
+
+		if (Effect.StatusTag == TAG_Status_Stun)
+		{
+			// 스턴: 데미지 없이 턴 스킵 표시
+			bWasStunned = true;
+		}
+		else if (Effect.StatusTag == TAG_Status_Burn)
+		{
+			// 화상: 스탯 기반 데미지 (방어력 무시)
+			ApplyStatusTickDamage(FMath::Max(1.f, Effect.MagnitudePerStack));
+		}
+		else if (Effect.StatusTag == TAG_Status_Poison)
+		{
+			// 독: 현재 HP 1% + 스탯 기반 데미지 (방어력 무시)
+			const float HPPercent = GetHP() * 0.01f;
+			ApplyStatusTickDamage(FMath::Max(1.f, HPPercent + Effect.MagnitudePerStack));
+		}
+		else if (Effect.StatusTag == TAG_Status_Regen)
+		{
+			// 재생: 힐
+			ApplyStatusTickHeal(FMath::Max(1.f, Effect.MagnitudePerStack));
+		}
+
+		// 스택 1 소모
+		Effect.RemainingTurns--;
+		bChanged = true; // 스택 변경 → 항상 UI 갱신
+		if (Effect.RemainingTurns <= 0)
+			ActiveStatusEffects.RemoveAt(i);
+	}
+
+	SyncStatusTags();
+
+	// 모든 효과가 소진되면 아이콘 패널 숨김
+	if (ActiveStatusEffects.IsEmpty() && StatusIconComponent)
+		StatusIconComponent->SetVisibility(false);
+
+	if (bChanged || bWasStunned)
+		OnStatusEffectsChanged.Broadcast(this);
+
+	return bWasStunned;
+}
+
+void ABattleCombatant::SyncStatusTags()
+{
+	if (!AbilitySystemComponent) return;
+
+	// 현재 ActiveStatusEffects에 있는 태그 목록 수집
+	TSet<FGameplayTag> WantedTags;
+	for (const FStatusEffectInstance& E : ActiveStatusEffects)
+		WantedTags.Add(E.StatusTag);
+
+	// 관리 대상 Status 태그들
+	const FGameplayTag StatusTags[] = {
+		TAG_Status_Burn, TAG_Status_Poison, TAG_Status_Regen, TAG_Status_Stun
+	};
+
+	for (const FGameplayTag& Tag : StatusTags)
+	{
+		const bool bShouldHave  = WantedTags.Contains(Tag);
+		const bool bCurrentlyHas = AbilitySystemComponent->HasMatchingGameplayTag(Tag);
+
+		if (bShouldHave && !bCurrentlyHas)
+			AbilitySystemComponent->AddLooseGameplayTag(Tag);
+		else if (!bShouldHave && bCurrentlyHas)
+			AbilitySystemComponent->RemoveLooseGameplayTag(Tag);
+	}
+}
+
+void ABattleCombatant::ApplyStatusTickDamage(float Damage)
+{
+	if (!AbilitySystemComponent || Damage <= 0.f) return;
+
+	// 동적 GE로 IncomingDamage 메타 어트리뷰트에 직접 주입
+	// → PostGameplayEffectExecute에서 HP 차감 + 데미지 숫자 UI + 사망 처리 자동 연결
+	UGameplayEffect* GEObj = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
+	GEObj->DurationPolicy = EGameplayEffectDurationType::Instant;
+
+	FGameplayModifierInfo ModInfo;
+	ModInfo.Attribute        = UTBAttributeSet::GetIncomingDamageAttribute();
+	ModInfo.ModifierOp       = EGameplayModOp::Additive;
+	ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(Damage);
+	GEObj->Modifiers.Add(ModInfo);
+
+	FGameplayEffectSpec Spec(GEObj, AbilitySystemComponent->MakeEffectContext(), 1.f);
+	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(Spec);
+}
+
+void ABattleCombatant::ApplyStatusTickHeal(float Heal)
+{
+	if (!AbilitySystemComponent || Heal <= 0.f) return;
+
+	UGameplayEffect* GEObj = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
+	GEObj->DurationPolicy = EGameplayEffectDurationType::Instant;
+
+	FGameplayModifierInfo ModInfo;
+	ModInfo.Attribute        = UTBAttributeSet::GetIncomingHealAttribute();
+	ModInfo.ModifierOp       = EGameplayModOp::Additive;
+	ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(Heal);
+	GEObj->Modifiers.Add(ModInfo);
+
+	FGameplayEffectSpec Spec(GEObj, AbilitySystemComponent->MakeEffectContext(), 1.f);
+	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(Spec);
 }

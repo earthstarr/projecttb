@@ -87,4 +87,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Attributes|Meta")
 	FGameplayAttributeData IncomingHeal;
 	ATTRIBUTE_ACCESSORS(UTBAttributeSet, IncomingHeal)
+
+	// 크리티컬 히트 여부 (0 = 일반, 1 = 크리티컬)
+	UPROPERTY(BlueprintReadOnly, Category="Attributes|Meta")
+	FGameplayAttributeData IncomingCritical;
+	ATTRIBUTE_ACCESSORS(UTBAttributeSet, IncomingCritical)
 };

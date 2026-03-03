@@ -28,6 +28,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBattlePhaseChanged, EBattlePhase,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnBegin,          ABattleCombatant*, Combatant);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnOrderUpdated,   const TArray<ABattleCombatant*>&, UpcomingTurns);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnyDamageDealt,    ABattleCombatant*, Target, float, Damage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnyHealDealt,      ABattleCombatant*, Target, float, Heal);
 
 /**
  * 배틀 씬에 배치되는 전투 관리 Actor.
@@ -58,6 +59,10 @@ public:
 	// 타겟 선택 완료
 	UFUNCTION(BlueprintCallable, Category="Battle|Input")
 	void PlayerSelectTarget(ABattleCombatant* Target);
+
+	// 방어 선택 — 이번 턴 받는 데미지 50% 감소, 즉시 턴 종료
+	UFUNCTION(BlueprintCallable, Category="Battle|Input")
+	void PlayerSelectDefend();
 
 	// 취소 (메뉴로 복귀)
 	UFUNCTION(BlueprintCallable, Category="Battle|Input")
@@ -118,6 +123,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
 	TObjectPtr<ACameraActor> ActionCamera;
 
+	// 플레이어 턴 메뉴 시 캐릭터 옆 3인칭 카메라 오프셋 (캐릭터 로컬 기준)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	FVector PlayerTurnCameraOffset = FVector(-150.f, 80.f, 100.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	FRotator PlayerTurnCameraRotation = FRotator(-15.f, 0.f, 0.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	float PlayerTurnCameraBlendTime = 0.5f;
+
 	// ─── 이벤트 델리게이트 ───────────────────────────────────────────────────
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FOnBattlePhaseChanged OnBattlePhaseChanged;
@@ -130,6 +145,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FOnAnyDamageDealt OnAnyDamageDealt;
+
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnAnyHealDealt OnAnyHealDealt;
 
 protected:
 	virtual void BeginPlay() override;
@@ -159,6 +177,7 @@ private:
 
 	// 내부 메서드
 	void SwitchToActionCamera(ABattleCombatant* Caster, const UTBGameplayAbility* AbilityCDO);
+	void SwitchToPlayerTurnCamera();
 	void ReturnToBattleCamera();
 
 	void SetPhase(EBattlePhase NewPhase);
@@ -176,8 +195,22 @@ private:
 	void OnCombatantDied(ABattleCombatant* Combatant);
 
 	UFUNCTION()
-	void OnCombatantDamaged(ABattleCombatant* Combatant, float Damage);
+	void OnCombatantDamaged(ABattleCombatant* Combatant, float Damage, bool bIsCritical);
+
+	UFUNCTION()
+	void OnCombatantHealed(ABattleCombatant* Combatant, float Heal);
 
 	// bAutoStartBattle 전용 — 딜레이 후 호출
 	void AutoStartBattle();
+
+	// 셰이더 웜업 — StartBattle 직후 오프스크린에서 이펙트 미리 터뜨림
+	void WarmUpEffects();
+
+	// 스턴 턴 스킵 딜레이용 (0.75초 표시 후 OnActionComplete)
+	FTimerHandle StunSkipTimer;
+
+	// 상태이상 일괄 틱 — 라운드에서 첫 번째 플레이어/적 턴에 각 진영 전체를 동시 처리
+	bool bPlayerStatusTickedThisRound = false;
+	bool bEnemyStatusTickedThisRound  = false;
+	TSet<ABattleCombatant*> StunnedThisRound;
 };

@@ -28,6 +28,16 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI")
 	TObjectPtr<UWidgetComponent> HealthBarWidgetComponent;
 
+	// 적 크기마다 다를 수 있으므로 Blueprint에서 개별 조정
+	UPROPERTY(EditDefaultsOnly, Category="UI", meta=(DisplayName="HP바 Z 위치"))
+	float HealthBarZOffset = 120.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="UI", meta=(DisplayName="HP바 크기"))
+	FVector2D HealthBarDrawSize = FVector2D(150.f, 15.f);
+
+	UPROPERTY(EditDefaultsOnly, Category="UI", meta=(DisplayName="상태이상 아이콘 Z 위치"))
+	float StatusIconZOffset = 140.f; // HP바(120) 위
+
 	/**
 	 * AI 행동 선택.
 	 * Blueprint에서 오버라이드해 적마다 다른 패턴 구현 가능.
@@ -53,7 +63,7 @@ protected:
 
 private:
 	UFUNCTION()
-	void OnDamageReceivedHandler(ABattleCombatant* Combatant, float Damage);
+	void OnDamageReceivedHandler(ABattleCombatant* Combatant, float Damage, bool bIsCritical);
 
 	void RefreshHealthBar();
 };

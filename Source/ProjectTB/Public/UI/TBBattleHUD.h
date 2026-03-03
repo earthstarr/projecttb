@@ -64,4 +64,10 @@ protected:
 
 	UFUNCTION()
 	void HandleDamageDealt(ABattleCombatant* Target, float Damage);
+
+	UFUNCTION()
+	void HandleHealDealt(ABattleCombatant* Target, float Heal);
+
+	UFUNCTION()
+	void HandleStatChanged(ABattleCombatant* Combatant);
 };

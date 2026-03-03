@@ -75,6 +75,9 @@ void UTBDamageExecution::Execute_Implementation(
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(GetCaptureStruct().CriticalChanceDef,      EvalParams, CritChance);
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(GetCaptureStruct().CriticalMultiplierDef,  EvalParams, CritMulti);
 
+	UE_LOG(LogTemp, Warning, TEXT("TBDamageExecution: Attack=%.1f, Defense=%.1f, CritChance=%.2f, CritMulti=%.2f"),
+		Attack, Defense, CritChance, CritMulti);
+
 	// ─── 데미지 공식 ─────────────────────────────────────────────────────────
 	// Reduction = Defense / (Defense + 100) → 0~1, 절대 1 불가
 	const float Reduction  = Defense / (Defense + 100.f);
@@ -85,8 +88,25 @@ void UTBDamageExecution::Execute_Implementation(
 	FinalDamage *= FMath::RandRange(0.9f, 1.1f);
 
 	// 크리티컬 판정
-	if (FMath::RandRange(0.f, 1.f) < CritChance)
+	bool bIsCritical = false;
+	const float CritRoll = FMath::RandRange(0.f, 1.f);
+	if (CritRoll < CritChance)
+	{
 		FinalDamage *= CritMulti;
+		bIsCritical = true;
+		UE_LOG(LogTemp, Warning, TEXT("TBDamageExecution: CRITICAL HIT! Roll=%.2f < Chance=%.2f, Damage=%.1f (x%.1f)"),
+			CritRoll, CritChance, FinalDamage, CritMulti);
+	}
+
+	UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
+
+	// 방어 중인 타겟 → 데미지 50% 감소
+	if (TargetASC && TargetASC->HasMatchingGameplayTag(TAG_Combatant_State_Defending))
+		FinalDamage *= 0.5f;
+
+	// 화상 상태인 타겟 → 받는 데미지 +25% 증가 (불에 취약)
+	if (TargetASC && TargetASC->HasMatchingGameplayTag(TAG_Status_Burn))
+		FinalDamage *= 1.25f;
 
 	// 최소 1 보장
 	FinalDamage = FMath::Max(FinalDamage, 1.f);
@@ -96,4 +116,10 @@ void UTBDamageExecution::Execute_Implementation(
 		UTBAttributeSet::GetIncomingDamageAttribute(),
 		EGameplayModOp::Additive,
 		FinalDamage));
+
+	// IncomingCritical 메타 어트리뷰트에 크리티컬 여부 출력
+	OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(
+		UTBAttributeSet::GetIncomingCriticalAttribute(),
+		EGameplayModOp::Override,
+		bIsCritical ? 1.f : 0.f));
 }

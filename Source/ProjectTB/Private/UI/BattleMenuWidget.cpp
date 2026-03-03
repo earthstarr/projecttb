@@ -67,6 +67,8 @@ void UBattleMenuWidget::ShowTargetSelection_Implementation(const TArray<ABattleC
 		MenuState = EMenuState::SelectingTarget;
 		SelectedIndex = 0;
 	}
+
+	UpdateTargetIndicators();
 }
 
 void UBattleMenuWidget::ShowTargetSelectionAll_Implementation(const TArray<ABattleCombatant*>& Targets)
@@ -82,6 +84,9 @@ void UBattleMenuWidget::ShowTargetSelectionAll_Implementation(const TArray<ABatt
 
 void UBattleMenuWidget::HideMenu_Implementation()
 {
+	for (ABattleCombatant* T : CurrentTargets)
+		if (T) T->HideTargetIndicator();
+
 	MenuState = EMenuState::Hidden;
 	CurrentTargets.Reset();
 }
@@ -105,14 +110,20 @@ void UBattleMenuWidget::NavigateLeft_Implementation()
 {
 	// 타겟 선택 시 왼쪽 = 이전 타겟
 	if (MenuState == EMenuState::SelectingTarget)
+	{
 		SelectedIndex = FMath::Max(0, SelectedIndex - 1);
+		UpdateTargetIndicators();
+	}
 }
 
 void UBattleMenuWidget::NavigateRight_Implementation()
 {
 	// 타겟 선택 시 오른쪽 = 다음 타겟
 	if (MenuState == EMenuState::SelectingTarget)
+	{
 		SelectedIndex = FMath::Min(CurrentTargets.Num() - 1, SelectedIndex + 1);
+		UpdateTargetIndicators();
+	}
 }
 
 // ─── 확인 / 취소 ─────────────────────────────────────────────────────────────
@@ -135,6 +146,10 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 				[](const UTBGameplayAbility* A) { return A && A->bShowInAbilityMenu; });
 			ShowAbilityMenu(Skills);
 		}
+		else if (SelectedIndex == 2)
+		{
+			BattleManager->PlayerSelectDefend();
+		}
 		break;
 
 	case EMenuState::AbilityMenu:
@@ -155,6 +170,19 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 
 	default:
 		break;
+	}
+}
+
+void UBattleMenuWidget::UpdateTargetIndicators()
+{
+	for (int32 i = 0; i < CurrentTargets.Num(); ++i)
+	{
+		if (!CurrentTargets[i]) continue;
+		// SelectedIndex < 0 이면 AllTarget — 모두 표시
+		if (SelectedIndex < 0 || i == SelectedIndex)
+			CurrentTargets[i]->ShowTargetIndicator();
+		else
+			CurrentTargets[i]->HideTargetIndicator();
 	}
 }
 

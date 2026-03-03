@@ -1,11 +1,13 @@
 #include "Battle/BattleManager.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Battle/BattleEnemyCharacter.h"
+#include "Battle/BattleImpactActor.h"
 #include "Abilities/TBGameplayAbility.h"
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraActor.h"
 #include "GameFramework/PlayerController.h"
+#include "NiagaraFunctionLibrary.h"
 
 ABattleManager::ABattleManager()
 {
@@ -21,6 +23,51 @@ void ABattleManager::BeginPlay()
 		// 0.5초 딜레이 — 레벨의 모든 Actor BeginPlay 완료 후 실행
 		FTimerHandle AutoStartTimer;
 		GetWorldTimerManager().SetTimer(AutoStartTimer, this, &ABattleManager::AutoStartBattle, 0.5f, false);
+	}
+}
+
+void ABattleManager::WarmUpEffects()
+{
+	// 카메라 뒤쪽 바닥 아래
+	FVector WarmupPos = GetActorLocation();
+	WarmupPos.X -= 500.f;
+	WarmupPos.Z -= 600.f;
+	
+	TSet<UNiagaraSystem*> SeenFX;
+	
+	// 플레이어 + 적 파티의 모든 어빌리티 순회
+	TArray<ABattleCombatant*> All;
+	for (ABattleCombatant* P : PlayerParty) All.Add(P);
+	for (ABattleCombatant* E : EnemyParty)  All.Add(E);
+	
+	for (ABattleCombatant* C : All)
+	{
+		UAbilitySystemComponent* ASC = C ? C->GetAbilitySystemComponent() : nullptr;
+		if (!ASC) continue;
+
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			const UTBGameplayAbility* GA = Cast<UTBGameplayAbility>(Spec.Ability.Get());
+			if (!GA) continue;
+
+			// HitEffect (Niagara)
+			if (GA->HitEffect && !SeenFX.Contains(GA->HitEffect))
+			{
+				SeenFX.Add(GA->HitEffect);
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, GA->HitEffect, WarmupPos);
+			}
+
+			// ImpactActorClass → CDO에서 ImpactEffect 읽어 직접 스폰
+			if (GA->ImpactActorClass)
+			{
+				const ABattleImpactActor* CDO = GA->ImpactActorClass->GetDefaultObject<ABattleImpactActor>();
+				if (CDO && CDO->ImpactEffect && !SeenFX.Contains(CDO->ImpactEffect))
+				{
+					SeenFX.Add(CDO->ImpactEffect);
+					UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, CDO->ImpactEffect, WarmupPos);
+				}
+			}
+		}
 	}
 }
 
@@ -64,6 +111,7 @@ void ABattleManager::StartBattle(
 		PlayerParty.Add(P);
 		P->OnDeath.AddDynamic(this, &ABattleManager::OnCombatantDied);
 		P->OnDamageReceived.AddDynamic(this, &ABattleManager::OnCombatantDamaged);
+		P->OnHealReceived.AddDynamic(this, &ABattleManager::OnCombatantHealed);
 	}
 	for (ABattleEnemyCharacter* E : Enemies)
 	{
@@ -71,8 +119,10 @@ void ABattleManager::StartBattle(
 		EnemyParty.Add(E);
 		E->OnDeath.AddDynamic(this, &ABattleManager::OnCombatantDied);
 		E->OnDamageReceived.AddDynamic(this, &ABattleManager::OnCombatantDamaged);
+		E->OnHealReceived.AddDynamic(this, &ABattleManager::OnCombatantHealed);
 	}
 
+	WarmUpEffects();
 	BuildRoundOrder();
 	SetPhase(EBattlePhase::BattleStart);
 
@@ -104,6 +154,9 @@ void ABattleManager::BuildRoundOrder()
 	});
 
 	CurrentRoundIndex = 0;
+	bPlayerStatusTickedThisRound = false;
+	bEnemyStatusTickedThisRound  = false;
+	StunnedThisRound.Empty();
 	BroadcastTurnOrder();
 }
 
@@ -132,9 +185,46 @@ void ABattleManager::AdvanceTurn()
 	ABattleCombatant* Current = CurrentRoundOrder[CurrentRoundIndex];
 	CurrentRoundIndex++;
 
+	// 자기 턴이 돌아오면 방어 상태 해제
+	Current->SetDefending(false);
+
+	// ─── 상태이상 틱 처리 ────────────────────────────────────────────────────
+	// 각 진영의 첫 번째 턴에 해당 진영 전체를 동시 처리
+	bool bStunned = false;
+	if (Cast<ABattleEnemyCharacter>(Current))
+	{
+		if (!bEnemyStatusTickedThisRound)
+		{
+			bEnemyStatusTickedThisRound = true;
+			for (ABattleCombatant* E : EnemyParty)
+				if (E && !E->IsDead() && E->TickStatusEffects())
+					StunnedThisRound.Add(E);
+		}
+		bStunned = StunnedThisRound.Contains(Current);
+	}
+	else
+	{
+		if (!bPlayerStatusTickedThisRound)
+		{
+			bPlayerStatusTickedThisRound = true;
+			for (ABattleCombatant* P : PlayerParty)
+				if (P && !P->IsDead() && P->TickStatusEffects())
+					StunnedThisRound.Add(P);
+		}
+		bStunned = StunnedThisRound.Contains(Current);
+	}
+
 	BroadcastTurnOrder();
 	OnTurnBegin.Broadcast(Current);
 	Current->OnTurnBegin();
+
+	if (bStunned)
+	{
+		// 스턴: 메뉴 열지 않고 0.75초 표시 후 다음 턴으로
+		GetWorldTimerManager().SetTimer(
+			StunSkipTimer, this, &ABattleManager::OnActionComplete, 0.75f, false);
+		return;
+	}
 
 	if (Cast<ABattlePlayerCharacter>(Current))
 		StartPlayerTurn();
@@ -244,6 +334,17 @@ void ABattleManager::PlayerSelectTarget(ABattleCombatant* Target)
 
 	if (AbilityToUse)
 		ExecuteAction(Caster, Target, AbilityToUse);
+}
+
+void ABattleManager::PlayerSelectDefend()
+{
+	if (CurrentPhase != EBattlePhase::PlayerTurn) return;
+
+	ABattleCombatant* Current = GetCurrentActor();
+	if (!Current) return;
+
+	Current->SetDefending(true);
+	OnActionComplete();
 }
 
 void ABattleManager::PlayerCancel()
@@ -363,6 +464,12 @@ TArray<ABattlePlayerCharacter*> ABattleManager::GetPlayerParty() const
 void ABattleManager::SetPhase(EBattlePhase NewPhase)
 {
 	CurrentPhase = NewPhase;
+
+	if (NewPhase == EBattlePhase::PlayerTurn)
+		SwitchToPlayerTurnCamera();
+	else if (NewPhase == EBattlePhase::SelectingTarget)
+		ReturnToBattleCamera();
+
 	OnBattlePhaseChanged.Broadcast(NewPhase);
 }
 
@@ -385,12 +492,42 @@ void ABattleManager::OnCombatantDied(ABattleCombatant* Combatant)
 	CheckBattleEnd();
 }
 
-void ABattleManager::OnCombatantDamaged(ABattleCombatant* Combatant, float Damage)
+void ABattleManager::OnCombatantDamaged(ABattleCombatant* Combatant, float Damage, bool /*bIsCritical*/)
 {
 	OnAnyDamageDealt.Broadcast(Combatant, Damage);
 }
 
+void ABattleManager::OnCombatantHealed(ABattleCombatant* Combatant, float Heal)
+{
+	OnAnyHealDealt.Broadcast(Combatant, Heal);
+}
+
 // ─── 카메라 전환 ──────────────────────────────────────────────────────────────
+void ABattleManager::SwitchToPlayerTurnCamera()
+{
+	if (!ActionCamera) return;
+
+	ABattleCombatant* Current = GetCurrentActor();
+	if (!Current) return;
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC) return;
+
+	const FTransform CasterTransform = Current->GetActorTransform();
+	const FVector    WorldLocation   = CasterTransform.TransformPosition(PlayerTurnCameraOffset);
+	const FRotator   WorldRotation   = CasterTransform.TransformRotation(
+		PlayerTurnCameraRotation.Quaternion()).Rotator();
+
+	ActionCamera->SetActorLocation(WorldLocation);
+	ActionCamera->SetActorRotation(WorldRotation);
+	ActionCamera->AttachToActor(Current, FAttachmentTransformRules::KeepWorldTransform);
+
+	PendingCameraBlendOutTime = PlayerTurnCameraBlendTime;
+	bActionCameraActive = true;
+
+	PC->SetViewTargetWithBlend(ActionCamera, PlayerTurnCameraBlendTime, VTBlend_Cubic);
+}
+
 void ABattleManager::SwitchToActionCamera(ABattleCombatant* Caster, const UTBGameplayAbility* AbilityCDO)
 {
 	if (!ActionCamera || !Caster || !AbilityCDO) return;
