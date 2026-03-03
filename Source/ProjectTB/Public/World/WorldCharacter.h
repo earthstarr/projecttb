@@ -27,6 +27,8 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+	//입력, 조작 관련
+#pragma region Input Actions
 	// ─── Enhanced Input ───────────────────────────────────────────────────────
 	/** 월드 탐험 전용 입력 컨텍스트 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
@@ -71,4 +73,5 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly)
 	bool bRunning;
+#pragma endregion;
 };

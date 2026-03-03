@@ -6,6 +6,8 @@
 #include "World/LevelActor/Potal/PotalBase.h"
 #include "ShopPotal.generated.h"
 
+
+
 /**
  * 
  */

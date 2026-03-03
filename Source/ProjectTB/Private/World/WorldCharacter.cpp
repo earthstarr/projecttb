@@ -36,6 +36,7 @@ AWorldCharacter::AWorldCharacter()
 	GetCharacterMovement()->AirControl                = 0.35f;
 }
 
+
 void AWorldCharacter::BeginPlay()
 {
 	Super::BeginPlay();
