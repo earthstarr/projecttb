@@ -8,6 +8,8 @@ class UStaticMeshComponent;
 class UNiagaraComponent;
 class UNiagaraSystem;
 class UProjectileMovementComponent;
+class ABattleCombatant;
+class UTBGameplayAbility;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleImpact);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleImpactFinished);
@@ -81,7 +83,23 @@ public:
 	float MaxSpeed = 0.0f;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement")
-	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;	
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+
+	// ─── 개별 타겟 모드 (bSpawnImpactPerTarget 용) ────────────────────────────
+	// true면 OnImpact 대신 OwningAbility->ApplyDamageToSingleTarget(TargetCombatant) 직접 호출
+	bool bPerTargetMode = false;
+
+	UPROPERTY()
+	TWeakObjectPtr<ABattleCombatant> TargetCombatant;
+
+	UPROPERTY()
+	TWeakObjectPtr<UTBGameplayAbility> OwningAbility;
+
+	int32 PerTargetHitIndex = 0;
+
+	// TBGameplayAbility::SpawnSingleImpactActor에서 호출
+	void SetPerTargetMode(UTBGameplayAbility* InAbility, ABattleCombatant* InTarget, int32 InHitIndex);
+	friend class UTBGameplayAbility;
 
 protected:
 	virtual void BeginPlay() override;

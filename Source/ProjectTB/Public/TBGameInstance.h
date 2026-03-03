@@ -2,9 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Data/LevelDataTypes.h"
 #include "TBGameInstance.generated.h"
 
 class ABattleEnemyCharacter;
+class UDataTable;
 
 /** 레벨 간 전투 전환 데이터 */
 USTRUCT(BlueprintType)
@@ -28,6 +30,9 @@ struct FBattleTransitionData
 	FRotator WorldReturnRotation  = FRotator::ZeroRotator;
 };
 
+// 레벨업 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPartyMemberLevelUp, const FLevelUpInfo&, LevelUpInfo);
+
 /**
  * GAS 전역 초기화 및 레벨 간 데이터 유지 담당.
  * Project Settings → Maps & Modes → Game Instance Class 에 지정.
@@ -40,7 +45,52 @@ class PROJECTTB_API UTBGameInstance : public UGameInstance
 public:
 	virtual void Init() override;
 
-	// 월드 → 배틀 씬 전환 시 여기에 데이터를 저장
+	// ─── 배틀 전환 데이터 ──────────────────────────────────────────────────────
 	UPROPERTY(BlueprintReadWrite, Category="Battle")
 	FBattleTransitionData BattleTransitionData;
+
+	// ─── 파티 데이터 ──────────────────────────────────────────────────────────
+	UPROPERTY(BlueprintReadWrite, Category="Party")
+	TArray<FPartyMemberData> PartyData;
+
+	// ─── 레벨 스탯 DataTable ──────────────────────────────────────────────────
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Data")
+	TSoftObjectPtr<UDataTable> CharacterLevelStatsTable;
+
+	// ─── 델리게이트 ───────────────────────────────────────────────────────────
+	UPROPERTY(BlueprintAssignable, Category="Party")
+	FOnPartyMemberLevelUp OnPartyMemberLevelUp;
+
+	// ─── 파티 관리 함수 ───────────────────────────────────────────────────────
+
+	/** 파티 초기화 (게임 시작 시 호출) */
+	UFUNCTION(BlueprintCallable, Category="Party")
+	void InitializeParty(const TArray<FPartyMemberData>& InitialParty);
+
+	/** 파티원 데이터 조회 (CharacterId로) - C++ 전용 */
+	FPartyMemberData* GetPartyMemberData(FName CharacterId);
+
+	/** 파티원 데이터 조회 (CharacterId로) - Blueprint용 */
+	UFUNCTION(BlueprintCallable, Category="Party")
+	bool GetPartyMemberDataByRef(FName CharacterId, FPartyMemberData& OutData);
+
+	/** 파티원 현재 스탯 저장 (전투 종료 시) */
+	UFUNCTION(BlueprintCallable, Category="Party")
+	void SavePartyMemberStats(FName CharacterId, float CurrentHP, float CurrentMP, float CurrentStamina);
+
+	// ─── 경험치/레벨 관리 ─────────────────────────────────────────────────────
+
+	/** 파티 전체에 경험치 분배 (전투 승리 시) */
+	UFUNCTION(BlueprintCallable, Category="Experience")
+	void AddExpToParty(int32 TotalExp);
+
+	/** 개별 파티원에 경험치 추가 + 레벨업 체크 */
+	UFUNCTION(BlueprintCallable, Category="Experience")
+	void AddExpToMember(FName CharacterId, int32 Exp);
+
+	// ─── 레벨 스탯 조회 ───────────────────────────────────────────────────────
+
+	/** DataTable에서 캐릭터+레벨에 해당하는 스탯 조회 */
+	UFUNCTION(BlueprintCallable, Category="Stats")
+	bool GetLevelStats(FName CharacterId, int32 Level, FCharacterLevelStats& OutStats);
 };

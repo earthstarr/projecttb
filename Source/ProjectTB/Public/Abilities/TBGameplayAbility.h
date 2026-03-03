@@ -36,6 +36,7 @@ enum class EAbilityAnimType : uint8
 
 class ABattleImpactActor;
 class ABattleManager;
+class ABattleCombatant;
 
 // ─── 어빌리티 부여 상태이상 설정 ─────────────────────────────────────────────
 // Blueprint에서 OnHitStatusEffects[]에 추가해 어빌리티마다 상태이상 설정.
@@ -128,6 +129,9 @@ public:
 	// 노티파이로부터 호출받을 인터페이스
 	void RequestSpawnImpact(int32 HitIndex = 0);
 
+	// bSpawnImpactPerTarget일 때 개별 타겟에만 데미지 적용 (ImpactActor에서 호출)
+	void ApplyDamageToSingleTarget(ABattleCombatant* Target, int32 HitIndex);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	bool bUseFixedWorldRotation = true; // Impact일 때 기본적으로 켬
 
@@ -210,7 +214,7 @@ private:
 	void SpawnImpactActor();
 
 	// 단일 타겟에 ImpactActor 스폰 (전체 공격에서 개별 스폰 시 사용)
-	void SpawnSingleImpactActor(AActor* Avatar, class ABattleCombatant* Target, const ABattleImpactActor* CDO, bool bBindFinished);
+	void SpawnSingleImpactActor(AActor* Avatar, class ABattleCombatant* Target, const ABattleImpactActor* CDO, bool bBindFinished, bool bPerTargetMode = false);
 
 	// 특정 위치에 ImpactActor 스폰 (전체 공격에서 중앙 스폰 시 사용)
 	void SpawnSingleImpactActorAtLocation(AActor* Avatar, const FVector& Location, const ABattleImpactActor* CDO, bool bBindFinished);

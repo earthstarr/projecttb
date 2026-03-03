@@ -213,4 +213,9 @@ private:
 	bool bPlayerStatusTickedThisRound = false;
 	bool bEnemyStatusTickedThisRound  = false;
 	TSet<ABattleCombatant*> StunnedThisRound;
+
+	// 전투 종료 시 경험치 분배 및 스탯 저장
+	void HandleBattleVictory();
+	void HandleBattleDefeat();
+	void SavePartyStats();
 };

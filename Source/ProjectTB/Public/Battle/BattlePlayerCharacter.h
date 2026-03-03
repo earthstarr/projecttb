@@ -21,6 +21,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Party")
 	int32 PartyIndex = 0;
 
+	// GameInstance 파티 데이터와 연결하기 위한 식별자 ("Swordsman", "Mage", "Archer")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Party")
+	FName CharacterId;
+
 	virtual void OnTurnBegin_Implementation() override;
 	virtual void OnTurnEnd_Implementation() override;
 };

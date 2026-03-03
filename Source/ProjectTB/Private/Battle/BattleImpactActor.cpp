@@ -1,9 +1,10 @@
-
 #include "Battle/BattleImpactActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Battle/BattleCombatant.h"
+#include "Abilities/TBGameplayAbility.h"
 
 ABattleImpactActor::ABattleImpactActor()
 {
@@ -67,7 +68,24 @@ void ABattleImpactActor::TriggerImpact()
 	}
 
 	PlayImpactEffect();
-	OnImpact.Broadcast();
+
+	// 개별 타겟 모드: OnImpact 대신 직접 단일 타겟에만 데미지 적용
+	if (bPerTargetMode && OwningAbility.IsValid() && TargetCombatant.IsValid())
+	{
+		OwningAbility->ApplyDamageToSingleTarget(TargetCombatant.Get(), PerTargetHitIndex);
+	}
+	else
+	{
+		OnImpact.Broadcast();
+	}
+}
+
+void ABattleImpactActor::SetPerTargetMode(UTBGameplayAbility* InAbility, ABattleCombatant* InTarget, int32 InHitIndex)
+{
+	bPerTargetMode = true;
+	OwningAbility = InAbility;
+	TargetCombatant = InTarget;
+	PerTargetHitIndex = InHitIndex;
 }
 
 void ABattleImpactActor::PlayImpactEffect_Implementation()

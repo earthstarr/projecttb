@@ -8,6 +8,8 @@
 #include "Camera/CameraActor.h"
 #include "GameFramework/PlayerController.h"
 #include "NiagaraFunctionLibrary.h"
+#include "TBGameInstance.h"
+#include "Data/LevelDataTypes.h"
 
 ABattleManager::ABattleManager()
 {
@@ -105,6 +107,8 @@ void ABattleManager::StartBattle(
 	PlayerParty.Reset();
 	EnemyParty.Reset();
 
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+
 	for (ABattlePlayerCharacter* P : Players)
 	{
 		if (!P || P->IsDead()) continue;
@@ -112,6 +116,32 @@ void ABattleManager::StartBattle(
 		P->OnDeath.AddDynamic(this, &ABattleManager::OnCombatantDied);
 		P->OnDamageReceived.AddDynamic(this, &ABattleManager::OnCombatantDamaged);
 		P->OnHealReceived.AddDynamic(this, &ABattleManager::OnCombatantHealed);
+
+		// GameInstance에서 레벨 스탯 적용
+		if (GI)
+		{
+			FPartyMemberData* PartyMember = GI->GetPartyMemberData(P->CharacterId);
+			if (PartyMember)
+			{
+				FCharacterLevelStats LevelStats;
+				if (GI->GetLevelStats(P->CharacterId, PartyMember->Level, LevelStats))
+				{
+					P->ApplyLevelStats(LevelStats, *PartyMember);
+				}
+			}
+			else
+			{
+				// 파티 데이터 없으면 기본 레벨 1로 조회
+				FCharacterLevelStats LevelStats;
+				FPartyMemberData DefaultData;
+				DefaultData.CharacterId = P->CharacterId;
+				DefaultData.Level = 1;
+				if (GI->GetLevelStats(P->CharacterId, 1, LevelStats))
+				{
+					P->ApplyLevelStats(LevelStats, DefaultData);
+				}
+			}
+		}
 	}
 	for (ABattleEnemyCharacter* E : Enemies)
 	{
@@ -189,29 +219,15 @@ void ABattleManager::AdvanceTurn()
 	Current->SetDefending(false);
 
 	// ─── 상태이상 틱 처리 ────────────────────────────────────────────────────
-	// 각 진영의 첫 번째 턴에 해당 진영 전체를 동시 처리
-	bool bStunned = false;
-	if (Cast<ABattleEnemyCharacter>(Current))
-	{
-		if (!bEnemyStatusTickedThisRound)
-		{
-			bEnemyStatusTickedThisRound = true;
-			for (ABattleCombatant* E : EnemyParty)
-				if (E && !E->IsDead() && E->TickStatusEffects())
-					StunnedThisRound.Add(E);
-		}
-		bStunned = StunnedThisRound.Contains(Current);
-	}
-	else
-	{
-		if (!bPlayerStatusTickedThisRound)
-		{
-			bPlayerStatusTickedThisRound = true;
-			for (ABattleCombatant* P : PlayerParty)
-				if (P && !P->IsDead() && P->TickStatusEffects())
-					StunnedThisRound.Add(P);
-		}
-		bStunned = StunnedThisRound.Contains(Current);
+	bool bStunned = Current->TickStatusEffects();
+	
+	// 상태이상으로 인한 사망 확인
+	if (Current->IsDead())
+	{        
+		// 0.75초 이후 다음 턴으로 진행
+		FTimerHandle DeathSkipTimer;
+		GetWorldTimerManager().SetTimer(DeathSkipTimer, this, &ABattleManager::AdvanceTurn, 0.75f, false);
+		return; 
 	}
 
 	BroadcastTurnOrder();
@@ -476,9 +492,15 @@ void ABattleManager::SetPhase(EBattlePhase NewPhase)
 void ABattleManager::CheckBattleEnd()
 {
 	if (GetLivingEnemies().IsEmpty())
+	{
 		SetPhase(EBattlePhase::BattleVictory);
+		HandleBattleVictory();
+	}
 	else if (GetLivingPlayers().IsEmpty())
+	{
 		SetPhase(EBattlePhase::BattleDefeat);
+		HandleBattleDefeat();
+	}
 }
 
 void ABattleManager::BroadcastTurnOrder()
@@ -564,4 +586,50 @@ void ABattleManager::ReturnToBattleCamera()
 	APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	if (PC)
 		PC->SetViewTargetWithBlend(BattleCamera, PendingCameraBlendOutTime, VTBlend_Cubic);
+}
+
+// ─── 전투 종료 처리 ────────────────────────────────────────────────────────────
+
+void ABattleManager::HandleBattleVictory()
+{
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	// 1. 총 경험치 계산 (죽은 적 전체)
+	int32 TotalExp = 0;
+	for (ABattleEnemyCharacter* Enemy : EnemyParty)
+	{
+		if (Enemy)
+			TotalExp += Enemy->ExpReward;
+	}
+
+	// 2. 파티에 경험치 분배
+	GI->AddExpToParty(TotalExp);
+
+	// 3. 파티 스탯 저장
+	SavePartyStats();
+}
+
+void ABattleManager::HandleBattleDefeat()
+{
+	// 패배 시에도 현재 스탯은 저장 (부활 처리는 필드 복귀 시)
+	SavePartyStats();
+}
+
+void ABattleManager::SavePartyStats()
+{
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	for (ABattlePlayerCharacter* Player : PlayerParty)
+	{
+		if (!Player) continue;
+
+		// 사망한 캐릭터는 HP 0으로 저장 (필드 복귀 시 HP 1로 부활)
+		const float HP = Player->IsDead() ? 0.f : Player->GetHP();
+		const float MP = Player->GetMP();
+		const float Stamina = Player->GetStamina();
+
+		GI->SavePartyMemberStats(Player->CharacterId, HP, MP, Stamina);
+	}
 }
