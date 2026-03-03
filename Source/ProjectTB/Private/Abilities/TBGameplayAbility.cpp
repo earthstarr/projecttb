@@ -4,6 +4,7 @@
 #include "Attributes/TBAttributeSet.h"
 #include "Battle/BattleManager.h"
 #include "Battle/BattleCombatant.h"
+#include "TBGameplayTags.h"
 #include "Battle/BattleImpactActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
@@ -34,6 +35,7 @@ void UTBGameplayAbility::ActivateAbility(
 	}
 
 	bAbilityFinished = false;
+	bImpactSpawned = false;
 	OriginLocation = FVector::ZeroVector;
 
 	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
@@ -174,7 +176,8 @@ void UTBGameplayAbility::OnMontageBlendOut()
 {
 	if (AnimationType == EAbilityAnimType::Impact)
 	{
-		SpawnImpactActor();
+		if (!bImpactSpawned)
+			SpawnImpactActor();
 	}
 	else
 	{
@@ -209,8 +212,11 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 		Targets = BM->GetLivingEnemies();
 		break;
 	case EAbilityTargetType::AllAllies:
-	case EAbilityTargetType::Self:
 		Targets = BM->GetLivingPlayers();
+		break;
+	case EAbilityTargetType::Self:
+		if (ABattleCombatant* Caster = Cast<ABattleCombatant>(CurrentActorInfo->AvatarActor.Get()))
+			Targets.Add(Caster);
 		break;
 	case EAbilityTargetType::SingleEnemy:
 	case EAbilityTargetType::SingleAlly:
@@ -220,7 +226,7 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 		break;
 	}
 
-	// 모든 타겟에 GE 적용
+	// 모든 타겟에 GE + 상태이상 적용
 	for (ABattleCombatant* Target : Targets)
 	{
 		if (!Target) continue;
@@ -228,6 +234,7 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 		UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
 		if (!TargetASC) continue;
 
+		// ─── 데미지 GE 적용 ─────────────────────────────────────────────────
 		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
 			CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, DamageEffectClass, 1.f);
 
@@ -236,6 +243,26 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 
 		SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_AbilityMultiplier, Multiplier);
 		TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+		// ─── 상태이상 부여 ───────────────────────────────────────────────────
+		if (!OnHitStatusEffects.IsEmpty())
+		{
+			// 시전자 MagicAttack 스냅샷
+			ABattleCombatant* Caster = Cast<ABattleCombatant>(CurrentActorInfo->AvatarActor.Get());
+			const float CasterMagic = Caster ? Caster->GetMagicAttack() : 0.f;
+
+			for (const FStatusEffectConfig& Config : OnHitStatusEffects)
+			{
+				if (!Config.StatusTag.IsValid() || Config.StacksToApply <= 0) continue;
+
+				FStatusEffectInstance Instance;
+				Instance.StatusTag       = Config.StatusTag;
+				Instance.MagnitudePerStack = CasterMagic * Config.ScalingCoeff;
+				Instance.RemainingTurns  = Config.StacksToApply;
+
+				Target->ApplyStatusEffect(Instance);
+			}
+		}
 	}
 }
 
@@ -430,6 +457,7 @@ bool UTBGameplayAbility::CheckCost(
 
 void UTBGameplayAbility::RequestSpawnImpact(int32 HitIndex)
 {
+	bImpactSpawned = true;
 	PendingHitIndex = HitIndex;
 	SpawnImpactActor();
 }

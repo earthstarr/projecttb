@@ -37,6 +37,27 @@ enum class EAbilityAnimType : uint8
 class ABattleImpactActor;
 class ABattleManager;
 
+// ─── 어빌리티 부여 상태이상 설정 ─────────────────────────────────────────────
+// Blueprint에서 OnHitStatusEffects[]에 추가해 어빌리티마다 상태이상 설정.
+USTRUCT(BlueprintType)
+struct FStatusEffectConfig
+{
+	GENERATED_BODY()
+
+	// 부여할 상태이상 태그 (Status.Burn / Status.Poison / Status.Regen / Status.Stun)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag StatusTag;
+
+	// 추가할 스택 수 (= 지속 턴 수)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(ClampMin="1"))
+	int32 StacksToApply = 1;
+
+	// 시전자 MagicAttack 배율 (틱당 데미지/힐 = CasterMagicAttack × ScalingCoeff)
+	// Stun은 0으로 설정. Poison은 HP% 부분이 틱마다 자동 추가됨.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(ClampMin="0.0"))
+	float ScalingCoeff = 0.3f;
+};
+
 /**
  * 모든 배틀 어빌리티의 기반 클래스.
  * 개별 어빌리티는 Blueprint에서 이 클래스를 상속해 만든다.
@@ -150,6 +171,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(EditCondition="bUseActionCamera"))
 	float CameraBlendOutTime = 0.5f;
 
+	// ─── 상태이상 부여 설정 ──────────────────────────────────────────────────
+	// 이 어빌리티가 타격 시 대상에게 부여할 상태이상 목록.
+	// Blueprint에서 편집: {StatusTag=Status.Burn, StacksToApply=2, ScalingCoeff=0.4}
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Status Effects")
+	TArray<FStatusEffectConfig> OnHitStatusEffects;
+
 	// ─── 유틸 ────────────────────────────────────────────────────────────────
 	// UI에서 비용 지불 가능 여부 확인 (그레이아웃 처리용)
 	UFUNCTION(BlueprintCallable, Category="Ability")
@@ -194,6 +221,7 @@ private:
 	ABattleManager* GetBattleManager() const;
 
 	bool bAbilityFinished = false;
+	bool bImpactSpawned = false;
 	FVector OriginLocation = FVector::ZeroVector;
 	FRotator OriginRotation; // 원래 회전값을 저장할 변수
 

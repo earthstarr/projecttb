@@ -7,17 +7,27 @@ ABattleEnemyCharacter::ABattleEnemyCharacter()
 {
 	HealthBarWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
 	HealthBarWidgetComponent->SetupAttachment(GetRootComponent());
-	HealthBarWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 120.f)); // 데미지 숫자보다 아래
 	HealthBarWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-	HealthBarWidgetComponent->SetDrawSize(FVector2D(150.f, 15.f));
+
+	// 상태이상 아이콘: 우하단 기준 → 오른쪽 고정, 왼쪽으로 쌓임 (위치는 BeginPlay에서 변수로 적용)
+	StatusIconComponent->SetPivot(FVector2D(1.0f, 1.0f));
 }
 
 void ABattleEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay(); // BattleCombatant::BeginPlay → InitAbilitySystem (스탯 세팅 완료)
 
+	// Blueprint 변수로 위치/크기 적용
+	HealthBarWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, HealthBarZOffset));
+	HealthBarWidgetComponent->SetDrawSize(HealthBarDrawSize);
+	StatusIconComponent->SetRelativeLocation(FVector(0.f, 0.f, StatusIconZOffset));
+
 	if (HealthBarWidgetClass)
 		HealthBarWidgetComponent->SetWidgetClass(HealthBarWidgetClass);
+
+	// 체력바 위젯에 Combatant 전달 (내부 StatusIconPanel 초기화용)
+	if (UEnemyHealthBarWidget* Widget = Cast<UEnemyHealthBarWidget>(HealthBarWidgetComponent->GetUserWidgetObject()))
+		Widget->InitWithCombatant(this);
 
 	// 초기 체력바 표시
 	RefreshHealthBar();
@@ -26,7 +36,7 @@ void ABattleEnemyCharacter::BeginPlay()
 	OnDamageReceived.AddDynamic(this, &ABattleEnemyCharacter::OnDamageReceivedHandler);
 }
 
-void ABattleEnemyCharacter::OnDamageReceivedHandler(ABattleCombatant* /*Combatant*/, float /*Damage*/)
+void ABattleEnemyCharacter::OnDamageReceivedHandler(ABattleCombatant* /*Combatant*/, float /*Damage*/, bool /*bIsCritical*/)
 {
 	RefreshHealthBar();
 }

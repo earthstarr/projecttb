@@ -15,6 +15,7 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Battle_Phase_Defeat)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Dead)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Stunned)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Acting)
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Defending)
 
 // ─── Ability Type ───────────────────────────────────────────────────────────
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Ability_Type_Physical)
@@ -30,6 +31,12 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Ability_Cost_HP)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Effect_Damage_Physical)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Effect_Damage_Magic)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Effect_Heal)
+
+// ─── Status Effect ──────────────────────────────────────────────────────────
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Burn)     // 화상: 턴당 데미지 + 받는 데미지 +25%
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Poison)   // 독: 턴당 데미지(HP%+스탯) + Speed 30% 감소
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Regen)    // 재생: 턴당 힐
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Stun)     // 스턴: 턴 스킵
 
 // ─── SetByCaller Data ───────────────────────────────────────────────────────
 // 데미지 GE에서 SetByCaller로 값을 주입할 때 사용

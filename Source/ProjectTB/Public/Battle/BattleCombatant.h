@@ -3,7 +3,30 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayTagContainer.h"
 #include "BattleCombatant.generated.h"
+
+// ─── 런타임 상태이상 인스턴스 ────────────────────────────────────────────────
+// 별도 시전자 추적 없이 스냅샷 Magnitude만 저장.
+// 같은 Tag라도 시전자가 다르면 별도 인스턴스로 공존.
+USTRUCT(BlueprintType)
+struct FStatusEffectInstance
+{
+	GENERATED_BODY()
+
+	// Status.Burn / Status.Poison / Status.Regen / Status.Stun
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayTag StatusTag;
+
+	// 부여 시점에 계산된 틱당 기본 데미지/힐 (시전자 MagicAttack 스냅샷)
+	// Stun은 0. Poison은 HP% 부분이 틱마다 실시간 추가됨.
+	UPROPERTY(BlueprintReadOnly)
+	float MagnitudePerStack = 0.f;
+
+	// 남은 스택 수 = 남은 턴 수. 0 되면 제거.
+	UPROPERTY(BlueprintReadOnly)
+	int32 RemainingTurns = 0;
+};
 
 class UAbilitySystemComponent;
 class UTBAttributeSet;
@@ -11,9 +34,13 @@ class UTBGameplayAbility;
 class UGameplayEffect;
 class UWidgetComponent;
 class UDamageNumberWidget;
+class UCanvasPanel;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatantDeath,    ABattleCombatant*, Combatant);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageReceived,   ABattleCombatant*, Combatant, float, Damage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatantDeath,       ABattleCombatant*, Combatant);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageReceived,     ABattleCombatant*, Combatant, float, Damage, bool, bIsCritical);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealReceived,        ABattleCombatant*, Combatant, float, Heal);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStatChanged,          ABattleCombatant*, Combatant);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStatusEffectsChanged, ABattleCombatant*, Combatant);
 
 /**
  * 모든 전투 유닛(플레이어/적)의 기반 클래스.
@@ -53,6 +80,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Attributes") float GetMaxMP() const;
 	UFUNCTION(BlueprintCallable, Category="Attributes") float GetStamina() const;
 	UFUNCTION(BlueprintCallable, Category="Attributes") float GetMaxStamina() const;
+	UFUNCTION(BlueprintCallable, Category="Attributes") float GetMagicAttack() const;
+	// 독 상태이상 시 Speed 30% 감소 반영
 	UFUNCTION(BlueprintCallable, Category="Attributes") float GetSpeed() const;
 	UFUNCTION(BlueprintCallable, Category="Attributes") bool  IsDead() const;
 
@@ -67,14 +96,40 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FOnDamageReceived OnDamageReceived;
 
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnHealReceived OnHealReceived;
+
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnStatChanged OnStatChanged;
+
+	// 상태이상 추가/제거/틱 시 브로드캐스트 (UI 아이콘 갱신용)
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnStatusEffectsChanged OnStatusEffectsChanged;
+
 	// AttributeSet에서 직접 호출 (내부용)
 	void OnDeathInternal();
-	void OnDamageReceivedInternal(float Damage);
+	void OnDamageReceivedInternal(float Damage, bool bIsCritical = false);
+	void OnHealReceivedInternal(float Heal);
+	void OnStatChangedInternal();
 
 	// ─── 데미지 숫자 위젯 ────────────────────────────────────────────────────
 	// Blueprint에서 WBP_DamageNumber 클래스를 지정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
 	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
+
+	// ─── 타겟 인디케이터 (머리 위 화살표) ────────────────────────────────────
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
+	TSubclassOf<UUserWidget> TargetIndicatorWidgetClass;
+
+	// ─── 상태이상 아이콘 패널 (머리 위) ─────────────────────────────────────
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
+	TSubclassOf<UUserWidget> StatusIconWidgetClass;
+
+	UFUNCTION(BlueprintCallable, Category="UI")
+	void ShowTargetIndicator();
+
+	UFUNCTION(BlueprintCallable, Category="UI")
+	void HideTargetIndicator();
 
 	// AnimNotify_OnHit → 현재 활성 어빌리티의 ApplyDamage 호출
 	// HitIndex: TBGameplayAbility::HitMultipliers 배열 인덱스
@@ -84,6 +139,25 @@ public:
 	// ranged일때 스폰 노티파이
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	void OnSpawnImpactNotify(int32 HitIndex = 0);
+
+	// ─── 상태이상 ──────────────────────────────────────────────────────────────
+	// 새 상태이상 인스턴스 추가 (어빌리티에서 호출)
+	UFUNCTION(BlueprintCallable, Category="Battle|StatusEffect")
+	void ApplyStatusEffect(const FStatusEffectInstance& NewEffect);
+
+	// 턴 시작 시 BattleManager가 호출. 반환값: 스턴 여부 (true = 턴 스킵)
+	bool TickStatusEffects();
+
+	// 현재 활성 상태이상 목록 (UI 참조용)
+	UPROPERTY(BlueprintReadOnly, Category="Battle|StatusEffect")
+	TArray<FStatusEffectInstance> ActiveStatusEffects;
+
+	// ─── 방어 상태 ────────────────────────────────────────────────────────────
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	void SetDefending(bool bDefending);
+
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	bool IsDefending() const;
 
 	// ─── 턴 알림 (Blueprint에서 오버라이드 가능) ──────────────────────────────
 	UFUNCTION(BlueprintNativeEvent, Category="Battle")
@@ -104,6 +178,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI")
 	TObjectPtr<UWidgetComponent> DamageWidgetComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI")
+	TObjectPtr<UWidgetComponent> TargetIndicatorComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI")
+	TObjectPtr<UWidgetComponent> StatusIconComponent;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
@@ -114,7 +194,21 @@ private:
 	bool bAbilitySystemInitialized = false;
 	void DestroyAfterDeath();
 
-	void ShowDamageNumber(float Damage);
-	void HideDamageNumber();
-	FTimerHandle DamageHideTimer;
+	// 다중 데미지 숫자 스택 시스템
+	void SpawnDamageNumber(float Value, bool bIsHeal, bool bIsCritical = false);
+	void OnDamageNumberRemoved(UDamageNumberWidget* Widget);
+
+	// 현재 표시 중인 데미지 위젯 목록
+	UPROPERTY()
+	TArray<TObjectPtr<UDamageNumberWidget>> ActiveDamageNumbers;
+
+	// 데미지 숫자 스택 간격 (픽셀)
+	float DamageNumberStackSpacing = 30.f;
+
+	// 상태이상 틱: 동적 GE로 IncomingDamage/IncomingHeal 메타 속성에 주입
+	void ApplyStatusTickDamage(float Damage);
+	void ApplyStatusTickHeal(float Heal);
+
+	// ActiveStatusEffects → GAS Loose Tag 동기화
+	void SyncStatusTags();
 };

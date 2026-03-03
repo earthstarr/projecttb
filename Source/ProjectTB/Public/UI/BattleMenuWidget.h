@@ -79,9 +79,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Menu")
 	TArray<TObjectPtr<UTBGameplayAbility>> CurrentAbilities;
 
-	// 메인 메뉴 항목 수 (Attack=0, Abilities=1, ...)
+	// 메인 메뉴 항목 수 (Attack=0, Abilities=1, Defend=2)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Menu")
-	int32 MainMenuItemCount = 2;
+	int32 MainMenuItemCount = 3;
 
 protected:
 	// 방향 입력 — C++에서 SelectedIndex 변경, Blueprint에서 시각적 처리 추가 가능
@@ -103,4 +103,7 @@ protected:
 
 	UFUNCTION(BlueprintNativeEvent, Category="Menu") void CancelSelection();
 	virtual void CancelSelection_Implementation();
+
+	// 현재 SelectedIndex에 맞춰 타겟 인디케이터 갱신
+	void UpdateTargetIndicators();
 };

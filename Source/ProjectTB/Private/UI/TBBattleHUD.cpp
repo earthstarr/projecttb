@@ -62,6 +62,7 @@ void ATBBattleHUD::BindToBattleManager()
 	BattleManager->OnTurnBegin.AddDynamic(this,          &ATBBattleHUD::HandleTurnBegin);
 	BattleManager->OnTurnOrderUpdated.AddDynamic(this,   &ATBBattleHUD::HandleTurnOrderUpdated);
 	BattleManager->OnAnyDamageDealt.AddDynamic(this,     &ATBBattleHUD::HandleDamageDealt);
+	BattleManager->OnAnyHealDealt.AddDynamic(this,       &ATBBattleHUD::HandleHealDealt);
 
 	// CharacterStatusWidget에 파티 정보 전달
 	if (CharacterStatusWidget)
@@ -93,6 +94,9 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 		// AutoStartBattle 딜레이 이후 PlayerParty가 채워지므로 여기서 초기화
 		if (CharacterStatusWidget)
 			CharacterStatusWidget->InitializeParty(BattleManager->GetPlayerParty());
+		// MP/Stamina 즉시 갱신을 위해 각 플레이어의 OnStatChanged 구독
+		for (ABattlePlayerCharacter* P : BattleManager->GetPlayerParty())
+			if (P) P->OnStatChanged.AddUniqueDynamic(this, &ATBBattleHUD::HandleStatChanged);
 		break;
 
 	case EBattlePhase::PlayerTurn:
@@ -177,4 +181,16 @@ void ATBBattleHUD::HandleDamageDealt(ABattleCombatant* Target, float /*Damage*/)
 {
 	if (CharacterStatusWidget && Target)
 		CharacterStatusWidget->RefreshStatus(Target);
+}
+
+void ATBBattleHUD::HandleHealDealt(ABattleCombatant* Target, float /*Heal*/)
+{
+	if (CharacterStatusWidget && Target)
+		CharacterStatusWidget->RefreshStatus(Target);
+}
+
+void ATBBattleHUD::HandleStatChanged(ABattleCombatant* Combatant)
+{
+	if (CharacterStatusWidget && Combatant)
+		CharacterStatusWidget->RefreshStatus(Combatant);
 }

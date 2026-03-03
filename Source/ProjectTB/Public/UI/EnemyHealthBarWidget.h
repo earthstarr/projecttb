@@ -5,6 +5,7 @@
 #include "EnemyHealthBarWidget.generated.h"
 
 class UProgressBar;
+class ABattleCombatant;
 
 /**
  * 적 머리 위에 표시되는 체력바 위젯 기반 클래스.
@@ -18,6 +19,10 @@ class PROJECTTB_API UEnemyHealthBarWidget : public UUserWidget
 
 public:
 	void UpdateHealth(float CurrentHP, float MaxHP);
+
+	// Blueprint에서 구현: 내부 WBP_StatusIconPanel에 InitWithCombatant 전달
+	UFUNCTION(BlueprintImplementableEvent, Category="UI")
+	void InitWithCombatant(ABattleCombatant* Combatant);
 
 protected:
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
