@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
+#include "Data/LevelDataTypes.h"
 #include "BattleCombatant.generated.h"
 
 // ─── 런타임 상태이상 인스턴스 ────────────────────────────────────────────────
@@ -167,6 +168,15 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category="Battle")
 	void OnTurnEnd();
 	virtual void OnTurnEnd_Implementation() {}
+
+	// ─── 레벨 스탯 적용 ─────────────────────────────────────────────────────────
+	/** DataTable + GameInstance 기반으로 스탯 적용 (플레이어 캐릭터용) */
+	UFUNCTION(BlueprintCallable, Category="Stats")
+	void ApplyLevelStats(const FCharacterLevelStats& LevelStats, const FPartyMemberData& PartyData);
+
+	/** 스탯을 직접 적용 (FCharacterLevelStats 기반, 적 캐릭터용) */
+	UFUNCTION(BlueprintCallable, Category="Stats")
+	void ApplyStatsDirectly(const FCharacterLevelStats& Stats);
 
 protected:
 	virtual void BeginPlay() override;

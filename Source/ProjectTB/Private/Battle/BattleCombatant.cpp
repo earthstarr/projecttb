@@ -7,6 +7,7 @@
 #include "UI/DamageNumberWidget.h"
 #include "UI/StatusIconPanelWidget.h"
 #include "GameplayEffect.h"
+#include "Battle/BattleManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/CanvasPanelSlot.h"
@@ -191,7 +192,7 @@ void ABattleCombatant::OnDeathInternal()
 {
 	AbilitySystemComponent->AddLooseGameplayTag(TAG_Combatant_State_Dead);
 	AbilitySystemComponent->CancelAllAbilities();
-	OnDeath.Broadcast(this);
+	OnDeath.Broadcast(this);	
 
 	// 0.5초 후 Actor 제거
 	FTimerHandle DestroyTimer;
@@ -275,9 +276,18 @@ void ABattleCombatant::OnDamageNumberRemoved(UDamageNumberWidget* Widget)
 
 void ABattleCombatant::ShowTargetIndicator()
 {
-	if (!TargetIndicatorComponent) return;
-	if (TargetIndicatorWidgetClass && !TargetIndicatorComponent->GetWidget())
-		TargetIndicatorComponent->SetWidgetClass(TargetIndicatorWidgetClass);
+	if (!IsValid(this) || !TargetIndicatorComponent) return;
+
+	// 위젯 클래스가 블루프린트에서 할당되었는지 확인
+	if (TargetIndicatorWidgetClass)
+	{
+		// 이미 위젯이 설정되어 있는지 확인 후 설정
+		if (TargetIndicatorComponent->GetWidgetClass() != TargetIndicatorWidgetClass)
+		{
+			TargetIndicatorComponent->SetWidgetClass(TargetIndicatorWidgetClass);
+		}
+	}
+
 	TargetIndicatorComponent->SetVisibility(true);
 }
 
@@ -398,11 +408,19 @@ void ABattleCombatant::ApplyStatusTickDamage(float Damage)
 	UGameplayEffect* GEObj = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
 	GEObj->DurationPolicy = EGameplayEffectDurationType::Instant;
 
-	FGameplayModifierInfo ModInfo;
-	ModInfo.Attribute        = UTBAttributeSet::GetIncomingDamageAttribute();
-	ModInfo.ModifierOp       = EGameplayModOp::Additive;
-	ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(Damage);
-	GEObj->Modifiers.Add(ModInfo);
+	// IncomingDamage 설정
+	FGameplayModifierInfo DamageMod;
+	DamageMod.Attribute        = UTBAttributeSet::GetIncomingDamageAttribute();
+	DamageMod.ModifierOp       = EGameplayModOp::Additive;
+	DamageMod.ModifierMagnitude = FGameplayEffectModifierMagnitude(Damage);
+	GEObj->Modifiers.Add(DamageMod);
+
+	// IncomingCritical도 설정 (0 = 비크리티컬) - PostGameplayEffectExecute 트리거용
+	FGameplayModifierInfo CritMod;
+	CritMod.Attribute        = UTBAttributeSet::GetIncomingCriticalAttribute();
+	CritMod.ModifierOp       = EGameplayModOp::Override;
+	CritMod.ModifierMagnitude = FGameplayEffectModifierMagnitude(0.f);
+	GEObj->Modifiers.Add(CritMod);
 
 	FGameplayEffectSpec Spec(GEObj, AbilitySystemComponent->MakeEffectContext(), 1.f);
 	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(Spec);
@@ -423,4 +441,53 @@ void ABattleCombatant::ApplyStatusTickHeal(float Heal)
 
 	FGameplayEffectSpec Spec(GEObj, AbilitySystemComponent->MakeEffectContext(), 1.f);
 	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(Spec);
+}
+
+// ─── 레벨 스탯 적용 ────────────────────────────────────────────────────────────
+
+void ABattleCombatant::ApplyLevelStats(const FCharacterLevelStats& LevelStats, const FPartyMemberData& PartyData)
+{
+	if (!AttributeSet) return;
+
+	// Max 스탯 적용 (DataTable 기반)
+	AttributeSet->SetMaxHP(LevelStats.MaxHP);
+	AttributeSet->SetMaxMP(LevelStats.MaxMP);
+	AttributeSet->SetMaxStamina(LevelStats.MaxStamina);
+	AttributeSet->SetPhysicalAttack(LevelStats.PhysicalAttack);
+	AttributeSet->SetMagicAttack(LevelStats.MagicAttack);
+	AttributeSet->SetPhysicalDefense(LevelStats.PhysicalDefense);
+	AttributeSet->SetMagicDefense(LevelStats.MagicDefense);
+	AttributeSet->SetSpeed(LevelStats.Speed);
+	AttributeSet->SetCriticalChance(LevelStats.CriticalChance);
+	AttributeSet->SetCriticalMultiplier(LevelStats.CriticalMultiplier);
+
+	// 현재 스탯 적용 (GameInstance에서 저장된 값 또는 풀 상태)
+	// -1이면 풀피/풀마나/풀스태로 시작
+	const float HP = (PartyData.CurrentHP < 0.f) ? LevelStats.MaxHP : FMath::Min(PartyData.CurrentHP, LevelStats.MaxHP);
+	const float MP = (PartyData.CurrentMP < 0.f) ? LevelStats.MaxMP : FMath::Min(PartyData.CurrentMP, LevelStats.MaxMP);
+	const float Stamina = (PartyData.CurrentStamina < 0.f) ? LevelStats.MaxStamina : FMath::Min(PartyData.CurrentStamina, LevelStats.MaxStamina);
+
+	AttributeSet->SetHP(HP);
+	AttributeSet->SetMP(MP);
+	AttributeSet->SetStamina(Stamina);
+}
+
+void ABattleCombatant::ApplyStatsDirectly(const FCharacterLevelStats& Stats)
+{
+	if (!AttributeSet) return;
+
+	// 모든 스탯 직접 적용 (적 캐릭터용 - 현재값 = 최대값)
+	AttributeSet->SetMaxHP(Stats.MaxHP);
+	AttributeSet->SetHP(Stats.MaxHP);
+	AttributeSet->SetMaxMP(Stats.MaxMP);
+	AttributeSet->SetMP(Stats.MaxMP);
+	AttributeSet->SetMaxStamina(Stats.MaxStamina);
+	AttributeSet->SetStamina(Stats.MaxStamina);
+	AttributeSet->SetPhysicalAttack(Stats.PhysicalAttack);
+	AttributeSet->SetMagicAttack(Stats.MagicAttack);
+	AttributeSet->SetPhysicalDefense(Stats.PhysicalDefense);
+	AttributeSet->SetMagicDefense(Stats.MagicDefense);
+	AttributeSet->SetSpeed(Stats.Speed);
+	AttributeSet->SetCriticalChance(Stats.CriticalChance);
+	AttributeSet->SetCriticalMultiplier(Stats.CriticalMultiplier);
 }

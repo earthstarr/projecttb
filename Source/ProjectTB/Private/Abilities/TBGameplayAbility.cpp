@@ -196,7 +196,12 @@ void UTBGameplayAbility::OnMontageCompleted()
 // ─── 데미지 적용 (AnimNotify_OnHit → BattleCombatant::OnHitNotify → 여기) ──────
 void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 {
+	if (!IsActive()) return;
+		
 	if (!DamageEffectClass) return;
+	
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (!IsValid(Avatar)) return;
 
 	ABattleManager* BM = GetBattleManager();
 	if (!BM) return;
@@ -229,7 +234,7 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 	// 모든 타겟에 GE + 상태이상 적용
 	for (ABattleCombatant* Target : Targets)
 	{
-		if (!Target) continue;
+		if (!IsValid(Target) || Target->IsDead()) continue;
 
 		UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
 		if (!TargetASC) continue;
@@ -273,16 +278,15 @@ void UTBGameplayAbility::FinishAbility()
 	bAbilityFinished = true;
 
 	ABattleManager* BM = GetBattleManager();
-	AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
+	AActor* Avatar = IsValid(GetAvatarActorFromActorInfo()) ? CurrentActorInfo->AvatarActor.Get() : nullptr;
 
 	if (!BM)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("TBGameplayAbility: BattleManager를 찾을 수 없습니다."));
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
-	if (Avatar)
+	if (IsValid(Avatar))
 	{
 		// Melee: 위치 복귀
 		if (AnimationType == EAbilityAnimType::Melee && OriginLocation != FVector::ZeroVector)
@@ -325,13 +329,13 @@ void UTBGameplayAbility::SpawnImpactActor()
 
 		if (bSpawnImpactPerTarget)
 		{
-			// 각 타겟마다 ImpactActor 스폰
+			// 각 타겟마다 ImpactActor 스폰 (개별 타겟 모드)
 			for (int32 i = 0; i < SpawnTargets.Num(); ++i)
 			{
 				ABattleCombatant* Target = SpawnTargets[i];
 				if (!Target) continue;
 
-				SpawnSingleImpactActor(Avatar, Target, CDO, i == 0); // 첫 번째만 OnFinished 바인딩
+				SpawnSingleImpactActor(Avatar, Target, CDO, i == 0, true); // 첫 번째만 OnFinished 바인딩, 개별 타겟 모드
 			}
 			return;
 		}
@@ -358,7 +362,7 @@ void UTBGameplayAbility::SpawnImpactActor()
 	SpawnSingleImpactActor(Avatar, Target, CDO, true);
 }
 
-void UTBGameplayAbility::SpawnSingleImpactActor(AActor* Avatar, ABattleCombatant* Target, const ABattleImpactActor* CDO, bool bBindFinished)
+void UTBGameplayAbility::SpawnSingleImpactActor(AActor* Avatar, ABattleCombatant* Target, const ABattleImpactActor* CDO, bool bBindFinished, bool bPerTargetMode)
 {
 	if (!Target) return;
 
@@ -387,7 +391,15 @@ void UTBGameplayAbility::SpawnSingleImpactActor(AActor* Avatar, ABattleCombatant
 			ImpactActor->ShootDirection = FinalSpawnRotation.Vector();
 		}
 
-		ImpactActor->OnImpact.AddDynamic(this, &UTBGameplayAbility::OnImpactNotify);
+		// 개별 타겟 모드: OnImpact 대신 직접 타겟에 데미지 적용
+		if (bPerTargetMode)
+		{
+			ImpactActor->SetPerTargetMode(this, Target, PendingHitIndex);
+		}
+		else
+		{
+			ImpactActor->OnImpact.AddDynamic(this, &UTBGameplayAbility::OnImpactNotify);
+		}
 
 		if (AnimationType == EAbilityAnimType::Impact && bBindFinished)
 		{
@@ -424,6 +436,46 @@ void UTBGameplayAbility::SpawnSingleImpactActorAtLocation(AActor* Avatar, const 
 void UTBGameplayAbility::OnImpactNotify()
 {
 	ApplyDamage(PendingHitIndex);
+}
+
+// ─── 개별 타겟에만 데미지 적용 (bSpawnImpactPerTarget 모드용) ──────────────────
+void UTBGameplayAbility::ApplyDamageToSingleTarget(ABattleCombatant* Target, int32 HitIndex)
+{
+	if (!DamageEffectClass || !Target) return;
+
+	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
+	if (!TargetASC) return;
+
+	const float Multiplier = HitMultipliers.IsValidIndex(HitIndex) ? HitMultipliers[HitIndex] : 1.0f;
+
+	// 데미지 GE 적용
+	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
+		CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, DamageEffectClass, 1.f);
+
+	if (AbilityTypeTag.IsValid())
+		SpecHandle.Data->CapturedSourceTags.GetSpecTags().AddTag(AbilityTypeTag);
+
+	SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_AbilityMultiplier, Multiplier);
+	TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	// 상태이상 부여
+	if (!OnHitStatusEffects.IsEmpty())
+	{
+		ABattleCombatant* Caster = Cast<ABattleCombatant>(CurrentActorInfo->AvatarActor.Get());
+		const float CasterMagic = Caster ? Caster->GetMagicAttack() : 0.f;
+
+		for (const FStatusEffectConfig& Config : OnHitStatusEffects)
+		{
+			if (!Config.StatusTag.IsValid() || Config.StacksToApply <= 0) continue;
+
+			FStatusEffectInstance Instance;
+			Instance.StatusTag       = Config.StatusTag;
+			Instance.MagnitudePerStack = CasterMagic * Config.ScalingCoeff;
+			Instance.RemainingTurns  = Config.StacksToApply;
+
+			Target->ApplyStatusEffect(Instance);
+		}
+	}
 }
 
 void UTBGameplayAbility::OnImpactFinished()

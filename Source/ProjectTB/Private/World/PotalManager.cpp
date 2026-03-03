@@ -15,7 +15,8 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 	PC = GetWorld()->GetFirstPlayerController();
 	if (PC == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UPotalManager 클래스. OnWorldBeginPlay 함수의 PC가 없습니다.")); return;
+		UE_LOG(LogTemp, Warning, TEXT("UPotalManager 클래스. OnWorldBeginPlay 함수의 PC가 없습니다."));
+		return;
 	}
 	
 	//한틱 다음에 실행

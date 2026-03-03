@@ -38,6 +38,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="UI", meta=(DisplayName="상태이상 아이콘 Z 위치"))
 	float StatusIconZOffset = 140.f; // HP바(120) 위
 
+	// ─── 보상 ─────────────────────────────────────────────────────────────────
+	/** 처치 시 파티에게 주는 경험치 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Reward")
+	int32 ExpReward = 10;
+
 	/**
 	 * AI 행동 선택.
 	 * Blueprint에서 오버라이드해 적마다 다른 패턴 구현 가능.
