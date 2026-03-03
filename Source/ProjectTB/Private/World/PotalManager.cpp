@@ -13,14 +13,27 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 	Super::OnWorldBeginPlay(InWorld);
 	
 	PC = GetWorld()->GetFirstPlayerController();
-	if (PC == nullptr) { UE_LOG(LogTemp, Warning, TEXT("UPotalManager 클래스. OnWorldBeginPlay 함수의 PC가 없습니다.")); return; }
+	if (PC == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPotalManager 클래스. OnWorldBeginPlay 함수의 PC가 없습니다.")); return;
+	}
+	
+	//한틱 다음에 실행
 	
 	// 이동 비활성화
-	PC->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_None);
-	
+	if (PC->GetCharacter() == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPotalManager 클래스. OnWorldBeginPlay 함수의 GetCharacter가 없습니다. 배틀 맵에서 실행됐습니다.")); 
+		return;
+	}
+	else
+	{
+		PC->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_None);
+	}
+
 	FString Path = TEXT("/Game/Blueprints2/DataTable/DT_Room.DT_Room");
 	UDataTable* LoadedTable = Cast<UDataTable>(StaticLoadObject(UDataTable::StaticClass(), nullptr, *Path));
-	
+
 	if (LoadedTable)
 	{
 		// 2. InitRoomHandle 구조체 채우기
@@ -28,6 +41,7 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 		InitRoomHandle.RowName = FName("Map_World");
 		InitRoomLoad();
 	}
+
 }
 
 void UPotalManager::InitRoomLoad()
