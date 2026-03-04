@@ -672,6 +672,29 @@ void ABattleManager::ReturnToBattleCamera()
 		PC->SetViewTargetWithBlend(BattleCamera, PendingCameraBlendOutTime, VTBlend_Cubic);
 }
 
+void ABattleManager::SetActionCameraWorldPosition(const FVector& WorldLocation, const FRotator& WorldRotation, float BlendTime)
+{
+	if (!ActionCamera) return;
+
+	// 기존 Attach 해제 (자유 이동 가능하게)
+	ActionCamera->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	// 새 위치로 이동
+	ActionCamera->SetActorLocation(WorldLocation);
+	ActionCamera->SetActorRotation(WorldRotation);
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC) return;
+
+	// 아직 ActionCamera가 ViewTarget이 아니면 전환
+	if (!bActionCameraActive)
+	{
+		bActionCameraActive = true;
+		PC->SetViewTargetWithBlend(ActionCamera, BlendTime, VTBlend_Cubic);
+	}
+	// 이미 활성화 상태면 위치만 변경됨 (부드럽게 보간됨)
+}
+
 // ─── 전투 종료 처리 ────────────────────────────────────────────────────────────
 
 void ABattleManager::HandleBattleVictory()

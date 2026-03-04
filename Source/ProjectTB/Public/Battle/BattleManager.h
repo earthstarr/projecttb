@@ -179,6 +179,21 @@ private:
 	void SwitchToPlayerTurnCamera();
 	void ReturnToBattleCamera();
 
+public:
+	// 컷씬/어빌리티에서 카메라 위치를 동적으로 변경 (월드 좌표)
+	UFUNCTION(BlueprintCallable, Category="Battle|Camera")
+	void SetActionCameraWorldPosition(const FVector& WorldLocation, const FRotator& WorldRotation, float BlendTime = 0.3f);
+
+	// 액션 카메라 활성화 상태 반환
+	UFUNCTION(BlueprintCallable, Category="Battle|Camera")
+	bool IsActionCameraActive() const { return bActionCameraActive; }
+
+	// ActionCamera 접근자
+	UFUNCTION(BlueprintCallable, Category="Battle|Camera")
+	ACameraActor* GetActionCamera() const { return ActionCamera; }
+
+private:
+
 	void SetPhase(EBattlePhase NewPhase);
 	void AdvanceTurn();
 

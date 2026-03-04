@@ -175,6 +175,59 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(EditCondition="bUseActionCamera"))
 	float CameraBlendOutTime = 0.5f;
 
+	// ─── 몽타주 카메라 (몽타주 재생 중 카메라) ─────────────────────────────────
+	// bUseActionCamera가 true일 때만 활성화 가능
+	// 몽타주 재생 동안 이 카메라 위치에서 촬영
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Montage", meta=(EditCondition="bUseActionCamera"))
+	bool bUseMontageCamera = false;
+
+	// 몽타주 카메라 위치 (시전자 로컬 기준)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Montage", meta=(EditCondition="bUseMontageCamera"))
+	FVector MontageCameraLocalOffset = FVector(-200.f, 100.f, 100.f);
+
+	// 몽타주 카메라 회전 (시전자 로컬 기준)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Montage", meta=(EditCondition="bUseMontageCamera"))
+	FRotator MontageCameraLocalRotation = FRotator(-10.f, 0.f, 0.f);
+
+	// 몽타주 카메라 전환 블렌드 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Montage", meta=(EditCondition="bUseMontageCamera"))
+	float MontageCameraBlendInTime = 0.3f;
+
+	// ─── 컷씬 카메라 (궁극기 연출용) ─────────────────────────────────────────
+	// bUseActionCamera가 true일 때만 활성화 가능
+	// 몽타주 종료 후 컷씬 카메라로 전환, 컷씬 종료 후 액션 카메라로 전환
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseActionCamera"))
+	bool bUseCutsceneCamera = false;
+
+	// 컷씬 카메라 위치 (시전자 로컬 기준)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	FVector CutsceneCameraLocalOffset = FVector(0.f, 0.f, 500.f);
+
+	// 컷씬 카메라 회전 (시전자 로컬 기준)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	FRotator CutsceneCameraLocalRotation = FRotator(-90.f, 0.f, 0.f);
+
+	// 컷씬 카메라 유지 시간 (초)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	float CutsceneDuration = 2.0f;
+
+	// 컷씬 전환 블렌드 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	float CutsceneBlendInTime = 0.3f;
+
+	// ─── 컷씬 Niagara ────────────────────────────────────────────────────────
+	// 컷씬 중 재생할 Niagara 이펙트
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	TObjectPtr<UNiagaraSystem> CutsceneNiagaraEffect;
+
+	// Niagara 스폰 위치 (시전자 로컬 기준)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	FVector CutsceneNiagaraLocalOffset = FVector(0.f, 0.f, 500.f);
+
+	// Niagara 스폰 딜레이 (컷씬 시작 후 몇 초 뒤)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	float CutsceneNiagaraDelay = 0.5f;
+
 	// ─── 상태이상 부여 설정 ──────────────────────────────────────────────────
 	// 이 어빌리티가 타격 시 대상에게 부여할 상태이상 목록.
 	// Blueprint에서 편집: {StatusTag=Status.Burn, StacksToApply=2, ScalingCoeff=0.4}
@@ -231,9 +284,19 @@ private:
 
 	FTimerHandle PreMoveTimer;
 	FTimerHandle PreMontageTimer;
+	FTimerHandle CutsceneTimer;
+	FTimerHandle CutsceneNiagaraTimer;
 
 	int32 PendingHitIndex = 0;
 
 	UFUNCTION() void DoTeleportToTarget();
 	UFUNCTION() void DoPlayMontage();
+
+	// 컷씬 카메라 관련
+	UFUNCTION() void StartCutsceneCamera();
+	UFUNCTION() void SpawnCutsceneNiagara();
+	UFUNCTION() void OnCutsceneFinished();
+
+	// 액션 카메라로 전환 후 ImpactActor 스폰 (컷씬 없이 몽타주 카메라만 사용할 때)
+	void SwitchToActionCameraAndSpawnImpact();
 };
