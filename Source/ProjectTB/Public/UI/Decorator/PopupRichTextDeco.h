@@ -6,6 +6,7 @@
 #include "Components/RichTextBlockDecorator.h"
 #include "PopupRichTextDeco.generated.h"
 
+class UPopupWidget;
 class FPopupRichTextDeco;
 
 /**
@@ -17,15 +18,22 @@ class PROJECTTB_API UPopupRichTextDeco : public URichTextBlockDecorator
 	GENERATED_BODY()
 	
 public:
-	// 에디터에서 선택할 '클릭 가능한 버튼 위젯' 클래스
+	// 에디터에서 선택할 클릭 했을 때 나오는 위젯. PopupWidgetClass를 상속받을 것.
 	UPROPERTY(EditAnywhere, Category = "Appearance")
-	TSubclassOf<UUserWidget> PopupWidgetClass;
+	TSubclassOf<UPopupWidget> PopupWidgetClass;
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void SetPopupID(const FString& PopupID);
 	
 	// FPopupRichTextDeco 생성
 	virtual TSharedPtr<ITextDecorator> CreateDecorator(URichTextBlock* InOwner) override;
+	
+	// Popup 위젯 생성 or 교체
+	void OpenPopup(URichTextBlock* OwnerRichText, const FString& PopupID);
+	
+private:
+	//한번에 하나의 팝업만 나오도록 가장 최신 팝업을 기억
+	TWeakObjectPtr<UPopupWidget> CurrentPopupWidget;
 };
 
 class FPopupRichTextDeco : public FRichTextDecorator
@@ -41,7 +49,7 @@ public:
 	virtual TSharedPtr<SWidget> CreateDecoratorWidget(const FTextRunInfo& RunInfo, const FTextBlockStyle& DefaultTextStyle) const override;
 	
 	//클릭시 떠오를 팝업창
-	FReply OnPopupClicked(FString PopupID) const;
+	FReply OnPopupClicked(FString PopupID);
 	
 private:
 	URichTextBlock* Owner;
