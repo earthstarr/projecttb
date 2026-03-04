@@ -92,7 +92,7 @@ void UTBGameplayAbility::ActivateAbility(
 		return;
 	}
 
-	// Ranged / Impact: 바로 몽타주 재생
+	// Ranged / Impact: 바로 몽타주 재생 (컷씬은 몽타주 후에)
 	DoPlayMontage();
 }
 
@@ -149,6 +149,23 @@ void UTBGameplayAbility::DoTeleportToTarget()
 
 void UTBGameplayAbility::DoPlayMontage()
 {
+	// 몽타주 카메라 활성화
+	if (bUseActionCamera && bUseMontageCamera)
+	{
+		AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
+		ABattleManager* BM = GetBattleManager();
+
+		if (Avatar && BM)
+		{
+			const FTransform AvatarTransform = Avatar->GetActorTransform();
+			const FVector MontageWorldLocation = AvatarTransform.TransformPosition(MontageCameraLocalOffset);
+			const FRotator MontageWorldRotation = AvatarTransform.TransformRotation(
+				MontageCameraLocalRotation.Quaternion()).Rotator();
+
+			BM->SetActionCameraWorldPosition(MontageWorldLocation, MontageWorldRotation, MontageCameraBlendInTime);
+		}
+	}
+
 	if (AbilityMontage)
 	{
 		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
@@ -177,7 +194,22 @@ void UTBGameplayAbility::OnMontageBlendOut()
 	if (AnimationType == EAbilityAnimType::Impact)
 	{
 		if (!bImpactSpawned)
-			SpawnImpactActor();
+		{
+			// 컷씬 카메라가 설정되어 있으면 컷씬 먼저 재생
+			if (bUseActionCamera && bUseCutsceneCamera)
+			{
+				StartCutsceneCamera();
+			}
+			else if (bUseActionCamera)
+			{
+				// 컷씬 없이 액션 카메라만 사용하는 경우 → 액션 카메라로 전환 후 스폰
+				SwitchToActionCameraAndSpawnImpact();
+			}
+			else
+			{
+				SpawnImpactActor();
+			}
+		}
 	}
 	else
 	{
@@ -546,4 +578,79 @@ void UTBGameplayAbility::SpawnHitEffect()
 
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 		GetWorld(), HitEffect, SpawnLocation, SpawnRotation);
+}
+
+// ─── 컷씬 카메라 처리 ─────────────────────────────────────────────────────────────
+void UTBGameplayAbility::StartCutsceneCamera()
+{
+	AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
+	ABattleManager* BM = GetBattleManager();
+	if (!Avatar || !BM)
+	{
+		// 컷씬 스킵하고 바로 몽타주 재생
+		DoPlayMontage();
+		return;
+	}
+
+	// 컷씬 카메라 위치 계산 (시전자 로컬 기준)
+	const FTransform AvatarTransform = Avatar->GetActorTransform();
+	const FVector CutsceneWorldLocation = AvatarTransform.TransformPosition(CutsceneCameraLocalOffset);
+	const FRotator CutsceneWorldRotation = AvatarTransform.TransformRotation(
+		CutsceneCameraLocalRotation.Quaternion()).Rotator();
+
+	// 카메라 이동
+	BM->SetActionCameraWorldPosition(CutsceneWorldLocation, CutsceneWorldRotation, CutsceneBlendInTime);
+
+	// Niagara 스폰 타이머 설정
+	if (CutsceneNiagaraEffect)
+	{
+		Avatar->GetWorldTimerManager().SetTimer(
+			CutsceneNiagaraTimer, this, &UTBGameplayAbility::SpawnCutsceneNiagara, CutsceneNiagaraDelay, false);
+	}
+
+	// 컷씬 종료 타이머 설정
+	Avatar->GetWorldTimerManager().SetTimer(
+		CutsceneTimer, this, &UTBGameplayAbility::OnCutsceneFinished, CutsceneDuration, false);
+}
+
+void UTBGameplayAbility::SpawnCutsceneNiagara()
+{
+	if (!CutsceneNiagaraEffect) return;
+
+	AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
+	if (!Avatar) return;
+
+	// Niagara 스폰 위치 계산 (시전자 로컬 기준)
+	const FVector SpawnLocation = Avatar->GetActorLocation() +
+		Avatar->GetActorRotation().RotateVector(CutsceneNiagaraLocalOffset);
+	const FRotator SpawnRotation = Avatar->GetActorRotation();
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(), CutsceneNiagaraEffect, SpawnLocation, SpawnRotation);
+}
+
+void UTBGameplayAbility::OnCutsceneFinished()
+{
+	// 컷씬 종료 후 액션 카메라로 전환 → ImpactActor 스폰
+	SwitchToActionCameraAndSpawnImpact();
+}
+
+void UTBGameplayAbility::SwitchToActionCameraAndSpawnImpact()
+{
+	AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
+	ABattleManager* BM = GetBattleManager();
+
+	if (Avatar && BM)
+	{
+		// 액션 카메라 위치로 전환
+		const FTransform AvatarTransform = Avatar->GetActorTransform();
+		const FVector ActionWorldLocation = AvatarTransform.TransformPosition(ActionCameraLocalOffset);
+		const FRotator ActionWorldRotation = AvatarTransform.TransformRotation(
+			ActionCameraLocalRotation.Quaternion()).Rotator();
+
+		BM->SetActionCameraWorldPosition(ActionWorldLocation, ActionWorldRotation, CameraBlendInTime);
+	}
+
+	// ImpactActor 스폰
+	SpawnImpactActor();
 }

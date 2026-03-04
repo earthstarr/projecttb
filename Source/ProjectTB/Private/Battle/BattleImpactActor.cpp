@@ -1,4 +1,5 @@
 #include "Battle/BattleImpactActor.h"
+#include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -10,10 +11,14 @@ ABattleImpactActor::ABattleImpactActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	// 루트 컴포넌트로 StaticMesh 생성 (Blueprint에서 메시 할당)
+	// 루트 컴포넌트: SceneComponent (이동/스폰 위치 기준)
+	RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootSceneComponent"));
+	SetRootComponent(RootSceneComponent);
+
+	// MeshComponent: 루트의 자식으로 생성 → 뷰포트에서 회전/스케일 편집 가능
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
-	SetRootComponent(MeshComponent);
-	
+	MeshComponent->SetupAttachment(RootSceneComponent);
+
 	// 트레일 이펙트
 	TrailNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailNiagaraComponent"));
 	TrailNiagaraComponent->SetupAttachment(MeshComponent);
@@ -23,17 +28,17 @@ ABattleImpactActor::ABattleImpactActor()
 	ImpactNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComponent"));
 	ImpactNiagaraComponent->SetupAttachment(MeshComponent);
 	ImpactNiagaraComponent->bAutoActivate = false; // Impact 시점에 수동 활성화
-	
+
 	// 발사체 컴포넌트 생성
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-    
-	// 기본 설정: UpdateComponent를 MeshComponent로 지정
-	ProjectileMovement->SetUpdatedComponent(MeshComponent);
-    
+
+	// 기본 설정: UpdateComponent를 RootSceneComponent로 지정 (액터 전체 이동)
+	ProjectileMovement->SetUpdatedComponent(RootSceneComponent);
+
 	// 초기 속도값 대입
 	ProjectileMovement->InitialSpeed = InitialSpeed;
 	ProjectileMovement->MaxSpeed = MaxSpeed;
-    
+
 	// 중력
 	ProjectileMovement->ProjectileGravityScale = 0.0f;
 }

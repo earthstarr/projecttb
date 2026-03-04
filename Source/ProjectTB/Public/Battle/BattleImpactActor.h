@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "BattleImpactActor.generated.h"
 
+class USceneComponent;
 class UStaticMeshComponent;
 class UNiagaraComponent;
 class UNiagaraSystem;
@@ -57,7 +58,12 @@ public:
 	FOnBattleImpactFinished OnFinished;
 
 	// ─── 비주얼 컴포넌트 (Blueprint에서 메시/이펙트 설정) ────────────────────
+	// 루트 컴포넌트 (이동/스폰 위치 기준)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Visual")
+	TObjectPtr<USceneComponent> RootSceneComponent;
+
+	// MeshComponent: 뷰포트에서 회전/스케일 직접 편집 가능
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Visual")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Visual")
