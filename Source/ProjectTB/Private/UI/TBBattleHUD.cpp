@@ -27,12 +27,25 @@ void ATBBattleHUD::BeginPlay()
 void ATBBattleHUD::CreateWidgets()
 {
 	APlayerController* PC = GetOwningPlayerController();
-	if (!PC) return;
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("TBBattleHUD::CreateWidgets - PlayerController is null!"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("TBBattleHUD::CreateWidgets - TurnOrderWidgetClass: %s"),
+		TurnOrderWidgetClass ? *TurnOrderWidgetClass->GetName() : TEXT("NULL"));
 
 	if (TurnOrderWidgetClass)
 	{
 		TurnOrderWidget = CreateWidget<UTurnOrderWidget>(PC, TurnOrderWidgetClass);
+		UE_LOG(LogTemp, Warning, TEXT("TBBattleHUD::CreateWidgets - TurnOrderWidget created: %s"),
+			TurnOrderWidget ? TEXT("YES") : TEXT("NO"));
 		if (TurnOrderWidget) TurnOrderWidget->AddToViewport(0);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("TBBattleHUD::CreateWidgets - TurnOrderWidgetClass is NOT set!"));
 	}
 	if (BattleMenuWidgetClass)
 	{
@@ -173,6 +186,9 @@ void ATBBattleHUD::HandleTurnBegin(ABattleCombatant* Combatant)
 
 void ATBBattleHUD::HandleTurnOrderUpdated(const TArray<ABattleCombatant*>& UpcomingTurns)
 {
+	UE_LOG(LogTemp, Warning, TEXT("HandleTurnOrderUpdated called - UpcomingTurns: %d, TurnOrderWidget valid: %s"),
+		UpcomingTurns.Num(), TurnOrderWidget ? TEXT("YES") : TEXT("NO"));
+
 	if (TurnOrderWidget)
 		TurnOrderWidget->UpdateTurnOrder(UpcomingTurns);
 }

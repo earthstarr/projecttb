@@ -169,6 +169,24 @@ public:
 	void OnTurnEnd();
 	virtual void OnTurnEnd_Implementation() {}
 
+	// ─── ATB 게이지 시스템 ────────────────────────────────────────────────────
+	// 행동 게이지 (0~100, 100 이상이면 행동 가능)
+	UPROPERTY(BlueprintReadOnly, Category="Battle|ATB")
+	float ActionGauge = 0.f;
+
+	// 행동에 필요한 게이지 (기본 100)
+	static constexpr float ActionGaugeThreshold = 100.f;
+
+	// 게이지 충전 (Speed만큼 증가)
+	void ChargeActionGauge();
+
+	// 행동 후 게이지 소모 (Threshold만큼 차감)
+	void ConsumeActionGauge();
+
+	// 게이지가 Threshold 이상인지
+	UFUNCTION(BlueprintCallable, Category="Battle|ATB")
+	bool IsActionReady() const { return ActionGauge >= ActionGaugeThreshold; }
+
 	// ─── 레벨 스탯 적용 ─────────────────────────────────────────────────────────
 	/** DataTable + GameInstance 기반으로 스탯 적용 (플레이어 캐릭터용) */
 	UFUNCTION(BlueprintCallable, Category="Stats")
