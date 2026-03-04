@@ -76,9 +76,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	ABattleCombatant* GetCurrentActor() const;
 
-	// TurnOrderWidget에 전달할 다음 N턴 목록
+	// TurnOrderWidget에 전달할 다음 N턴 목록 (ATB 게이지 시뮬레이션 기반)
 	UFUNCTION(BlueprintCallable, Category="Battle")
-	TArray<ABattleCombatant*> GetUpcomingTurns(int32 Count = 5) const;
+	TArray<ABattleCombatant*> GetUpcomingTurns(int32 Count = 10) const;
 
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	TArray<ABattleCombatant*> GetLivingPlayers() const;
@@ -160,9 +160,8 @@ private:
 	TArray<ABattlePlayerCharacter*> PlayerParty;
 	TArray<ABattleEnemyCharacter*>  EnemyParty;
 
-	// 턴 순서 (Speed 기준 내림차순, 라운드 반복)
-	TArray<ABattleCombatant*> CurrentRoundOrder;
-	int32 CurrentRoundIndex = 0;
+	// ATB 시스템: 현재 행동 중인 캐릭터
+	ABattleCombatant* CurrentActor = nullptr;
 
 	// 진행 중인 액션 데이터
 	ABattleCombatant*               PendingTarget       = nullptr;
@@ -181,8 +180,13 @@ private:
 	void ReturnToBattleCamera();
 
 	void SetPhase(EBattlePhase NewPhase);
-	void BuildRoundOrder();
 	void AdvanceTurn();
+
+	// ATB 시스템: 모든 캐릭터 게이지 충전 후 행동 가능한 캐릭터 반환
+	ABattleCombatant* ChargeAndFindNextActor();
+
+	// ATB 시스템: 게이지 시뮬레이션으로 다음 N턴 예측
+	TArray<ABattleCombatant*> SimulateUpcomingTurns(int32 Count) const;
 	void StartPlayerTurn();
 	void StartEnemyTurn();
 	void ExecuteEnemyActionDelayed();
@@ -209,10 +213,6 @@ private:
 	// 스턴 턴 스킵 딜레이용 (0.75초 표시 후 OnActionComplete)
 	FTimerHandle StunSkipTimer;
 
-	// 상태이상 일괄 틱 — 라운드에서 첫 번째 플레이어/적 턴에 각 진영 전체를 동시 처리
-	bool bPlayerStatusTickedThisRound = false;
-	bool bEnemyStatusTickedThisRound  = false;
-	TSet<ABattleCombatant*> StunnedThisRound;
 
 	// 전투 종료 시 경험치 분배 및 스탯 저장
 	void HandleBattleVictory();

@@ -491,3 +491,18 @@ void ABattleCombatant::ApplyStatsDirectly(const FCharacterLevelStats& Stats)
 	AttributeSet->SetCriticalChance(Stats.CriticalChance);
 	AttributeSet->SetCriticalMultiplier(Stats.CriticalMultiplier);
 }
+
+// ─── ATB 게이지 시스템 ────────────────────────────────────────────────────────
+
+void ABattleCombatant::ChargeActionGauge()
+{
+	ActionGauge += GetSpeed();
+}
+
+void ABattleCombatant::ConsumeActionGauge()
+{
+	ActionGauge -= ActionGaugeThreshold;
+	// 음수 방지 (혹시 100 미만에서 행동했을 경우)
+	if (ActionGauge < 0.f)
+		ActionGauge = 0.f;
+}

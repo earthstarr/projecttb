@@ -153,7 +153,6 @@ void ABattleManager::StartBattle(
 	}
 
 	WarmUpEffects();
-	BuildRoundOrder();
 	SetPhase(EBattlePhase::BattleStart);
 
 	// 고정 카메라로 전환
@@ -170,69 +169,168 @@ void ABattleManager::StartBattle(
 	GetWorldTimerManager().SetTimer(StartTimer, this, &ABattleManager::AdvanceTurn, 1.f, false);
 }
 
-// ─── 턴 순서 구성 (Speed 내림차순) ─────────────────────────────────────────────
-void ABattleManager::BuildRoundOrder()
+// ─── ATB 시스템: 게이지 충전 및 다음 행동자 찾기 ──────────────────────────────
+ABattleCombatant* ABattleManager::ChargeAndFindNextActor()
 {
-	CurrentRoundOrder.Reset();
+	// 살아있는 모든 캐릭터 수집
+	TArray<ABattleCombatant*> AllLiving;
+	for (ABattleCombatant* P : PlayerParty) if (P && !P->IsDead()) AllLiving.Add(P);
+	for (ABattleCombatant* E : EnemyParty)  if (E && !E->IsDead()) AllLiving.Add(E);
 
-	for (ABattleCombatant* P : PlayerParty) if (P && !P->IsDead()) CurrentRoundOrder.Add(P);
-	for (ABattleCombatant* E : EnemyParty)  if (E && !E->IsDead()) CurrentRoundOrder.Add(E);
+	if (AllLiving.IsEmpty()) return nullptr;
 
-	CurrentRoundOrder.Sort([](const ABattleCombatant& A, const ABattleCombatant& B)
+	// 게이지가 100 이상인 캐릭터가 나올 때까지 반복 충전
+	while (true)
 	{
-		return A.GetSpeed() > B.GetSpeed();
-	});
+		// 가장 높은 게이지를 가진 캐릭터 찾기
+		ABattleCombatant* HighestGauge = nullptr;
+		float MaxGauge = -1.f;
 
-	CurrentRoundIndex = 0;
-	bPlayerStatusTickedThisRound = false;
-	bEnemyStatusTickedThisRound  = false;
-	StunnedThisRound.Empty();
-	BroadcastTurnOrder();
+		for (ABattleCombatant* C : AllLiving)
+		{
+			if (C->ActionGauge > MaxGauge)
+			{
+				MaxGauge = C->ActionGauge;
+				HighestGauge = C;
+			}
+		}
+
+		// 100 이상이면 행동 가능
+		if (HighestGauge && HighestGauge->IsActionReady())
+		{
+			return HighestGauge;
+		}
+
+		// 아직 없으면 모두 충전
+		for (ABattleCombatant* C : AllLiving)
+		{
+			C->ChargeActionGauge();
+		}
+	}
 }
 
-// ─── 다음 턴으로 이동 ────────────────────────────────────────────────────────────
+// ATB 시스템: 게이지 시뮬레이션으로 다음 N턴 예측
+TArray<ABattleCombatant*> ABattleManager::SimulateUpcomingTurns(int32 Count) const
+{
+	TArray<ABattleCombatant*> Result;
+	if (Count <= 0) return Result;
+	
+	// 살아있는 캐릭터와 현재 게이지 복사
+	TArray<ABattleCombatant*> AllLiving;
+	TMap<ABattleCombatant*, float> SimGauges;
+	
+	// 현재 턴을 진행 중인 캐릭터가 있다면 0번에 고정
+	if (CurrentActor && !CurrentActor->IsDead())
+	{
+		Result.Add(CurrentActor);
+		
+		// 시뮬레이션 상에서 CurrentActor는 이미 행동을 시작한 것으로 간주하여
+		// 다음 턴 계산을 위해 게이지를 미리 차감
+		if (SimGauges.Contains(CurrentActor))
+		{
+			SimGauges[CurrentActor] -= ABattleCombatant::ActionGaugeThreshold;
+		}
+	}	
+
+	for (ABattleCombatant* P : PlayerParty)
+	{
+		if (P && !P->IsDead())
+		{
+			AllLiving.Add(P);
+			SimGauges.Add(P, P->ActionGauge);
+		}
+	}
+	for (ABattleCombatant* E : EnemyParty)
+	{
+		if (E && !E->IsDead())
+		{
+			AllLiving.Add(E);
+			SimGauges.Add(E, E->ActionGauge);
+		}
+	}
+
+	if (AllLiving.IsEmpty()) return Result;
+
+	// N명 예측
+	while (Result.Num() < Count)
+	{
+		// 가장 높은 게이지 찾기
+		ABattleCombatant* Next = nullptr;
+		float MaxGauge = -1.f;
+
+		for (ABattleCombatant* C : AllLiving)
+		{
+			const float Gauge = SimGauges[C];
+			if (Gauge > MaxGauge)
+			{
+				MaxGauge = Gauge;
+				Next = C;
+			}
+		}
+
+		// 100 이상이면 결과에 추가, 게이지 소모
+		if (Next && MaxGauge >= ABattleCombatant::ActionGaugeThreshold)
+		{
+			Result.Add(Next);
+			SimGauges[Next] -= ABattleCombatant::ActionGaugeThreshold;
+		}
+		else
+		{
+			// 아직 없으면 모두 충전
+			for (ABattleCombatant* C : AllLiving)
+			{
+				SimGauges[C] += C->GetSpeed();
+			}
+		}
+
+		// 무한루프 방지
+		static int32 MaxIterations = 1000;
+		if (Result.Num() == 0 && MaxIterations-- <= 0) break;
+	}
+
+	return Result;
+}
+
+// ─── 다음 턴으로 이동 (ATB 시스템) ────────────────────────────────────────────
 void ABattleManager::AdvanceTurn()
 {
 	CheckBattleEnd();
 	if (CurrentPhase == EBattlePhase::BattleVictory ||
 	    CurrentPhase == EBattlePhase::BattleDefeat) return;
 
-	// 사망한 유닛 스킵
-	while (CurrentRoundIndex < CurrentRoundOrder.Num() &&
-	       (!CurrentRoundOrder[CurrentRoundIndex] || CurrentRoundOrder[CurrentRoundIndex]->IsDead()))
+	// ATB: 게이지 충전 후 행동 가능한 캐릭터 찾기
+	ABattleCombatant* Next = ChargeAndFindNextActor();
+	if (!Next)
 	{
-		CurrentRoundIndex++;
-	}
-
-	// 라운드 종료 → 재구성
-	if (CurrentRoundIndex >= CurrentRoundOrder.Num())
-	{
-		BuildRoundOrder();
-		AdvanceTurn();
+		// 모든 캐릭터 사망?
+		CheckBattleEnd();
 		return;
 	}
 
-	ABattleCombatant* Current = CurrentRoundOrder[CurrentRoundIndex];
-	CurrentRoundIndex++;
+	// 게이지 소모
+	Next->ConsumeActionGauge();
+	CurrentActor = Next;
+	
+	BroadcastTurnOrder();
 
 	// 자기 턴이 돌아오면 방어 상태 해제
-	Current->SetDefending(false);
+	Next->SetDefending(false);
 
 	// ─── 상태이상 틱 처리 ────────────────────────────────────────────────────
-	bool bStunned = Current->TickStatusEffects();
-	
+	bool bStunned = Next->TickStatusEffects();
+
 	// 상태이상으로 인한 사망 확인
-	if (Current->IsDead())
-	{        
+	if (Next->IsDead())
+	{
 		// 0.75초 이후 다음 턴으로 진행
 		FTimerHandle DeathSkipTimer;
 		GetWorldTimerManager().SetTimer(DeathSkipTimer, this, &ABattleManager::AdvanceTurn, 0.75f, false);
-		return; 
+		return;
 	}
 
 	BroadcastTurnOrder();
-	OnTurnBegin.Broadcast(Current);
-	Current->OnTurnBegin();
+	OnTurnBegin.Broadcast(Next);
+	Next->OnTurnBegin();
 
 	if (bStunned)
 	{
@@ -242,9 +340,9 @@ void ABattleManager::AdvanceTurn()
 		return;
 	}
 
-	if (Cast<ABattlePlayerCharacter>(Current))
+	if (Cast<ABattlePlayerCharacter>(Next))
 		StartPlayerTurn();
-	else if (Cast<ABattleEnemyCharacter>(Current))
+	else if (Cast<ABattleEnemyCharacter>(Next))
 		StartEnemyTurn();
 }
 
@@ -418,6 +516,9 @@ void ABattleManager::OnActionComplete()
 
 	if (ABattleCombatant* Current = GetCurrentActor())
 		Current->OnTurnEnd();
+	
+	CurrentActor = nullptr; 
+	BroadcastTurnOrder(); // 리스트 갱신
 
 	CheckBattleEnd();
 
@@ -432,29 +533,12 @@ void ABattleManager::OnActionComplete()
 // ─── 쿼리 ─────────────────────────────────────────────────────────────────────
 ABattleCombatant* ABattleManager::GetCurrentActor() const
 {
-	const int32 Index = CurrentRoundIndex - 1;
-	return CurrentRoundOrder.IsValidIndex(Index) ? CurrentRoundOrder[Index] : nullptr;
+	return CurrentActor;
 }
 
 TArray<ABattleCombatant*> ABattleManager::GetUpcomingTurns(int32 Count) const
 {
-	TArray<ABattleCombatant*> Result;
-	const int32 RoundSize = CurrentRoundOrder.Num();
-	if (RoundSize == 0) return Result;
-
-	// 현재 액터부터 시작해 다음 라운드까지 포함해서 Count개 반환
-	const int32 StartIndex = FMath::Max(CurrentRoundIndex - 1, 0);
-
-	for (int32 Offset = 0; Result.Num() < Count; Offset++)
-	{
-		// 현재 라운드 → 다음 라운드 순환
-		const int32 Idx = (StartIndex + Offset) % RoundSize;
-		if (ABattleCombatant* C = CurrentRoundOrder[Idx])
-			if (!C->IsDead()) Result.Add(C);
-
-		if (Offset >= Count * 3) break; // 무한루프 방지
-	}
-	return Result;
+	return SimulateUpcomingTurns(Count);
 }
 
 TArray<ABattleCombatant*> ABattleManager::GetLivingPlayers() const
