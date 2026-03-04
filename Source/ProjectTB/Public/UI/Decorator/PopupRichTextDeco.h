@@ -21,12 +21,29 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Appearance")
 	TSubclassOf<UUserWidget> PopupWidgetClass;
 	
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetPopupID(const FString& PopupID);
+	
+	// FPopupRichTextDeco 생성
 	virtual TSharedPtr<ITextDecorator> CreateDecorator(URichTextBlock* InOwner) override;
 };
 
-class FPopupRichTextDeco : public URichTextBlockDecorator
+class FPopupRichTextDeco : public FRichTextDecorator
 {
 public:
 	FPopupRichTextDeco(URichTextBlock* InOwner, UPopupRichTextDeco* InDecorator)
-						: FRichTextBlockDecorator(InOwner), Owner(InOwner), Decorator(InDecorator){}
+						: FRichTextDecorator(InOwner), Owner(InOwner), Decorator(InDecorator){};
+	
+	//파싱된 문자열이 찾고 있는 태그인지 확인
+	virtual bool Supports(const FTextRunParseResults& RunParseResult, const FString& Text) const override;
+	
+	//선택 가능한 위젯으로 변경
+	virtual TSharedPtr<SWidget> CreateDecoratorWidget(const FTextRunInfo& RunInfo, const FTextBlockStyle& DefaultTextStyle) const override;
+	
+	//클릭시 떠오를 팝업창
+	FReply OnPopupClicked(FString PopupID) const;
+	
+private:
+	URichTextBlock* Owner;
+	UPopupRichTextDeco* Decorator;
 };
