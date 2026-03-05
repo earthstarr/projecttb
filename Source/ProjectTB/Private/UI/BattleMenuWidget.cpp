@@ -27,6 +27,14 @@ FReply UBattleMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKe
 {
 	const FKey Key = InKeyEvent.GetKey();
 
+	// 패링 (F키) — 메뉴 상태와 관계없이 항상 처리
+	if (Key == EKeys::F)
+	{
+		if (BattleManager)
+			BattleManager->TryParry();
+		return FReply::Handled();
+	}
+
 	if      (Key == EKeys::Up    || Key == EKeys::W) { NavigateUp();        return FReply::Handled(); }
 	else if (Key == EKeys::Down  || Key == EKeys::S) { NavigateDown();      return FReply::Handled(); }
 	else if (Key == EKeys::Left  || Key == EKeys::A) { NavigateLeft();      return FReply::Handled(); }

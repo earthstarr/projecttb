@@ -1,4 +1,5 @@
 #include "Battle/BattleManager.h"
+#include "TBGameplayTags.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Battle/BattleEnemyCharacter.h"
 #include "Battle/BattleImpactActor.h"
@@ -13,7 +14,7 @@
 
 ABattleManager::ABattleManager()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void ABattleManager::BeginPlay()
@@ -25,6 +26,32 @@ void ABattleManager::BeginPlay()
 		// 0.5초 딜레이 — 레벨의 모든 Actor BeginPlay 완료 후 실행
 		FTimerHandle AutoStartTimer;
 		GetWorldTimerManager().SetTimer(AutoStartTimer, this, &ABattleManager::AutoStartBattle, 0.5f, false);
+	}
+}
+
+void ABattleManager::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// 컷씬 카메라 부드러운 이동
+	if (bCutsceneCameraBlending && ActionCamera)
+	{
+		CutsceneCameraBlendElapsed += DeltaTime;
+		const float Alpha = FMath::Clamp(CutsceneCameraBlendElapsed / CutsceneCameraBlendTime, 0.f, 1.f);
+
+		// Cubic ease-out 보간
+		const float EasedAlpha = 1.f - FMath::Pow(1.f - Alpha, 3.f);
+
+		const FVector NewLocation = FMath::Lerp(CutsceneCameraStartLocation, CutsceneCameraTargetLocation, EasedAlpha);
+		const FRotator NewRotation = FMath::Lerp(CutsceneCameraStartRotation, CutsceneCameraTargetRotation, EasedAlpha);
+
+		ActionCamera->SetActorLocation(NewLocation);
+		ActionCamera->SetActorRotation(NewRotation);
+
+		if (Alpha >= 1.f)
+		{
+			bCutsceneCameraBlending = false;
+		}
 	}
 }
 
@@ -174,8 +201,8 @@ ABattleCombatant* ABattleManager::ChargeAndFindNextActor()
 {
 	// 살아있는 모든 캐릭터 수집
 	TArray<ABattleCombatant*> AllLiving;
-	for (ABattleCombatant* P : PlayerParty) if (P && !P->IsDead()) AllLiving.Add(P);
-	for (ABattleCombatant* E : EnemyParty)  if (E && !E->IsDead()) AllLiving.Add(E);
+	for (ABattleCombatant* P : PlayerParty) if (IsValid(P) && !P->IsDead()) AllLiving.Add(P);
+	for (ABattleCombatant* E : EnemyParty)  if (IsValid(E) && !E->IsDead()) AllLiving.Add(E);
 
 	if (AllLiving.IsEmpty()) return nullptr;
 
@@ -214,27 +241,27 @@ TArray<ABattleCombatant*> ABattleManager::SimulateUpcomingTurns(int32 Count) con
 {
 	TArray<ABattleCombatant*> Result;
 	if (Count <= 0) return Result;
-	
+
 	// 살아있는 캐릭터와 현재 게이지 복사
 	TArray<ABattleCombatant*> AllLiving;
 	TMap<ABattleCombatant*, float> SimGauges;
-	
+
 	// 현재 턴을 진행 중인 캐릭터가 있다면 0번에 고정
-	if (CurrentActor && !CurrentActor->IsDead())
+	if (IsValid(CurrentActor) && !CurrentActor->IsDead())
 	{
 		Result.Add(CurrentActor);
-		
+
 		// 시뮬레이션 상에서 CurrentActor는 이미 행동을 시작한 것으로 간주하여
 		// 다음 턴 계산을 위해 게이지를 미리 차감
 		if (SimGauges.Contains(CurrentActor))
 		{
 			SimGauges[CurrentActor] -= ABattleCombatant::ActionGaugeThreshold;
 		}
-	}	
+	}
 
 	for (ABattleCombatant* P : PlayerParty)
 	{
-		if (P && !P->IsDead())
+		if (IsValid(P) && !P->IsDead())
 		{
 			AllLiving.Add(P);
 			SimGauges.Add(P, P->ActionGauge);
@@ -242,7 +269,7 @@ TArray<ABattleCombatant*> ABattleManager::SimulateUpcomingTurns(int32 Count) con
 	}
 	for (ABattleCombatant* E : EnemyParty)
 	{
-		if (E && !E->IsDead())
+		if (IsValid(E) && !E->IsDead())
 		{
 			AllLiving.Add(E);
 			SimGauges.Add(E, E->ActionGauge);
@@ -481,25 +508,102 @@ void ABattleManager::ExecuteAction(
 
 	SetPhase(EBattlePhase::ExecutingAction);
 	PendingTarget = Target; // 어빌리티가 GetPendingTarget()으로 읽기
+	PendingCaster = Caster;
+	PendingAbilityClass = AbilityClass;
 
-	// 어빌리티 CDO에서 카메라 설정을 읽어 액션 카메라 전환
-	if (UTBGameplayAbility* CDO = AbilityClass->GetDefaultObject<UTBGameplayAbility>())
+	UTBGameplayAbility* CDO = AbilityClass->GetDefaultObject<UTBGameplayAbility>();
+	if (!CDO) { OnActionComplete(); return; }
+
+	PendingTargetType = CDO->TargetType;
+
+	// ─── 캐릭터 회전 (카메라 전환 전에 먼저 수행) ───
+	// 회전 전 원래 회전 저장 (FinishAbility에서 복귀용)
+	Caster->PreAbilityRotation = Caster->GetActorRotation();
+
+	FVector LookAtLocation = FVector::ZeroVector;
+	bool bShouldRotate = false;
+
+	if (CDO->TargetType == EAbilityTargetType::AllEnemies)
 	{
-		if (CDO->bUseActionCamera)
-			SwitchToActionCamera(Caster, CDO);
+		TArray<ABattleCombatant*> Enemies = GetLivingEnemies();
+		for (ABattleCombatant* E : Enemies)
+			if (E) LookAtLocation += E->GetActorLocation();
+		if (!Enemies.IsEmpty())
+		{
+			LookAtLocation /= Enemies.Num();
+			bShouldRotate = true;
+		}
+	}
+	else if (CDO->TargetType == EAbilityTargetType::AllAllies)
+	{
+		TArray<ABattleCombatant*> Allies = GetLivingPlayers();
+		for (ABattleCombatant* A : Allies)
+			if (A) LookAtLocation += A->GetActorLocation();
+		if (!Allies.IsEmpty())
+		{
+			LookAtLocation /= Allies.Num();
+			bShouldRotate = true;
+		}
+	}
+	else if (Target)
+	{
+		LookAtLocation = Target->GetActorLocation();
+		bShouldRotate = true;
 	}
 
-	UAbilitySystemComponent* ASC = Caster->GetAbilitySystemComponent();
+	if (bShouldRotate)
+	{
+		FVector Dir = LookAtLocation - Caster->GetActorLocation();
+		Dir.Z = 0.f;
+		if (!Dir.IsNearlyZero())
+		{
+			Caster->SetActorRotation(Dir.Rotation());
+		}
+	}
+
+	// ─── 카메라 전환 (캐릭터 회전 후) ───
+	float CameraBlendTime = 0.f;
+
+	// Impact + 컷씬 카메라 사용 시 → 액션 카메라 스킵 (어빌리티에서 컷씬 카메라로 직접 전환)
+	const bool bSkipActionCamera = (CDO->AnimationType == EAbilityAnimType::Impact && CDO->bUseCutsceneCamera);
+
+	if (CDO->bUseActionCamera && !bSkipActionCamera)
+	{
+		SwitchToActionCamera(Caster, CDO);
+		CameraBlendTime = CDO->CameraBlendInTime;
+	}
+
+	// 카메라 블렌드 완료 후 어빌리티 활성화
+	if (CameraBlendTime > 0.f)
+	{
+		GetWorldTimerManager().SetTimer(
+			ActionCameraDelayTimer, this, &ABattleManager::ActivatePendingAbility, CameraBlendTime, false);
+	}
+	else
+	{
+		ActivatePendingAbility();
+	}
+}
+
+void ABattleManager::ActivatePendingAbility()
+{
+	if (!IsValid(PendingCaster) || !PendingAbilityClass)
+	{
+		OnActionComplete();
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = PendingCaster->GetAbilitySystemComponent();
 	if (!ASC) { OnActionComplete(); return; }
 
 	// ASC에서 해당 클래스의 Spec을 찾아 활성화
-	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(AbilityClass);
+	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(PendingAbilityClass);
 	if (Spec)
 	{
 		if (!ASC->TryActivateAbility(Spec->Handle))
 		{
 			// 비용 부족 등으로 활성화 실패 → 플레이어 턴으로 복귀
-			if (Cast<ABattlePlayerCharacter>(Caster))
+			if (Cast<ABattlePlayerCharacter>(PendingCaster))
 				StartPlayerTurn();
 			else
 				OnActionComplete();
@@ -544,14 +648,14 @@ TArray<ABattleCombatant*> ABattleManager::GetUpcomingTurns(int32 Count) const
 TArray<ABattleCombatant*> ABattleManager::GetLivingPlayers() const
 {
 	TArray<ABattleCombatant*> Result;
-	for (ABattleCombatant* P : PlayerParty) if (P && !P->IsDead()) Result.Add(P);
+	for (ABattleCombatant* P : PlayerParty) if (IsValid(P) && !P->IsDead()) Result.Add(P);
 	return Result;
 }
 
 TArray<ABattleCombatant*> ABattleManager::GetLivingEnemies() const
 {
 	TArray<ABattleCombatant*> Result;
-	for (ABattleCombatant* E : EnemyParty) if (E && !E->IsDead()) Result.Add(E);
+	for (ABattleCombatant* E : EnemyParty) if (IsValid(E) && !E->IsDead()) Result.Add(E);
 	return Result;
 }
 
@@ -590,6 +694,62 @@ void ABattleManager::CheckBattleEnd()
 void ABattleManager::BroadcastTurnOrder()
 {
 	OnTurnOrderUpdated.Broadcast(GetUpcomingTurns(5));
+}
+
+// ─── 패링 ─────────────────────────────────────────────────────────────────────
+void ABattleManager::OpenParryTiming(float Duration)
+{
+	bParryTimingOpen = true;
+	GetWorldTimerManager().SetTimer(ParryTimingTimer, this, &ABattleManager::CloseParryTiming, Duration, false);
+}
+
+bool ABattleManager::TryParry()
+{
+	// 쿨다운 중이면 입력 무시 (선입력 페널티)
+	if (bParryCooldown) return false;
+
+	// 패링 시도 시 무조건 쿨다운 시작 (성공/실패 관계없이)
+	bParryCooldown = true;
+	GetWorldTimerManager().SetTimer(ParryCooldownTimer, this, &ABattleManager::ClearParryCooldown, ParryCooldownDuration, false);
+
+	// 타이밍이 안 열려있으면 실패 (쿨다운만 적용)
+	if (!bParryTimingOpen) return false;
+
+	// PendingTargetType 기준으로 패링 대상 결정
+	// AllEnemies(적이 전체 공격) → 살아있는 플레이어 전원, 그 외 → PendingTarget만
+	TArray<ABattleCombatant*> ParryTargets;
+	if (PendingTargetType == EAbilityTargetType::AllEnemies)
+	{
+		for (ABattlePlayerCharacter* P : PlayerParty)
+			if (P && !P->IsDead()) ParryTargets.Add(P);
+	}
+	else
+	{
+		if (PendingTarget && !PendingTarget->IsDead())
+			ParryTargets.Add(PendingTarget);
+	}
+
+	for (ABattleCombatant* Target : ParryTargets)
+	{
+		if (UAbilitySystemComponent* ASC = Target->GetAbilitySystemComponent())
+			ASC->AddLooseGameplayTag(TAG_Combatant_State_ParrySuccess);
+		Target->PlayParryMontage();
+	}
+
+	CloseParryTiming();
+	return !ParryTargets.IsEmpty();
+}
+
+void ABattleManager::CloseParryTiming()
+{
+	bParryTimingOpen = false;
+	GetWorldTimerManager().ClearTimer(ParryTimingTimer);
+}
+
+void ABattleManager::ClearParryCooldown()
+{
+	bParryCooldown = false;
+	GetWorldTimerManager().ClearTimer(ParryCooldownTimer);
 }
 
 void ABattleManager::OnCombatantDied(ABattleCombatant* Combatant)
@@ -641,6 +801,9 @@ void ABattleManager::SwitchToActionCamera(ABattleCombatant* Caster, const UTBGam
 	APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	if (!PC) return;
 
+	// 기존 Attach 해제
+	ActionCamera->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
 	// 캐릭터 로컬 오프셋 → 월드 좌표로 변환
 	const FTransform CasterTransform = Caster->GetActorTransform();
 	const FVector    WorldLocation   = CasterTransform.TransformPosition(AbilityCDO->ActionCameraLocalOffset);
@@ -650,8 +813,7 @@ void ABattleManager::SwitchToActionCamera(ABattleCombatant* Caster, const UTBGam
 	ActionCamera->SetActorLocation(WorldLocation);
 	ActionCamera->SetActorRotation(WorldRotation);
 
-	// 캐릭터에 Attach — Melee처럼 캐릭터가 이동해도 카메라가 따라감
-	ActionCamera->AttachToActor(Caster, FAttachmentTransformRules::KeepWorldTransform);
+	// Attach 제거 — 카메라는 월드 좌표로 고정, 캐릭터 회전에 영향 안 받음
 
 	PendingCameraBlendOutTime = AbilityCDO->CameraBlendOutTime;
 	bActionCameraActive = true;
@@ -679,20 +841,33 @@ void ABattleManager::SetActionCameraWorldPosition(const FVector& WorldLocation, 
 	// 기존 Attach 해제 (자유 이동 가능하게)
 	ActionCamera->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-	// 새 위치로 이동
-	ActionCamera->SetActorLocation(WorldLocation);
-	ActionCamera->SetActorRotation(WorldRotation);
-
 	APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	if (!PC) return;
 
 	// 아직 ActionCamera가 ViewTarget이 아니면 전환
 	if (!bActionCameraActive)
 	{
+		// 블렌딩 전에 현재 카메라 위치에서 시작하도록 설정
+		if (AActor* CurrentViewTarget = PC->GetViewTarget())
+		{
+			ActionCamera->SetActorLocation(CurrentViewTarget->GetActorLocation());
+			ActionCamera->SetActorRotation(CurrentViewTarget->GetActorRotation());
+		}
+
 		bActionCameraActive = true;
 		PC->SetViewTargetWithBlend(ActionCamera, BlendTime, VTBlend_Cubic);
 	}
-	// 이미 활성화 상태면 위치만 변경됨 (부드럽게 보간됨)
+
+	// 시작 위치 저장 (현재 ActionCamera 위치)
+	CutsceneCameraStartLocation = ActionCamera->GetActorLocation();
+	CutsceneCameraStartRotation = ActionCamera->GetActorRotation();
+
+	// 목표 위치로 부드럽게 이동 (Tick에서 보간)
+	CutsceneCameraTargetLocation = WorldLocation;
+	CutsceneCameraTargetRotation = WorldRotation;
+	CutsceneCameraBlendTime = FMath::Max(0.01f, BlendTime);
+	CutsceneCameraBlendElapsed = 0.f;
+	bCutsceneCameraBlending = true;
 }
 
 // ─── 전투 종료 처리 ────────────────────────────────────────────────────────────

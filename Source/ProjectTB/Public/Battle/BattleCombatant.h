@@ -36,6 +36,7 @@ class UGameplayEffect;
 class UWidgetComponent;
 class UDamageNumberWidget;
 class UCanvasPanel;
+class UNiagaraSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatantDeath,       ABattleCombatant*, Combatant);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageReceived,     ABattleCombatant*, Combatant, float, Damage, bool, bIsCritical);
@@ -136,10 +137,29 @@ public:
 	// HitIndex: TBGameplayAbility::HitMultipliers 배열 인덱스
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	void OnHitNotify(int32 HitIndex);
-	
+
 	// ranged일때 스폰 노티파이
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	void OnSpawnImpactNotify(int32 HitIndex = 0);
+
+	// AnimNotify_OpenParryTiming → BattleManager의 패링 타이밍 열기
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	void OnOpenParryTimingNotify(float Duration = 0.6f);
+
+	// 패링 성공 시 BattleManager에서 호출
+	void PlayParryMontage();
+
+	// 패링 몽타주 (Blueprint에서 설정)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	TObjectPtr<UAnimMontage> ParryMontage;
+
+	// 패링 성공 이펙트 (Blueprint에서 설정)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	TObjectPtr<UNiagaraSystem> ParryEffect;
+
+	// 패링 이펙트 스폰 위치 오프셋 (캐릭터 기준)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	FVector ParryEffectOffset = FVector(50.f, 0.f, 80.f);
 
 	// ─── 상태이상 ──────────────────────────────────────────────────────────────
 	// 새 상태이상 인스턴스 추가 (어빌리티에서 호출)
@@ -168,6 +188,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category="Battle")
 	void OnTurnEnd();
 	virtual void OnTurnEnd_Implementation() {}
+
+	// 어빌리티 시작 전 회전 저장 (FinishAbility에서 복귀용)
+	UPROPERTY(BlueprintReadOnly, Category="Battle")
+	FRotator PreAbilityRotation;
 
 	// ─── ATB 게이지 시스템 ────────────────────────────────────────────────────
 	// 행동 게이지 (0~100, 100 이상이면 행동 가능)

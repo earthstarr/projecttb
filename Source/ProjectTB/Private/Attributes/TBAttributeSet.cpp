@@ -1,6 +1,7 @@
 #include "Attributes/TBAttributeSet.h"
 #include "GameplayEffectExtension.h"
 #include "Battle/BattleCombatant.h"
+#include "TBGameplayTags.h"
 
 UTBAttributeSet::UTBAttributeSet()
 {
@@ -65,6 +66,11 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 				if (NewHP <= 0.f)
 					Combatant->OnDeathInternal();
 			}
+
+			// 패링 태그 소모 (히트당 1회 — 다단히트는 각 히트마다 따로 패링)
+			UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+			if (ASC)
+				ASC->RemoveLooseGameplayTag(TAG_Combatant_State_ParrySuccess);
 		}
 	}
 	// ─── MP/Stamina 직접 변경 (코스트 GE 등) → 즉시 UI 갱신 ────────────────

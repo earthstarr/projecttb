@@ -68,6 +68,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Battle|Input")
 	void PlayerCancel();
 
+	// ─── 패링 ────────────────────────────────────────────────────────────────
+	// 적 몽타주 AnimNotify 또는 ImpactActor에서 호출 — 패링 입력 창 열기
+	UFUNCTION(BlueprintCallable, Category="Battle|Parry")
+	void OpenParryTiming(float Duration = 0.6f);
+
+	// 패링 키 입력 시 BattleMenuWidget에서 호출
+	// 패링 성공 시 true 반환
+	UFUNCTION(BlueprintCallable, Category="Battle|Parry")
+	bool TryParry();
+
+	UFUNCTION(BlueprintCallable, Category="Battle|Parry")
+	bool IsParryTimingOpen() const { return bParryTimingOpen; }
+
 	// ─── 어빌리티 완료 콜백 (Ability → BattleManager) ────────────────────────
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	void OnActionComplete();
@@ -151,6 +164,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 private:
 	// 상태
@@ -165,14 +179,37 @@ private:
 
 	// 진행 중인 액션 데이터
 	ABattleCombatant*               PendingTarget       = nullptr;
+	ABattleCombatant*               PendingCaster       = nullptr;
 	TSubclassOf<UTBGameplayAbility> PendingAbilityClass = nullptr;
 	EAbilityTargetType              PendingTargetType   = EAbilityTargetType::SingleEnemy;
 
 	FTimerHandle EnemyActionTimer;
+	FTimerHandle ActionCameraDelayTimer;
+	void ActivatePendingAbility();
+
+	// 패링
+	bool bParryTimingOpen = false;
+	FTimerHandle ParryTimingTimer;
+	void CloseParryTiming();
+
+	// 패링 쿨다운 (선입력 페널티)
+	bool bParryCooldown = false;
+	FTimerHandle ParryCooldownTimer;
+	void ClearParryCooldown();
+	static constexpr float ParryCooldownDuration = 0.7f;
 
 	// 카메라 상태
 	bool  bActionCameraActive       = false;
 	float PendingCameraBlendOutTime = 0.5f;
+
+	// 컷씬 카메라 부드러운 이동용
+	bool bCutsceneCameraBlending = false;
+	FVector CutsceneCameraTargetLocation;
+	FRotator CutsceneCameraTargetRotation;
+	float CutsceneCameraBlendTime = 0.f;
+	float CutsceneCameraBlendElapsed = 0.f;
+	FVector CutsceneCameraStartLocation;
+	FRotator CutsceneCameraStartRotation;
 
 	// 내부 메서드
 	void SwitchToActionCamera(ABattleCombatant* Caster, const UTBGameplayAbility* AbilityCDO);

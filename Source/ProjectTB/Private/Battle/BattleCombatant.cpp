@@ -12,6 +12,8 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 ABattleCombatant::ABattleCombatant()
 {
@@ -165,6 +167,30 @@ void ABattleCombatant::OnSpawnImpactNotify(int32 HitIndex)
 				return;
 			}
 		}
+	}
+}
+
+void ABattleCombatant::OnOpenParryTimingNotify(float Duration)
+{
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABattleManager::StaticClass(), Found);
+	if (!Found.IsEmpty())
+	{
+		if (ABattleManager* BM = Cast<ABattleManager>(Found[0]))
+			BM->OpenParryTiming(Duration);
+	}
+}
+
+void ABattleCombatant::PlayParryMontage()
+{
+	if (ParryMontage)
+		PlayAnimMontage(ParryMontage);
+
+	// 패링 이펙트 스폰
+	if (ParryEffect)
+	{
+		const FVector SpawnLocation = GetActorLocation() + GetActorRotation().RotateVector(ParryEffectOffset);
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ParryEffect, SpawnLocation, GetActorRotation());
 	}
 }
 
