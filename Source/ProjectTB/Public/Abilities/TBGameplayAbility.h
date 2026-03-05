@@ -286,14 +286,19 @@ private:
 	FTimerHandle PreMontageTimer;
 	FTimerHandle CutsceneTimer;
 	FTimerHandle CutsceneNiagaraTimer;
+	FTimerHandle CutsceneCameraBlendTimer;
+	FTimerHandle MontageCameraBlendTimer;
 
 	int32 PendingHitIndex = 0;
 
 	UFUNCTION() void DoTeleportToTarget();
 	UFUNCTION() void DoPlayMontage();
+	UFUNCTION() void OnMontageCameraBlendFinished();
+	void PlayMontageInternal();
 
 	// 컷씬 카메라 관련
 	UFUNCTION() void StartCutsceneCamera();
+	UFUNCTION() void OnCutsceneCameraBlendFinished();
 	UFUNCTION() void SpawnCutsceneNiagara();
 	UFUNCTION() void OnCutsceneFinished();
 

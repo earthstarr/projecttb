@@ -41,46 +41,11 @@ void UTBGameplayAbility::ActivateAbility(
 	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
 	if (Avatar)
 	{
-		// 원래 회전값 저장
+		// 현재 회전값 저장 (BattleManager::ExecuteAction에서 이미 타겟 방향으로 회전됨)
 		OriginRotation = Avatar->GetActorRotation();
 	}
 
-	// ─── 시전자가 타겟을 바라보게 회전 ───
-	ABattleManager* BM = GetBattleManager();
-
-	if (Avatar && BM)
-	{
-		FVector LookAtLocation = FVector::ZeroVector;
-
-		// AllEnemies/AllAllies는 모든 타겟의 중앙을 바라봄
-		if (TargetType == EAbilityTargetType::AllEnemies)
-		{
-			TArray<ABattleCombatant*> Enemies = BM->GetLivingEnemies();
-			for (ABattleCombatant* E : Enemies)
-				if (E) LookAtLocation += E->GetActorLocation();
-			if (!Enemies.IsEmpty()) LookAtLocation /= Enemies.Num();
-		}
-		else if (TargetType == EAbilityTargetType::AllAllies)
-		{
-			TArray<ABattleCombatant*> Allies = BM->GetLivingPlayers();
-			for (ABattleCombatant* A : Allies)
-				if (A) LookAtLocation += A->GetActorLocation();
-			if (!Allies.IsEmpty()) LookAtLocation /= Allies.Num();
-		}
-		else if (ABattleCombatant* Target = BM->GetPendingTarget())
-		{
-			LookAtLocation = Target->GetActorLocation();
-		}
-
-		// 높이(Z) 차이를 무시하고 수평 방향으로만 회전
-		FVector Dir = LookAtLocation - Avatar->GetActorLocation();
-		Dir.Z = 0.f;
-
-		if (!Dir.IsNearlyZero())
-		{
-			Avatar->SetActorRotation(Dir.Rotation());
-		}
-	}
+	// 참고: 캐릭터 회전은 BattleManager::ExecuteAction에서 카메라 전환 전에 수행됨
 
 	// Melee: 0.5초 후 순간이동
 	if (AnimationType == EAbilityAnimType::Melee)
@@ -149,7 +114,7 @@ void UTBGameplayAbility::DoTeleportToTarget()
 
 void UTBGameplayAbility::DoPlayMontage()
 {
-	// 몽타주 카메라 활성화
+	// 몽타주 카메라 활성화 시 카메라 블렌딩 완료 후 몽타주 재생
 	if (bUseActionCamera && bUseMontageCamera)
 	{
 		AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
@@ -163,9 +128,25 @@ void UTBGameplayAbility::DoPlayMontage()
 				MontageCameraLocalRotation.Quaternion()).Rotator();
 
 			BM->SetActionCameraWorldPosition(MontageWorldLocation, MontageWorldRotation, MontageCameraBlendInTime);
+
+			// 카메라 블렌딩 완료 후 몽타주 재생
+			Avatar->GetWorldTimerManager().SetTimer(
+				MontageCameraBlendTimer, this, &UTBGameplayAbility::OnMontageCameraBlendFinished, MontageCameraBlendInTime, false);
+			return;
 		}
 	}
 
+	// 몽타주 카메라를 사용하지 않는 경우 바로 몽타주 재생
+	PlayMontageInternal();
+}
+
+void UTBGameplayAbility::OnMontageCameraBlendFinished()
+{
+	PlayMontageInternal();
+}
+
+void UTBGameplayAbility::PlayMontageInternal()
+{
 	if (AbilityMontage)
 	{
 		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
@@ -326,8 +307,11 @@ void UTBGameplayAbility::FinishAbility()
 			Avatar->SetActorLocation(OriginLocation);
 		}
 
-		// 회전 복귀
-		Avatar->SetActorRotation(OriginRotation);
+		// 회전 복귀 (BattleManager::ExecuteAction에서 저장한 원래 회전)
+		if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(Avatar))
+		{
+			Avatar->SetActorRotation(Combatant->PreAbilityRotation);
+		}
 	}
 
 	BM->OnActionComplete();
@@ -598,17 +582,27 @@ void UTBGameplayAbility::StartCutsceneCamera()
 	const FRotator CutsceneWorldRotation = AvatarTransform.TransformRotation(
 		CutsceneCameraLocalRotation.Quaternion()).Rotator();
 
-	// 카메라 이동
+	// 카메라 이동 시작
 	BM->SetActionCameraWorldPosition(CutsceneWorldLocation, CutsceneWorldRotation, CutsceneBlendInTime);
 
-	// Niagara 스폰 타이머 설정
+	// 카메라 블렌딩 완료 후 컷씬 시작 (Niagara, 홀드 타이머 등)
+	Avatar->GetWorldTimerManager().SetTimer(
+		CutsceneCameraBlendTimer, this, &UTBGameplayAbility::OnCutsceneCameraBlendFinished, CutsceneBlendInTime, false);
+}
+
+void UTBGameplayAbility::OnCutsceneCameraBlendFinished()
+{
+	AActor* Avatar = CurrentActorInfo ? CurrentActorInfo->AvatarActor.Get() : nullptr;
+	if (!Avatar) return;
+
+	// Niagara 스폰 타이머 설정 (카메라 블렌딩 완료 시점 기준)
 	if (CutsceneNiagaraEffect)
 	{
 		Avatar->GetWorldTimerManager().SetTimer(
 			CutsceneNiagaraTimer, this, &UTBGameplayAbility::SpawnCutsceneNiagara, CutsceneNiagaraDelay, false);
 	}
 
-	// 컷씬 종료 타이머 설정
+	// 컷씬 종료 타이머 설정 (카메라 블렌딩 완료 후부터 CutsceneDuration 만큼 유지)
 	Avatar->GetWorldTimerManager().SetTimer(
 		CutsceneTimer, this, &UTBGameplayAbility::OnCutsceneFinished, CutsceneDuration, false);
 }
@@ -642,7 +636,7 @@ void UTBGameplayAbility::SwitchToActionCameraAndSpawnImpact()
 
 	if (Avatar && BM)
 	{
-		// 액션 카메라 위치로 전환
+		// 캐릭터 현재 회전 기준으로 카메라 위치 계산 (캐릭터 회전에 맞춰 카메라도 회전)
 		const FTransform AvatarTransform = Avatar->GetActorTransform();
 		const FVector ActionWorldLocation = AvatarTransform.TransformPosition(ActionCameraLocalOffset);
 		const FRotator ActionWorldRotation = AvatarTransform.TransformRotation(

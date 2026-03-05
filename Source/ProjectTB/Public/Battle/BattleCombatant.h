@@ -189,6 +189,10 @@ public:
 	void OnTurnEnd();
 	virtual void OnTurnEnd_Implementation() {}
 
+	// 어빌리티 시작 전 회전 저장 (FinishAbility에서 복귀용)
+	UPROPERTY(BlueprintReadOnly, Category="Battle")
+	FRotator PreAbilityRotation;
+
 	// ─── ATB 게이지 시스템 ────────────────────────────────────────────────────
 	// 행동 게이지 (0~100, 100 이상이면 행동 가능)
 	UPROPERTY(BlueprintReadOnly, Category="Battle|ATB")
