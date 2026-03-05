@@ -164,6 +164,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 private:
 	// 상태
@@ -178,10 +179,13 @@ private:
 
 	// 진행 중인 액션 데이터
 	ABattleCombatant*               PendingTarget       = nullptr;
+	ABattleCombatant*               PendingCaster       = nullptr;
 	TSubclassOf<UTBGameplayAbility> PendingAbilityClass = nullptr;
 	EAbilityTargetType              PendingTargetType   = EAbilityTargetType::SingleEnemy;
 
 	FTimerHandle EnemyActionTimer;
+	FTimerHandle ActionCameraDelayTimer;
+	void ActivatePendingAbility();
 
 	// 패링
 	bool bParryTimingOpen = false;
@@ -197,6 +201,15 @@ private:
 	// 카메라 상태
 	bool  bActionCameraActive       = false;
 	float PendingCameraBlendOutTime = 0.5f;
+
+	// 컷씬 카메라 부드러운 이동용
+	bool bCutsceneCameraBlending = false;
+	FVector CutsceneCameraTargetLocation;
+	FRotator CutsceneCameraTargetRotation;
+	float CutsceneCameraBlendTime = 0.f;
+	float CutsceneCameraBlendElapsed = 0.f;
+	FVector CutsceneCameraStartLocation;
+	FRotator CutsceneCameraStartRotation;
 
 	// 내부 메서드
 	void SwitchToActionCamera(ABattleCombatant* Caster, const UTBGameplayAbility* AbilityCDO);
