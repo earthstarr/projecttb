@@ -16,6 +16,7 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Dead)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Stunned)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Acting)
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_Defending)
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Combatant_State_ParrySuccess)
 
 // ─── Ability Type ───────────────────────────────────────────────────────────
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Ability_Type_Physical)

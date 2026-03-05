@@ -1,4 +1,5 @@
 #include "Battle/BattleManager.h"
+#include "TBGameplayTags.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Battle/BattleEnemyCharacter.h"
 #include "Battle/BattleImpactActor.h"
@@ -174,8 +175,8 @@ ABattleCombatant* ABattleManager::ChargeAndFindNextActor()
 {
 	// 살아있는 모든 캐릭터 수집
 	TArray<ABattleCombatant*> AllLiving;
-	for (ABattleCombatant* P : PlayerParty) if (P && !P->IsDead()) AllLiving.Add(P);
-	for (ABattleCombatant* E : EnemyParty)  if (E && !E->IsDead()) AllLiving.Add(E);
+	for (ABattleCombatant* P : PlayerParty) if (IsValid(P) && !P->IsDead()) AllLiving.Add(P);
+	for (ABattleCombatant* E : EnemyParty)  if (IsValid(E) && !E->IsDead()) AllLiving.Add(E);
 
 	if (AllLiving.IsEmpty()) return nullptr;
 
@@ -214,27 +215,27 @@ TArray<ABattleCombatant*> ABattleManager::SimulateUpcomingTurns(int32 Count) con
 {
 	TArray<ABattleCombatant*> Result;
 	if (Count <= 0) return Result;
-	
+
 	// 살아있는 캐릭터와 현재 게이지 복사
 	TArray<ABattleCombatant*> AllLiving;
 	TMap<ABattleCombatant*, float> SimGauges;
-	
+
 	// 현재 턴을 진행 중인 캐릭터가 있다면 0번에 고정
-	if (CurrentActor && !CurrentActor->IsDead())
+	if (IsValid(CurrentActor) && !CurrentActor->IsDead())
 	{
 		Result.Add(CurrentActor);
-		
+
 		// 시뮬레이션 상에서 CurrentActor는 이미 행동을 시작한 것으로 간주하여
 		// 다음 턴 계산을 위해 게이지를 미리 차감
 		if (SimGauges.Contains(CurrentActor))
 		{
 			SimGauges[CurrentActor] -= ABattleCombatant::ActionGaugeThreshold;
 		}
-	}	
+	}
 
 	for (ABattleCombatant* P : PlayerParty)
 	{
-		if (P && !P->IsDead())
+		if (IsValid(P) && !P->IsDead())
 		{
 			AllLiving.Add(P);
 			SimGauges.Add(P, P->ActionGauge);
@@ -242,7 +243,7 @@ TArray<ABattleCombatant*> ABattleManager::SimulateUpcomingTurns(int32 Count) con
 	}
 	for (ABattleCombatant* E : EnemyParty)
 	{
-		if (E && !E->IsDead())
+		if (IsValid(E) && !E->IsDead())
 		{
 			AllLiving.Add(E);
 			SimGauges.Add(E, E->ActionGauge);
@@ -482,9 +483,10 @@ void ABattleManager::ExecuteAction(
 	SetPhase(EBattlePhase::ExecutingAction);
 	PendingTarget = Target; // 어빌리티가 GetPendingTarget()으로 읽기
 
-	// 어빌리티 CDO에서 카메라 설정을 읽어 액션 카메라 전환
+	// 어빌리티 CDO에서 TargetType과 카메라 설정 읽기
 	if (UTBGameplayAbility* CDO = AbilityClass->GetDefaultObject<UTBGameplayAbility>())
 	{
+		PendingTargetType = CDO->TargetType;
 		if (CDO->bUseActionCamera)
 			SwitchToActionCamera(Caster, CDO);
 	}
@@ -544,14 +546,14 @@ TArray<ABattleCombatant*> ABattleManager::GetUpcomingTurns(int32 Count) const
 TArray<ABattleCombatant*> ABattleManager::GetLivingPlayers() const
 {
 	TArray<ABattleCombatant*> Result;
-	for (ABattleCombatant* P : PlayerParty) if (P && !P->IsDead()) Result.Add(P);
+	for (ABattleCombatant* P : PlayerParty) if (IsValid(P) && !P->IsDead()) Result.Add(P);
 	return Result;
 }
 
 TArray<ABattleCombatant*> ABattleManager::GetLivingEnemies() const
 {
 	TArray<ABattleCombatant*> Result;
-	for (ABattleCombatant* E : EnemyParty) if (E && !E->IsDead()) Result.Add(E);
+	for (ABattleCombatant* E : EnemyParty) if (IsValid(E) && !E->IsDead()) Result.Add(E);
 	return Result;
 }
 
@@ -590,6 +592,62 @@ void ABattleManager::CheckBattleEnd()
 void ABattleManager::BroadcastTurnOrder()
 {
 	OnTurnOrderUpdated.Broadcast(GetUpcomingTurns(5));
+}
+
+// ─── 패링 ─────────────────────────────────────────────────────────────────────
+void ABattleManager::OpenParryTiming(float Duration)
+{
+	bParryTimingOpen = true;
+	GetWorldTimerManager().SetTimer(ParryTimingTimer, this, &ABattleManager::CloseParryTiming, Duration, false);
+}
+
+bool ABattleManager::TryParry()
+{
+	// 쿨다운 중이면 입력 무시 (선입력 페널티)
+	if (bParryCooldown) return false;
+
+	// 패링 시도 시 무조건 쿨다운 시작 (성공/실패 관계없이)
+	bParryCooldown = true;
+	GetWorldTimerManager().SetTimer(ParryCooldownTimer, this, &ABattleManager::ClearParryCooldown, ParryCooldownDuration, false);
+
+	// 타이밍이 안 열려있으면 실패 (쿨다운만 적용)
+	if (!bParryTimingOpen) return false;
+
+	// PendingTargetType 기준으로 패링 대상 결정
+	// AllEnemies(적이 전체 공격) → 살아있는 플레이어 전원, 그 외 → PendingTarget만
+	TArray<ABattleCombatant*> ParryTargets;
+	if (PendingTargetType == EAbilityTargetType::AllEnemies)
+	{
+		for (ABattlePlayerCharacter* P : PlayerParty)
+			if (P && !P->IsDead()) ParryTargets.Add(P);
+	}
+	else
+	{
+		if (PendingTarget && !PendingTarget->IsDead())
+			ParryTargets.Add(PendingTarget);
+	}
+
+	for (ABattleCombatant* Target : ParryTargets)
+	{
+		if (UAbilitySystemComponent* ASC = Target->GetAbilitySystemComponent())
+			ASC->AddLooseGameplayTag(TAG_Combatant_State_ParrySuccess);
+		Target->PlayParryMontage();
+	}
+
+	CloseParryTiming();
+	return !ParryTargets.IsEmpty();
+}
+
+void ABattleManager::CloseParryTiming()
+{
+	bParryTimingOpen = false;
+	GetWorldTimerManager().ClearTimer(ParryTimingTimer);
+}
+
+void ABattleManager::ClearParryCooldown()
+{
+	bParryCooldown = false;
+	GetWorldTimerManager().ClearTimer(ParryCooldownTimer);
 }
 
 void ABattleManager::OnCombatantDied(ABattleCombatant* Combatant)

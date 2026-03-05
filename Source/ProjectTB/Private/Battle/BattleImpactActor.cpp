@@ -1,4 +1,6 @@
 #include "Battle/BattleImpactActor.h"
+#include "Battle/BattleManager.h"
+#include "Kismet/GameplayStatics.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraComponent.h"
@@ -62,6 +64,14 @@ void ABattleImpactActor::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(
 		FinishedTimer, this, &ABattleImpactActor::TriggerFinished, TotalDuration, false);
+
+	// 패링 가능한 경우: 데미지 발생 ParryTimingLeadTime 초 전에 타이밍 열기
+	if (bParryable && ParryTimingLeadTime > 0.f)
+	{
+		const float ParryOpenTime = FMath::Max(0.01f, ImpactDelay - ParryTimingLeadTime);
+		GetWorldTimerManager().SetTimer(
+			ParryOpenTimer, this, &ABattleImpactActor::TriggerOpenParryTiming, ParryOpenTime, false);
+	}
 }
 
 void ABattleImpactActor::TriggerImpact()
@@ -111,6 +121,17 @@ void ABattleImpactActor::PlayImpactEffect_Implementation()
 	else if (ImpactNiagaraComponent && ImpactNiagaraComponent->GetAsset())
 	{
 		ImpactNiagaraComponent->Activate(true);
+	}
+}
+
+void ABattleImpactActor::TriggerOpenParryTiming()
+{
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABattleManager::StaticClass(), Found);
+	if (!Found.IsEmpty())
+	{
+		if (ABattleManager* BM = Cast<ABattleManager>(Found[0]))
+			BM->OpenParryTiming(ParryTimingLeadTime);
 	}
 }
 
