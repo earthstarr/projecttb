@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "ShopkeeperBasePawn.generated.h"
 
+class AWorldPlayerController;
 class USphereComponent;
 
 UCLASS()
@@ -53,6 +54,5 @@ protected:
 	
 private:
 	bool CreateShopWidget();
-	void RequestShowShopWidget();
-	void RequestCloseShopWidget();
+	void RequestShowShopWidget(AWorldPlayerController* PC);
 };

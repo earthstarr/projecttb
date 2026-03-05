@@ -24,7 +24,6 @@ void AWorldPlayerController::ShowWidget(UUserWidget* Widget, bool bIgnoreMoveInp
 	{
 		SetInputModeUIOnly();
 	}
-
 }
 
 void AWorldPlayerController::CloseWidget(UUserWidget* Widget, bool bActiveMoveInput)

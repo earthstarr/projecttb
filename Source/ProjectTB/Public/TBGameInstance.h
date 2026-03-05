@@ -93,4 +93,24 @@ public:
 	/** DataTable에서 캐릭터+레벨에 해당하는 스탯 조회 */
 	UFUNCTION(BlueprintCallable, Category="Stats")
 	bool GetLevelStats(FName CharacterId, int32 Level, FCharacterLevelStats& OutStats);
+	
+	// ─── 재화 ────────────────────────────────────────────────────────────────
+private:
+	UPROPERTY(BlueprintReadWrite, Category="Money", META = (AllowPrivateAccess))
+	int32 CurrentMoney;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category="Money")
+	void AddGold(int32 Amount);
+	
+	// 소모. 결과가 0원 이상인 경우 소모하며 true 반환. 결과가 음수일 경우 소모하지 않고 false
+	UFUNCTION(BlueprintCallable, Category="Money")
+	bool SpendGold(int32 Amount);
+	
+	// 강탈. 언더 플로우 방지 적용됨
+	UFUNCTION(BlueprintCallable, Category="Money")
+	void RobMoney(int32 Amount);
+	
+	UFUNCTION(BlueprintCallable, Category="Money")
+	int32 GetCurrentMoney() const;
 };

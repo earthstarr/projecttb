@@ -5,6 +5,8 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Components/SphereComponent.h"
+#include "World/WorldCharacter.h"
+#include "World/WorldCharacterBase.h"
 #include "World/WorldPlayerController.h"
 
 // Sets default values
@@ -43,7 +45,21 @@ void AShopkeeperBasePawn::BeginPlay()
 void AShopkeeperBasePawn::OnAreaOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	RequestShowShopWidget();
+	//이 부분 GAS로 상점을 이용할 수 있는지 확인 하면 좋을듯 하다. todo
+	AWorldCharacterBase* Player = Cast<AWorldCharacterBase>(OtherActor);
+	if (Player)
+	{
+		AWorldPlayerController* PC = Cast<AWorldPlayerController>(Player->GetController());
+		if (PC)
+		{
+			RequestShowShopWidget(PC);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp,Warning,TEXT("상점을 이용할 수 있는 플레이어가 아닙니다."));
+	}
+	return;
 }
 
 // Called every frame
@@ -75,7 +91,7 @@ bool AShopkeeperBasePawn::CreateShopWidget()
 	}
 }
 
-void AShopkeeperBasePawn::RequestShowShopWidget()
+void AShopkeeperBasePawn::RequestShowShopWidget(AWorldPlayerController* PC)
 {
 	if (ShopWidget == nullptr)
 	{
@@ -84,32 +100,5 @@ void AShopkeeperBasePawn::RequestShowShopWidget()
 			return;
 		}
 	}
-	
-	//
-	AWorldPlayerController* WorldPC = Cast<AWorldPlayerController>(GetWorld()->GetFirstPlayerController());
-	
-	if (WorldPC != nullptr)
-	{
-		WorldPC->ShowWidget(ShopWidget, true);
-	}
+	PC->ShowWidget(ShopWidget, true);
 }
-
-void AShopkeeperBasePawn::RequestCloseShopWidget()
-{
-	if (ShopWidget == nullptr)
-	{
-		if (CreateShopWidget() == false)
-		{
-			return;
-		}
-	}
-	
-	//
-	AWorldPlayerController* WorldPC = Cast<AWorldPlayerController>(GetWorld()->GetFirstPlayerController());
-	
-	if (WorldPC != nullptr)
-	{
-		WorldPC->CloseWidget(ShopWidget, true);
-	}
-}
-
