@@ -14,6 +14,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Dead,       "Combatant.State.Dead")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Stunned,    "Combatant.State.Stunned")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Acting,     "Combatant.State.Acting")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_Defending,  "Combatant.State.Defending")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combatant_State_ParrySuccess, "Combatant.State.ParrySuccess")
 
 // ─── Ability Type ───────────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Type_Physical, "Ability.Type.Physical")

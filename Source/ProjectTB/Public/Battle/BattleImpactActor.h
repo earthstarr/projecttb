@@ -45,6 +45,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	float ImpactDelay = 1.0f;
 
+	// 패링 가능 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact|Parry")
+	bool bParryable = false;
+
+	// 데미지 발생 몇 초 전에 패링 타이밍을 열지 (ImpactDelay보다 작아야 함)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact|Parry")
+	float ParryTimingLeadTime = 0.5f;
+
 	// 이펙트 전체 재생 시간 (초) — 이 시간 후 OnFinished 발생 및 액터 제거
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	float TotalDuration = 2.0f;
@@ -118,7 +126,9 @@ protected:
 private:
 	UFUNCTION() void TriggerImpact();
 	UFUNCTION() void TriggerFinished();
+	UFUNCTION() void TriggerOpenParryTiming();
 
 	FTimerHandle ImpactTimer;
 	FTimerHandle FinishedTimer;
+	FTimerHandle ParryOpenTimer;
 };
