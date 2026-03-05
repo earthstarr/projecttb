@@ -90,7 +90,26 @@ void AShopkeeperBasePawn::RequestShowShopWidget()
 	
 	if (WorldPC != nullptr)
 	{
-		WorldPC->ShowWidget(ShopWidget);
+		WorldPC->ShowWidget(ShopWidget, true);
+	}
+}
+
+void AShopkeeperBasePawn::RequestCloseShopWidget()
+{
+	if (ShopWidget == nullptr)
+	{
+		if (CreateShopWidget() == false)
+		{
+			return;
+		}
+	}
+	
+	//
+	AWorldPlayerController* WorldPC = Cast<AWorldPlayerController>(GetWorld()->GetFirstPlayerController());
+	
+	if (WorldPC != nullptr)
+	{
+		WorldPC->CloseWidget(ShopWidget, true);
 	}
 }
 

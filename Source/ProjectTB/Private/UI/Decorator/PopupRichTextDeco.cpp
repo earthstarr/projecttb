@@ -30,7 +30,7 @@ void UPopupRichTextDeco::OpenPopup(URichTextBlock* OwnerRichText, const FString&
 	}
 	
 	// 이미 열려 있으면 기존 팝업 제거
-	if (CurrentPopupWidget.IsValid())
+	if (CurrentPopupWidget.IsValid() && CurrentPopupWidget->IsInViewport())
 	{
 		CurrentPopupWidget->RemoveFromParent();
 		CurrentPopupWidget = nullptr;

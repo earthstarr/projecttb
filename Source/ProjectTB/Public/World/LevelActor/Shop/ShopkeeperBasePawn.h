@@ -54,5 +54,5 @@ protected:
 private:
 	bool CreateShopWidget();
 	void RequestShowShopWidget();
-	
+	void RequestCloseShopWidget();
 };

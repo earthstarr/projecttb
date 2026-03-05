@@ -25,6 +25,8 @@ public:
 	//포커스 잃으면 닫히기
 	virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
 	
-	void SetPopupText(FString Key);
+	void SetPopupText(const FString& PopupID);
 	
+	UPROPERTY()
+	FString CurrentPopupID;
 };
