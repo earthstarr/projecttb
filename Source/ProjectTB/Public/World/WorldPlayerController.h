@@ -15,7 +15,10 @@ class PROJECTTB_API AWorldPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	void ShowWidget(UUserWidget* Widget);
+	void ShowWidget(UUserWidget* Widget, bool bIgnoreMoveInput);
+	void CloseWidget(UUserWidget* Widget, bool bActiveMoveInput);
+	void SetInputModeGameOnly();
+	void SetInputModeUIOnly();
 	
 private:
 	UPROPERTY(Meta = (AllowPrivateAccess = true))

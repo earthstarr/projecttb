@@ -1,6 +1,7 @@
 #include "TBGameInstance.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/DataTable.h"
+#include "Math/NumericLimits.h"
 
 void UTBGameInstance::Init()
 {
@@ -122,3 +123,36 @@ bool UTBGameInstance::GetLevelStats(FName CharacterId, int32 Level, FCharacterLe
 
 	return false;
 }
+
+// ─── 재화 시스템 ──────────────────────────────────────────────────────────────
+
+void UTBGameInstance::AddGold(int32 Amount)
+{
+	int64 NewValue = (int64)CurrentMoney + Amount;
+	CurrentMoney = FMath::Clamp(NewValue, (int64)MIN_int32, (int64)MAX_int32);
+}
+
+bool UTBGameInstance::SpendGold(int32 Amount)
+{
+	if (CurrentMoney < Amount)
+	{
+		return false;
+	}
+	else
+	{
+		CurrentMoney -= Amount;
+		return true;
+	}
+}
+
+void UTBGameInstance::RobMoney(int32 Amount)
+{
+	int64 NewValue = (int64)CurrentMoney - Amount;
+	CurrentMoney = FMath::Clamp(NewValue, (int64)MIN_int32, (int64)MAX_int32);
+}
+
+int32 UTBGameInstance::GetCurrentMoney() const
+{
+	return CurrentMoney;
+}
+
