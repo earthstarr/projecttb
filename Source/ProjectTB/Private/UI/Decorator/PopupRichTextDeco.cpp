@@ -45,8 +45,7 @@ void UPopupRichTextDeco::OpenPopup(URichTextBlock* OwnerRichText, const FString&
 		PopupWidget->SetPopupText(PopupID);
 		
 		//마우스 위치에 팝업창 생성
-		UWidgetLayoutLibrary::GetMousePositionOnViewport(World);
-		FVector2D MousePosition;
+		FVector2D MousePosition = UWidgetLayoutLibrary::GetMousePositionOnViewport(World);
 		MousePosition += FVector2D(20.f, 20.f);
 		
 		//화면 밖으로 나가지 않도록 적용
@@ -55,13 +54,22 @@ void UPopupRichTextDeco::OpenPopup(URichTextBlock* OwnerRichText, const FString&
 		//위젯 크기 즉시 계산 요청
 		PopupWidget->ForceLayoutPrepass();
 		
-		//위젯 크기 가져오기 추가해야함. todo
+		//위젯 크기 가져와서 보정
 		FVector2D WidgetSize = PopupWidget->GetDesiredSize();
 		
 		MousePosition.X = FMath::Clamp(MousePosition.X, 0.f, ViewportSize.X - WidgetSize.X);
 		MousePosition.Y = FMath::Clamp(MousePosition.Y, 0.f, ViewportSize.Y - WidgetSize.Y);
 
 		PopupWidget->SetPositionInViewport(MousePosition);
+		FTimerHandle Handle;
+
+		World->GetTimerManager().SetTimerForNextTick([PopupWidget]()
+		{
+			if (PopupWidget)
+			{
+				PopupWidget->SetKeyboardFocus();
+			}
+		});
 		
 		//현재 팝업 위젯 최신화
 		CurrentPopupWidget = PopupWidget;

@@ -3,6 +3,14 @@
 
 #include "UI/PopupWidget.h"
 
+
+void UPopupWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+	
+	bIsFocusable = true;
+}
+
 FReply UPopupWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	// 위젯 영역 밖 클릭이면 닫기
@@ -13,6 +21,13 @@ FReply UPopupWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const 
 	}
 
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
+void UPopupWidget::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{
+	Super::NativeOnFocusLost(InFocusEvent);
+	
+	RemoveFromParent();
 }
 
 void UPopupWidget::SetPopupText(FString KeyText)
