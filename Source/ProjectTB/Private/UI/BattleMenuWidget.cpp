@@ -6,6 +6,8 @@
 
 void UBattleMenuWidget::NativeConstruct()
 {
+	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::NativeConstruct Enter"));
+
 	Super::NativeConstruct();
 
 	// 키보드 포커스를 받을 수 있도록 설정
@@ -25,6 +27,8 @@ FReply UBattleMenuWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, c
 
 FReply UBattleMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
+	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::NativeOnKeyDown Enter"));
+
 	const FKey Key = InKeyEvent.GetKey();
 
 	// 패링 (F키) — 메뉴 상태와 관계없이 항상 처리
@@ -49,6 +53,8 @@ FReply UBattleMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKe
 
 void UBattleMenuWidget::ShowMainMenu_Implementation(ABattleCombatant* ActiveCombatant)
 {
+	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::ShowMainMenu_Implementation Enter"));
+
 	MenuState     = EMenuState::MainMenu;
 	SelectedIndex = 0;
 	CurrentCombatant = ActiveCombatant;

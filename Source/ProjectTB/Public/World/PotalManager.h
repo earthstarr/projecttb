@@ -3,10 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "DataStruct/RoomDataStruct.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "PotalManager.generated.h"
 
-
+class AWorldPlayerController;
 struct FRoomData;
 class ULevelStreamingDynamic;
 /**
@@ -27,6 +28,9 @@ public:
 	void OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHandle);
 	
 	UFUNCTION()
+	void OnReturnToWorldLevel(const FDataTableRowHandle& ReturnRoomData);
+	
+	UFUNCTION()
 	void OnLevelLoadFinished();
 	
 	UFUNCTION()
@@ -35,13 +39,16 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Room Data")
 	FDataTableRowHandle InitRoomHandle;
 	
+	UFUNCTION()
+	void ActivateHUDMode(const ERoomType RoomType);
+	
 private:
 	// 페이드 인, 아웃
 	UPROPERTY()
 	APlayerCameraManager* CamManager;
 	
 	UPROPERTY()
-	APlayerController* PC;
+	AWorldPlayerController* PC;
 	
 	float TransitionStartTime;
 	

@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "Data/LevelDataTypes.h"
+#include "Data/ArtifactDataTypes.h"
 #include "TBGameInstance.generated.h"
 
 class ABattleEnemyCharacter;
@@ -18,6 +19,10 @@ struct FBattleTransitionData
 	UPROPERTY(BlueprintReadWrite, Category="Battle")
 	TArray<TSoftClassPtr<ABattleEnemyCharacter>> EnemyClasses;
 
+	// 전투 종료 후 복귀할 월드 데이터
+	UPROPERTY(BlueprintReadWrite, Category="Battle")
+	FDataTableRowHandle ReturnRoomData;
+	
 	// 전투 종료 후 복귀할 월드 레벨 이름
 	UPROPERTY(BlueprintReadWrite, Category="Battle")
 	FName WorldLevelName;
@@ -121,5 +126,19 @@ public:
 	void RobMoney(int32 Amount);
 	
 	UFUNCTION(BlueprintCallable, Category="Money")
-	int32 GetCurrentMoney() const;
+	int32 GetCurrentMoney() const {return CurrentMoney;}
+
+	// ─── 아티팩트 ─────────────────────────────────────────────────────────────
+	
+	// 파티 보유 아티팩트 데이터
+	UPROPERTY(BlueprintReadWrite, Category="Artifact")
+	FEquippedArtifactData PartyArtifactData;
+	
+	// 최대 보유 아티팩트 갯수 한도
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Artifact")
+	int32 MaxArtifactCount = 100;
+	
+	// 아티팩트 습득
+	UFUNCTION(BlueprintCallable, Category="Artifact")
+	void AcquireArtifact(FName ArtifactID);
 };

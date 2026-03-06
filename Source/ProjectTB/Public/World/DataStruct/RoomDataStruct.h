@@ -4,6 +4,17 @@
 #include "Engine/DataTable.h"
 #include "RoomDataStruct.generated.h"
 
+
+UENUM(BlueprintType)
+enum class ERoomType : uint8
+{
+	Test,
+	Battle,
+	World,
+	Event,
+	Shop
+};
+
 USTRUCT(BlueprintType)
 struct FRoomData : public FTableRowBase
 {
@@ -12,7 +23,7 @@ struct FRoomData : public FTableRowBase
 public:
 	// 방 종류 (전투, 상점, 이벤트)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
-	FName RoomType;
+	ERoomType RoomType;
 	
 	// 이동할 레벨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
