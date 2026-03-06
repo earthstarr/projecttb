@@ -28,6 +28,10 @@ struct FBattleTransitionData
 
 	UPROPERTY(BlueprintReadWrite, Category="Battle")
 	FRotator WorldReturnRotation  = FRotator::ZeroRotator;
+
+	// 열 배틀맵 이름 (예: "BattleMap_Forest", "BattleMap_Dungeon")
+	UPROPERTY(BlueprintReadWrite, Category="Battle")
+	FName BattleMapName;
 };
 
 // 레벨업 델리게이트
@@ -50,6 +54,11 @@ public:
 	FBattleTransitionData BattleTransitionData;
 
 	// ─── 파티 데이터 ──────────────────────────────────────────────────────────
+
+	/** Blueprint에서 기본 파티 3명 설정 — Init() 시 PartyData로 자동 복사 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Party")
+	TArray<FPartyMemberData> DefaultParty;
+
 	UPROPERTY(BlueprintReadWrite, Category="Party")
 	TArray<FPartyMemberData> PartyData;
 

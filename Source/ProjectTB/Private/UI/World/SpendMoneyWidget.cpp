@@ -9,7 +9,7 @@ void USpendMoneyWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	TBInstance = Cast<UTBGameInstance>(GetGameInstance())
+	TBInstance = Cast<UTBGameInstance>(GetGameInstance());
 }
 
 bool USpendMoneyWidget::TrySpendMoney(int32 Amount)

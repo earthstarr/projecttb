@@ -29,6 +29,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnBegin,          ABattleCombat
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnOrderUpdated,   const TArray<ABattleCombatant*>&, UpcomingTurns);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnyDamageDealt,    ABattleCombatant*, Target, float, Damage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnyHealDealt,      ABattleCombatant*, Target, float, Heal);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleReady);
 
 /**
  * 배틀 씬에 배치되는 전투 관리 Actor.
@@ -121,11 +122,21 @@ public:
 	bool bAutoStartBattle = true;
 
 	// ─── 캐릭터 스폰 위치 (레벨에서 설정) ────────────────────────────────────
+	// 플레이어 스폰 포인트 (3개 배치)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
 	TArray<TObjectPtr<AActor>> PlayerSpawnPoints;
 
+	// 적 스폰 중심점 (1개만 배치, 적 수에 따라 좌우로 펼침)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
-	TArray<TObjectPtr<AActor>> EnemySpawnPoints;
+	TObjectPtr<AActor> EnemySpawnCenter;
+
+	// 적 간 간격 (Y축 기준)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
+	float EnemySpacing = 200.f;
+
+	// 적이 바라볼 방향 (스폰 시 적용)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
+	FRotator EnemySpawnRotation = FRotator::ZeroRotator;
 
 	// ─── 카메라 ───────────────────────────────────────────────────────────────
 	// 전투 전체 고정 카메라 (레벨에 배치)
@@ -161,6 +172,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FOnAnyHealDealt OnAnyHealDealt;
+
+	// 전투 준비 완료 (스탯 적용 완료 후 UI 초기화용)
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnBattleReady OnBattleReady;
 
 protected:
 	virtual void BeginPlay() override;
@@ -256,8 +271,11 @@ private:
 	UFUNCTION()
 	void OnCombatantHealed(ABattleCombatant* Combatant, float Heal);
 
-	// bAutoStartBattle 전용 — 딜레이 후 호출
+	// bAutoStartBattle 전용 — 딜레이 후 호출 (테스트용: 맵에 배치된 캐릭터 자동 감지)
 	void AutoStartBattle();
+
+	// GameInstance 기반 스폰 — bAutoStartBattle=false일 때 사용
+	void SpawnAndStartBattle();
 
 	// 셰이더 웜업 — StartBattle 직후 오프스크린에서 이펙트 미리 터뜨림
 	void WarmUpEffects();
