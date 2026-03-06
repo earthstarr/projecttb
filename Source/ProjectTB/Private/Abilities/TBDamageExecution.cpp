@@ -80,7 +80,7 @@ void UTBDamageExecution::Execute_Implementation(
 
 	// ─── 데미지 공식 ─────────────────────────────────────────────────────────
 	// Reduction = Defense / (Defense + 100) → 0~1, 절대 1 불가
-	const float Reduction  = Defense / (Defense + 100.f);
+	const float Reduction  = Defense / (Defense + 100.f);	// 방어력 50이면 3분의2, 방어력 100이면 절반 데미지, 방어력 200이면 3분의1 데미지
 	const float BaseDamage = Attack * AbilityMultiplier;
 	float FinalDamage      = BaseDamage * (1.f - Reduction);
 

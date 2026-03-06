@@ -21,11 +21,17 @@ void ABattleManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 0.5초 딜레이 — 레벨의 모든 Actor BeginPlay 완료 후 실행
+	FTimerHandle StartTimer;
 	if (bAutoStartBattle)
 	{
-		// 0.5초 딜레이 — 레벨의 모든 Actor BeginPlay 완료 후 실행
-		FTimerHandle AutoStartTimer;
-		GetWorldTimerManager().SetTimer(AutoStartTimer, this, &ABattleManager::AutoStartBattle, 0.5f, false);
+		// 테스트용: 맵에 배치된 캐릭터 자동 감지
+		GetWorldTimerManager().SetTimer(StartTimer, this, &ABattleManager::AutoStartBattle, 0.5f, false);
+	}
+	else
+	{
+		// 정식: GameInstance에서 데이터 읽어서 스폰
+		GetWorldTimerManager().SetTimer(StartTimer, this, &ABattleManager::SpawnAndStartBattle, 0.5f, false);
 	}
 }
 
@@ -126,6 +132,118 @@ void ABattleManager::AutoStartBattle()
 	StartBattle(Players, Enemies);
 }
 
+void ABattleManager::SpawnAndStartBattle()
+{
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI)
+	{
+		UE_LOG(LogTemp, Error, TEXT("BattleManager: GameInstance가 없습니다."));
+		return;
+	}
+
+	// ─── 플레이어 스폰 ───────────────────────────────────────────────────────
+	TArray<ABattlePlayerCharacter*> Players;
+
+	if (PlayerSpawnPoints.Num() < GI->PartyData.Num())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BattleManager: PlayerSpawnPoints(%d)가 PartyData(%d)보다 적습니다."),
+			PlayerSpawnPoints.Num(), GI->PartyData.Num());
+	}
+
+	for (int32 i = 0; i < GI->PartyData.Num() && i < PlayerSpawnPoints.Num(); i++)
+	{
+		const FPartyMemberData& Data = GI->PartyData[i];
+		AActor* SpawnPoint = PlayerSpawnPoints[i];
+
+		if (!Data.CharacterClass || !SpawnPoint)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BattleManager: PartyData[%d] CharacterClass 또는 SpawnPoint가 없습니다."), i);
+			continue;
+		}
+
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		ABattlePlayerCharacter* Player = GetWorld()->SpawnActor<ABattlePlayerCharacter>(
+			Data.CharacterClass,
+			SpawnPoint->GetActorLocation(),
+			SpawnPoint->GetActorRotation(),
+			SpawnParams
+		);
+
+		if (Player)
+		{
+			Player->CharacterId = Data.CharacterId;
+			Players.Add(Player);
+			UE_LOG(LogTemp, Display, TEXT("BattleManager: 플레이어 스폰 - %s (Lv.%d)"),
+				*Data.CharacterId.ToString(), Data.Level);
+		}
+	}
+
+	// ─── 적 스폰 ─────────────────────────────────────────────────────────────
+	TArray<ABattleEnemyCharacter*> Enemies;
+	const TArray<TSoftClassPtr<ABattleEnemyCharacter>>& EnemyClasses = GI->BattleTransitionData.EnemyClasses;
+
+	if (!EnemySpawnCenter)
+	{
+		UE_LOG(LogTemp, Error, TEXT("BattleManager: EnemySpawnCenter가 설정되지 않았습니다."));
+	}
+	else if (EnemyClasses.Num() > 0)
+	{
+		const int32 EnemyCount = EnemyClasses.Num();
+		const FVector CenterLoc = EnemySpawnCenter->GetActorLocation();
+
+		// 중심 기준 좌우 대칭 배치 (Y축)
+		// 예: 3마리 → -1, 0, +1 → 간격 곱해서 -200, 0, +200
+		const float StartOffset = -((EnemyCount - 1) / 2.f) * EnemySpacing;
+
+		for (int32 i = 0; i < EnemyCount; i++)
+		{
+			TSubclassOf<ABattleEnemyCharacter> EnemyClass = EnemyClasses[i].LoadSynchronous();
+			if (!EnemyClass)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("BattleManager: EnemyClasses[%d] 로드 실패"), i);
+				continue;
+			}
+
+			FVector SpawnLoc = CenterLoc;
+			SpawnLoc.Y += StartOffset + (i * EnemySpacing);
+
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+			ABattleEnemyCharacter* Enemy = GetWorld()->SpawnActor<ABattleEnemyCharacter>(
+				EnemyClass,
+				SpawnLoc,
+				EnemySpawnRotation,
+				SpawnParams
+			);
+
+			if (Enemy)
+			{
+				Enemies.Add(Enemy);
+				UE_LOG(LogTemp, Display, TEXT("BattleManager: 적 스폰 - %s"), *Enemy->GetName());
+			}
+		}
+	}
+
+	// ─── 전투 시작 ───────────────────────────────────────────────────────────
+	if (Players.IsEmpty())
+	{
+		UE_LOG(LogTemp, Error, TEXT("BattleManager: 스폰된 플레이어가 없습니다."));
+		return;
+	}
+	if (Enemies.IsEmpty())
+	{
+		UE_LOG(LogTemp, Error, TEXT("BattleManager: 스폰된 적이 없습니다."));
+		return;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("BattleManager: SpawnAndStartBattle → Player %d명, Enemy %d명"),
+		Players.Num(), Enemies.Num());
+	StartBattle(Players, Enemies);
+}
+
 // ─── 전투 시작 ─────────────────────────────────────────────────────────────────
 void ABattleManager::StartBattle(
 	const TArray<ABattlePlayerCharacter*>& Players,
@@ -181,6 +299,9 @@ void ABattleManager::StartBattle(
 
 	WarmUpEffects();
 	SetPhase(EBattlePhase::BattleStart);
+
+	// 스탯 적용 완료 → UI 초기화 트리거
+	OnBattleReady.Broadcast();
 
 	// 고정 카메라로 전환
 	if (BattleCamera)

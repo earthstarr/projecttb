@@ -9,6 +9,12 @@ void UTBGameInstance::Init()
 
 	// GAS 전역 초기화 — 반드시 한 번 호출해야 ExecutionCalculation 등이 작동함
 	UAbilitySystemGlobals::Get().InitGlobalData();
+
+	// 파티 3명 고정 — Blueprint에서 DefaultParty 설정 시 자동 초기화
+	if (DefaultParty.Num() > 0)
+	{
+		PartyData = DefaultParty;
+	}
 }
 
 // ─── 파티 관리 ─────────────────────────────────────────────────────────────────

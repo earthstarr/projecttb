@@ -59,7 +59,11 @@ void ATBBattleHUD::CreateWidgets()
 	if (CharacterStatusWidgetClass)
 	{
 		CharacterStatusWidget = CreateWidget<UCharacterStatusWidget>(PC, CharacterStatusWidgetClass);
-		if (CharacterStatusWidget) CharacterStatusWidget->AddToViewport(0);
+		if (CharacterStatusWidget)
+		{
+			CharacterStatusWidget->AddToViewport(0);
+			CharacterStatusWidget->SetVisibility(ESlateVisibility::Collapsed);  // 스탯 적용 전까지 완전히 숨김
+		}
 	}
 }
 
@@ -76,10 +80,9 @@ void ATBBattleHUD::BindToBattleManager()
 	BattleManager->OnTurnOrderUpdated.AddDynamic(this,   &ATBBattleHUD::HandleTurnOrderUpdated);
 	BattleManager->OnAnyDamageDealt.AddDynamic(this,     &ATBBattleHUD::HandleDamageDealt);
 	BattleManager->OnAnyHealDealt.AddDynamic(this,       &ATBBattleHUD::HandleHealDealt);
+	BattleManager->OnBattleReady.AddDynamic(this,        &ATBBattleHUD::HandleBattleReady);
 
-	// CharacterStatusWidget에 파티 정보 전달
-	if (CharacterStatusWidget)
-		CharacterStatusWidget->InitializeParty(BattleManager->GetPlayerParty());
+	// CharacterStatusWidget 초기화는 OnBattleReady에서 수행 (스탯 적용 완료 후)
 
 	// 배틀씬: UI 전용 입력 모드 (마우스 클릭으로 포커스 빠지는 것 방지)
 	if (APlayerController* PC = GetOwningPlayerController())
@@ -104,12 +107,7 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 	switch (NewPhase)
 	{
 	case EBattlePhase::BattleStart:
-		// AutoStartBattle 딜레이 이후 PlayerParty가 채워지므로 여기서 초기화
-		if (CharacterStatusWidget)
-			CharacterStatusWidget->InitializeParty(BattleManager->GetPlayerParty());
-		// MP/Stamina 즉시 갱신을 위해 각 플레이어의 OnStatChanged 구독
-		for (ABattlePlayerCharacter* P : BattleManager->GetPlayerParty())
-			if (P) P->OnStatChanged.AddUniqueDynamic(this, &ATBBattleHUD::HandleStatChanged);
+		// UI 초기화는 OnBattleReady에서 수행 (스탯 적용 완료 후)
 		break;
 
 	case EBattlePhase::PlayerTurn:
@@ -209,4 +207,27 @@ void ATBBattleHUD::HandleStatChanged(ABattleCombatant* Combatant)
 {
 	if (CharacterStatusWidget && Combatant)
 		CharacterStatusWidget->RefreshStatus(Combatant);
+}
+
+void ATBBattleHUD::HandleBattleReady()
+{
+	if (!BattleManager) return;
+
+	// 스탯 적용 완료 후 파티 UI 초기화
+	if (CharacterStatusWidget)
+	{
+		CharacterStatusWidget->InitializeParty(BattleManager->GetPlayerParty());
+
+		// 초기 바 갱신 (InitializeParty 직후 RefreshStatus 호출)
+		for (ABattlePlayerCharacter* P : BattleManager->GetPlayerParty())
+		{
+			if (P) CharacterStatusWidget->RefreshStatus(P);
+		}
+
+		CharacterStatusWidget->SetVisibility(ESlateVisibility::Visible);  // 초기화 완료 후 표시
+	}
+
+	// MP/Stamina 변경 구독
+	for (ABattlePlayerCharacter* P : BattleManager->GetPlayerParty())
+		if (P) P->OnStatChanged.AddUniqueDynamic(this, &ATBBattleHUD::HandleStatChanged);
 }

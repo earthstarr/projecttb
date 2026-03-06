@@ -70,4 +70,7 @@ protected:
 
 	UFUNCTION()
 	void HandleStatChanged(ABattleCombatant* Combatant);
+
+	UFUNCTION()
+	void HandleBattleReady();
 };
