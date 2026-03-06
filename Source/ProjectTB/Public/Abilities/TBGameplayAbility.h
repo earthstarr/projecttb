@@ -122,8 +122,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage")
 	FGameplayTag AbilityTypeTag;
 
-	// Impact 전용: 몽타주 종료 후 스폰할 BattleImpactActor 클래스
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage", meta=(EditCondition="AnimationType==EAbilityAnimType::Impact"))
+	// Ranged/Impact: 스폰할 BattleImpactActor 클래스
+	// Ranged: AnimNotify_SpawnImpact 타이밍에 스폰 / Impact: 몽타주 종료 후 자동 스폰
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Damage", meta=(EditCondition="AnimationType!=EAbilityAnimType::Melee"))
 	TSubclassOf<ABattleImpactActor> ImpactActorClass;
 
 	// 노티파이로부터 호출받을 인터페이스
