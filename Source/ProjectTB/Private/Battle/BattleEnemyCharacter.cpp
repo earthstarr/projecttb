@@ -52,7 +52,7 @@ void ABattleEnemyCharacter::SelectAction_Implementation(
 	ABattleCombatant*& OutTarget,
 	TSubclassOf<UTBGameplayAbility>& OutAbilityClass)
 {
-	// 기본 AI: 살아있는 플레이어 중 랜덤 타겟 + 첫 번째 어빌리티
+	// 기본 AI: 살아있는 플레이어 중 랜덤 타겟 + 랜덤 어빌리티
 	TArray<ABattleCombatant*> Living = PlayerParty.FilterByPredicate(
 		[](const ABattleCombatant* C) { return C && !C->IsDead(); });
 
@@ -62,7 +62,7 @@ void ABattleEnemyCharacter::SelectAction_Implementation(
 
 	TArray<UTBGameplayAbility*> Abilities = GetGrantedAbilities();
 	if (!Abilities.IsEmpty())
-		OutAbilityClass = Abilities[0]->GetClass();
+		OutAbilityClass = Abilities[FMath::RandRange(0, Abilities.Num() - 1)]->GetClass();
 }
 
 void ABattleEnemyCharacter::OnTurnBegin_Implementation()

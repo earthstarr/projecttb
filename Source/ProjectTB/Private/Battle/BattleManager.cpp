@@ -998,7 +998,7 @@ void ABattleManager::HandleBattleVictory()
 	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
 	if (!GI) return;
 
-	// 1. 총 경험치 계산 (죽은 적 전체)
+	// 총 경험치 계산 (죽은 적 전체)
 	int32 TotalExp = 0;
 	for (ABattleEnemyCharacter* Enemy : EnemyParty)
 	{
@@ -1006,10 +1006,10 @@ void ABattleManager::HandleBattleVictory()
 			TotalExp += Enemy->ExpReward;
 	}
 
-	// 2. 파티에 경험치 분배
+	// 파티에 경험치 분배
 	GI->AddExpToParty(TotalExp);
 
-	// 3. 파티 스탯 저장
+	// 파티 스탯 저장
 	SavePartyStats();
 }
 

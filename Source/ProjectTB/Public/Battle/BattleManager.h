@@ -211,7 +211,7 @@ private:
 	bool bParryCooldown = false;
 	FTimerHandle ParryCooldownTimer;
 	void ClearParryCooldown();
-	static constexpr float ParryCooldownDuration = 0.7f;
+	static constexpr float ParryCooldownDuration = 0.5f;
 
 	// 카메라 상태
 	bool  bActionCameraActive       = false;
