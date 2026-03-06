@@ -42,3 +42,4 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Stun)     // 스턴: 턴 스킵
 // ─── SetByCaller Data ───────────────────────────────────────────────────────
 // 데미지 GE에서 SetByCaller로 값을 주입할 때 사용
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Data_AbilityMultiplier)
+

@@ -1,4 +1,4 @@
-#include "TBGameInstance.h"
+﻿#include "TBGameInstance.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/DataTable.h"
 #include "Math/NumericLimits.h"
@@ -157,8 +157,8 @@ void UTBGameInstance::RobMoney(int32 Amount)
 	CurrentMoney = FMath::Clamp(NewValue, (int64)MIN_int32, (int64)MAX_int32);
 }
 
-int32 UTBGameInstance::GetCurrentMoney() const
-{
-	return CurrentMoney;
-}
 
+void UTBGameInstance::AcquireArtifact(FName ArtifactID)
+{
+	PartyArtifactData.EquippedArtifact.Add(ArtifactID);
+}
