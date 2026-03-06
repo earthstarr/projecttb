@@ -19,6 +19,10 @@ struct FBattleTransitionData
 	UPROPERTY(BlueprintReadWrite, Category="Battle")
 	TArray<TSoftClassPtr<ABattleEnemyCharacter>> EnemyClasses;
 
+	// 전투 종료 후 복귀할 월드 데이터
+	UPROPERTY(BlueprintReadWrite, Category="Battle")
+	FDataTableRowHandle ReturnRoomData;
+	
 	// 전투 종료 후 복귀할 월드 레벨 이름
 	UPROPERTY(BlueprintReadWrite, Category="Battle")
 	FName WorldLevelName;

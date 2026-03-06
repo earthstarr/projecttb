@@ -23,6 +23,13 @@ public:
 	ATBBattleHUD();
 
 	virtual void BeginPlay() override;
+	
+	// ─── 전투 배틀 위젯 ─────────────────────────────────────────────────────
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void EnterBattleMode();
+	
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void ExitBattleMode();
 
 	// ─── 위젯 클래스 (Blueprint에서 지정) ────────────────────────────────────
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
@@ -49,8 +56,10 @@ public:
 	TObjectPtr<ABattleManager> BattleManager;
 
 protected:
-	void CreateWidgets();
+	void CreateBattleWidgets();
+	void RemoveBattleWidgets();
 	void BindToBattleManager();
+	void UnBindToBattleManager();
 
 	// BattleManager 델리게이트 핸들러
 	UFUNCTION()

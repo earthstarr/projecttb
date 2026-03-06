@@ -11,6 +11,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "TBGameInstance.h"
 #include "Data/LevelDataTypes.h"
+#include "UI/TBBattleHUD.h"
 
 ABattleManager::ABattleManager()
 {
@@ -497,6 +498,8 @@ void ABattleManager::AdvanceTurn()
 // ─── 플레이어 턴 ──────────────────────────────────────────────────────────────
 void ABattleManager::StartPlayerTurn()
 {
+	UE_LOG(LogTemp, Log, TEXT("ABattleManager::StartPlayerTurn Enter"));
+
 	PendingTarget       = nullptr;
 	PendingAbilityClass = nullptr;
 	SetPhase(EBattlePhase::PlayerTurn);
@@ -804,12 +807,24 @@ void ABattleManager::CheckBattleEnd()
 	{
 		SetPhase(EBattlePhase::BattleVictory);
 		HandleBattleVictory();
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		{
+			if (PC->GetHUD())
+			{
+				if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
+				{
+					HUD->ExitBattleMode();
+				}
+			}
+		}
 	}
 	else if (GetLivingPlayers().IsEmpty())
 	{
 		SetPhase(EBattlePhase::BattleDefeat);
 		HandleBattleDefeat();
+		//게임오버
 	}
+	
 }
 
 void ABattleManager::BroadcastTurnOrder()

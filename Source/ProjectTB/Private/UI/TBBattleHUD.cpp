@@ -1,4 +1,6 @@
 #include "UI/TBBattleHUD.h"
+
+#include "TBGameInstance.h"
 #include "UI/TurnOrderWidget.h"
 #include "UI/BattleMenuWidget.h"
 #include "UI/CharacterStatusWidget.h"
@@ -6,13 +8,20 @@
 #include "Battle/BattlePlayerCharacter.h"
 #include "Abilities/TBGameplayAbility.h"
 #include "Kismet/GameplayStatics.h"
+#include "World/PotalManager.h"
 
 ATBBattleHUD::ATBBattleHUD() {}
 
 void ATBBattleHUD::BeginPlay()
 {
 	Super::BeginPlay();
-	CreateWidgets();
+}
+
+void ATBBattleHUD::EnterBattleMode()
+{
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::EnterBattleMode Enter"));
+
+	CreateBattleWidgets();
 
 	// 레벨에서 BattleManager를 찾아 바인딩
 	TArray<AActor*> Found;
@@ -24,8 +33,28 @@ void ATBBattleHUD::BeginPlay()
 	}
 }
 
-void ATBBattleHUD::CreateWidgets()
+void ATBBattleHUD::ExitBattleMode()
 {
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::ExitBattleMode Enter"));
+	
+	// 이벤트 연결 해제
+	UnBindToBattleManager();
+	
+	// 배틀 위젯 제거
+	RemoveBattleWidgets();
+	
+	// 포탈 매니저에게 월드 맵으로 이동 요청
+	UPotalManager* PotalManager = GetWorld()->GetSubsystem<UPotalManager>();
+	if (UTBGameInstance* TBGameInstance = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		PotalManager->OnReturnToWorldLevel(TBGameInstance->BattleTransitionData.ReturnRoomData);
+	}
+}
+
+void ATBBattleHUD::CreateBattleWidgets()
+{
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::CreateWidgets Enter"));
+
 	APlayerController* PC = GetOwningPlayerController();
 	if (!PC)
 	{
@@ -67,8 +96,31 @@ void ATBBattleHUD::CreateWidgets()
 	}
 }
 
+void ATBBattleHUD::RemoveBattleWidgets()
+{
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::RemoveBattleWidgets Enter"));
+
+	if (TurnOrderWidget)
+	{
+		TurnOrderWidget->RemoveFromParent();
+		TurnOrderWidget = nullptr;
+	}
+	if (BattleMenuWidget)
+	{
+		BattleMenuWidget->RemoveFromParent();
+		BattleMenuWidget = nullptr;
+	}
+	if (CharacterStatusWidget)
+	{
+		CharacterStatusWidget->RemoveFromParent();
+		CharacterStatusWidget = nullptr;
+	}
+}
+
 void ATBBattleHUD::BindToBattleManager()
 {
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::BindToBattleManager Enter"));
+
 	if (!BattleManager) return;
 
 	// CreateWidgets()는 BattleManager 탐색 전에 실행되므로 여기서 주입
@@ -100,8 +152,44 @@ void ATBBattleHUD::BindToBattleManager()
 	}
 }
 
+void ATBBattleHUD::UnBindToBattleManager()
+{
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::UnBindToBattleManager Enter"));
+
+	if (!BattleManager) return;
+	
+	//델리게이트 제거
+
+	BattleManager->OnBattlePhaseChanged.RemoveDynamic(this, &ATBBattleHUD::HandlePhaseChanged);
+	BattleManager->OnTurnBegin.RemoveDynamic(this,          &ATBBattleHUD::HandleTurnBegin);
+	BattleManager->OnTurnOrderUpdated.RemoveDynamic(this,   &ATBBattleHUD::HandleTurnOrderUpdated);
+	BattleManager->OnAnyDamageDealt.RemoveDynamic(this,     &ATBBattleHUD::HandleDamageDealt);
+	BattleManager->OnAnyHealDealt.RemoveDynamic(this,       &ATBBattleHUD::HandleHealDealt);
+	BattleManager->OnBattleReady.RemoveDynamic(this,        &ATBBattleHUD::HandleBattleReady);
+	
+	// MP/Stamina 변경 구독
+	for (ABattlePlayerCharacter* P : BattleManager->GetPlayerParty())
+		if (P) P->OnStatChanged.RemoveDynamic(this, &ATBBattleHUD::HandleStatChanged);
+	
+	// 월드씬: UI 전용 입력 모드 해제
+	if (APlayerController* PC = GetOwningPlayerController())
+	{
+		FInputModeGameOnly InputMode;
+		PC->SetInputMode(InputMode);
+		PC->bShowMouseCursor = false;
+		
+		// 클릭 가능하되 마우스 커서는 일단 안보이게
+		PC->bEnableClickEvents = true;
+		PC->bEnableMouseOverEvents= true;
+	}
+	
+	BattleManager = nullptr;
+}
+
 void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 {
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::HandlePhaseChanged Enter"));
+
 	if (!BattleManager) return;
 
 	switch (NewPhase)
@@ -176,6 +264,8 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 
 void ATBBattleHUD::HandleTurnBegin(ABattleCombatant* Combatant)
 {
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::HandleTurnBegin Enter"));
+
 	if (CharacterStatusWidget)
 		CharacterStatusWidget->SetActiveCharacter(Combatant);
 
@@ -211,6 +301,8 @@ void ATBBattleHUD::HandleStatChanged(ABattleCombatant* Combatant)
 
 void ATBBattleHUD::HandleBattleReady()
 {
+	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::HandleBattleReady Enter"));
+
 	if (!BattleManager) return;
 
 	// 스탯 적용 완료 후 파티 UI 초기화

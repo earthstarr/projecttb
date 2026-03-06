@@ -18,6 +18,6 @@ public:
 	ABattlePotal();
 
 protected:
-	void PotalActivate() override;
+	virtual void PotalActivate() override;
 	void CleanRoom() override;
 };

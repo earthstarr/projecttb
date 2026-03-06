@@ -19,6 +19,8 @@ public:
 	void CloseWidget(UUserWidget* Widget, bool bActiveMoveInput);
 	void SetInputModeGameOnly();
 	void SetInputModeUIOnly();
+	void SetInputModeBattle();
+	void SetInputModeWorld();
 	
 private:
 	UPROPERTY(Meta = (AllowPrivateAccess = true))

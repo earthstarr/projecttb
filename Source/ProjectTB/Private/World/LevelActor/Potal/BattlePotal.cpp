@@ -15,7 +15,6 @@ ABattlePotal::ABattlePotal()
 void ABattlePotal::PotalActivate()
 {
 	Super::PotalActivate();
-	
 }
 
 void ABattlePotal::CleanRoom()
