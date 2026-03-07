@@ -52,21 +52,173 @@ void ABattleEnemyCharacter::SelectAction_Implementation(
 	ABattleCombatant*& OutTarget,
 	TSubclassOf<UTBGameplayAbility>& OutAbilityClass)
 {
-	// 기본 AI: 살아있는 플레이어 중 랜덤 타겟 + 랜덤 어빌리티
 	TArray<ABattleCombatant*> Living = PlayerParty.FilterByPredicate(
 		[](const ABattleCombatant* C) { return C && !C->IsDead(); });
 
 	if (Living.IsEmpty()) return;
 
-	OutTarget = Living[FMath::RandRange(0, Living.Num() - 1)];
+	// DefaultSkills가 비어있고 페이즈 시스템도 꺼져있으면 기존 랜덤 동작 (하위 호환)
+	if (DefaultSkills.IsEmpty() && !bUsePhaseSystem)
+	{
+		OutTarget = Living[FMath::RandRange(0, Living.Num() - 1)];
+		TArray<UTBGameplayAbility*> Abilities = GetGrantedAbilities();
+		if (!Abilities.IsEmpty())
+			OutAbilityClass = Abilities[FMath::RandRange(0, Abilities.Num() - 1)]->GetClass();
+		return;
+	}
 
-	TArray<UTBGameplayAbility*> Abilities = GetGrantedAbilities();
-	if (!Abilities.IsEmpty())
-		OutAbilityClass = Abilities[FMath::RandRange(0, Abilities.Num() - 1)]->GetClass();
+	const float SelfHPPercent = GetMaxHP() > 0.f ? GetHP() / GetMaxHP() : 0.f;
+
+	// ─── 페이즈 체크 ─────────────────────────────────────────────────────────
+	if (bUsePhaseSystem)
+	{
+		for (int32 i = 0; i < Phases.Num(); i++)
+		{
+			FPhaseData& Phase = Phases[i];
+			if (!Phase.bActivated && SelfHPPercent <= Phase.HPThreshold)
+			{
+				Phase.bActivated = true;
+				ActivePhaseIndex = i;
+
+				// 페이즈 전환 어빌리티가 있으면 이번 턴에 즉시 사용
+				if (Phase.PhaseTransitionAbility)
+				{
+					OutAbilityClass = Phase.PhaseTransitionAbility;
+					OutTarget = Living[FMath::RandRange(0, Living.Num() - 1)];
+					return;  
+				}
+			}
+			else if (Phase.bActivated)
+			{
+				// 이미 활성된 페이즈 중 가장 낮은(강한) 페이즈 추적
+				ActivePhaseIndex = i;
+			}
+		}
+	}
+
+	// ─── 활성 스킬 풀 결정 ───────────────────────────────────────────────────
+	TArray<FEnemySkillEntry>* ActivePool = &DefaultSkills;
+	if (bUsePhaseSystem && ActivePhaseIndex >= 0 && Phases.IsValidIndex(ActivePhaseIndex))
+		ActivePool = &Phases[ActivePhaseIndex].PhaseSkills;
+
+	// ─── 조건/우선순위/가중치로 스킬 선택 ────────────────────────────────────
+	const int32 SelectedIndex = SelectSkillFromPool(*ActivePool, SelfHPPercent);
+
+	if (SelectedIndex >= 0)
+	{
+		FEnemySkillEntry& Entry = (*ActivePool)[SelectedIndex];
+		Entry.LastUsedTurn = CurrentBattleTurn;
+		Entry.UsedCount++;
+
+		OutAbilityClass = Entry.AbilityClass;
+		OutTarget = ResolveTarget(Entry.TargetCondition, Living);
+	}
+	else
+	{
+		// 폴백: 조건 맞는 스킬 없음 → 첫 번째 어빌리티 + 랜덤 타겟
+		TArray<UTBGameplayAbility*> Abilities = GetGrantedAbilities();
+		if (!Abilities.IsEmpty())
+			OutAbilityClass = Abilities[0]->GetClass();
+		OutTarget = Living[FMath::RandRange(0, Living.Num() - 1)];
+	}
+}
+
+int32 ABattleEnemyCharacter::SelectSkillFromPool(TArray<FEnemySkillEntry>& Pool, float SelfHPPercent)
+{
+	// 1. 조건 필터링
+	TArray<int32> ValidIndices;
+	for (int32 i = 0; i < Pool.Num(); i++)
+	{
+		const FEnemySkillEntry& Entry = Pool[i];
+		if (!Entry.AbilityClass) continue;
+		if (SelfHPPercent < Entry.MinSelfHPPercent || SelfHPPercent > Entry.MaxSelfHPPercent) continue;
+		if (Entry.CooldownTurns > 0 && (CurrentBattleTurn - Entry.LastUsedTurn) <= Entry.CooldownTurns) continue;
+		if (Entry.MaxUseCount >= 0 && Entry.UsedCount >= Entry.MaxUseCount) continue;
+		ValidIndices.Add(i);
+	}
+
+	if (ValidIndices.IsEmpty()) return -1;
+
+	// 2. 최고 우선순위 그룹 추출
+	int32 MaxPriority = TNumericLimits<int32>::Min();
+	for (int32 i : ValidIndices)
+		MaxPriority = FMath::Max(MaxPriority, Pool[i].Priority);
+
+	TArray<int32> TopIndices;
+	for (int32 i : ValidIndices)
+		if (Pool[i].Priority == MaxPriority)
+			TopIndices.Add(i);
+
+	// 3. 가중치 랜덤 선택
+	float TotalWeight = 0.f;
+	for (int32 i : TopIndices)
+		TotalWeight += Pool[i].Weight;
+
+	const float Rand = FMath::FRandRange(0.f, TotalWeight);
+	float Cumulative = 0.f;
+	for (int32 i : TopIndices)
+	{
+		Cumulative += Pool[i].Weight;
+		if (Rand <= Cumulative)
+			return i;
+	}
+
+	return TopIndices.Last();
+}
+
+ABattleCombatant* ABattleEnemyCharacter::ResolveTarget(ETargetCondition Condition,
+                                                        const TArray<ABattleCombatant*>& Living)
+{
+	if (Living.IsEmpty()) return nullptr;
+
+	switch (Condition)
+	{
+	case ETargetCondition::LowestHP:
+	{
+		ABattleCombatant* Best = Living[0];
+		for (ABattleCombatant* C : Living)
+			if (C->GetHP() < Best->GetHP()) Best = C;
+		return Best;
+	}
+	case ETargetCondition::HighestHP:
+	{
+		ABattleCombatant* Best = Living[0];
+		for (ABattleCombatant* C : Living)
+			if (C->GetHP() > Best->GetHP()) Best = C;
+		return Best;
+	}
+	case ETargetCondition::LowestHPPercent:
+	{
+		ABattleCombatant* Best = Living[0];
+		float BestPct = Best->GetMaxHP() > 0.f ? Best->GetHP() / Best->GetMaxHP() : 0.f;
+		for (ABattleCombatant* C : Living)
+		{
+			const float Pct = C->GetMaxHP() > 0.f ? C->GetHP() / C->GetMaxHP() : 0.f;
+			if (Pct < BestPct) { Best = C; BestPct = Pct; }
+		}
+		return Best;
+	}
+	case ETargetCondition::HighestHPPercent:
+	{
+		ABattleCombatant* Best = Living[0];
+		float BestPct = Best->GetMaxHP() > 0.f ? Best->GetHP() / Best->GetMaxHP() : 1.f;
+		for (ABattleCombatant* C : Living)
+		{
+			const float Pct = C->GetMaxHP() > 0.f ? C->GetHP() / C->GetMaxHP() : 0.f;
+			if (Pct > BestPct) { Best = C; BestPct = Pct; }
+		}
+		return Best;
+	}
+	case ETargetCondition::Self:
+		return this;
+	case ETargetCondition::Random:
+	default:
+		return Living[FMath::RandRange(0, Living.Num() - 1)];
+	}
 }
 
 void ABattleEnemyCharacter::OnTurnBegin_Implementation()
 {
 	Super::OnTurnBegin_Implementation();
-	// BattleManager가 SelectAction 호출 후 자동 실행
+	++CurrentBattleTurn; // 쿨다운 계산용 턴 카운터
 }
