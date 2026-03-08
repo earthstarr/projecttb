@@ -404,7 +404,10 @@ void UTBGameplayAbility::SpawnSingleImpactActor(AActor* Avatar, ABattleCombatant
 	{
 		if (AnimationType != EAbilityAnimType::Impact)
 		{
+			// Ranged 타입: 발사 방향 설정 + 거리 기반 ImpactDelay 자동 계산 활성
 			ImpactActor->ShootDirection = FinalSpawnRotation.Vector();
+			ImpactActor->TargetLocation = Target->GetActorLocation();
+			ImpactActor->bAutoCalculateImpactDelay = true;
 		}
 
 		// 개별 타겟 모드: OnImpact 대신 직접 타겟에 데미지 적용
