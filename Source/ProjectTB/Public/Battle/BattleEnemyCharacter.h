@@ -137,6 +137,20 @@ public:
 		meta=(EditCondition="bUsePhaseSystem"))
 	TArray<FPhaseData> Phases;
 
+	// ─── 도발 ─────────────────────────────────────────────────────────────────
+	/**
+	 * 이 적에게 도발 적용.
+	 * 상태이상 아이콘(Status.Taunt) 부여 + TauntTarget/TauntRemainingTurns 세팅.
+	 * GA_Taunt Blueprint에서 살아있는 적 순회하며 호출.
+	 */
+	UFUNCTION(BlueprintCallable, Category="AI|Taunt")
+	void ApplyTaunt(ABattleCombatant* Caster, int32 Turns);
+
+	/** 도발 시 시전자를 타겟으로 선택할 확률 (0~1, 기본 0.75) */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Taunt",
+		meta=(ClampMin=0, ClampMax=1))
+	float TauntAggroChance = 0.75f;
+
 	/**
 	 * AI 행동 선택.
 	 * Blueprint에서 오버라이드해 적마다 다른 패턴 구현 가능.
@@ -172,6 +186,13 @@ private:
 
 	/** 현재 활성 페이즈 인덱스 (-1 = 페이즈 없음 → DefaultSkills 사용) */
 	int32 ActivePhaseIndex = -1;
+
+	// ─── 도발 런타임 ──────────────────────────────────────────────────────────
+	/** 도발 시전자. 유효하지 않으면 도발 없음 */
+	TWeakObjectPtr<ABattleCombatant> TauntTarget;
+
+	/** 도발 남은 턴 수. 0 되면 TauntTarget 클리어 */
+	int32 TauntRemainingTurns = 0;
 
 	/**
 	 * 조건에 따라 타겟 반환.

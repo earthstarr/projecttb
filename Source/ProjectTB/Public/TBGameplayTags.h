@@ -38,6 +38,7 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Burn)     // 화상: 턴당 데미지 
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Poison)   // 독: 턴당 데미지(HP%+스탯) + Speed 30% 감소
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Regen)    // 재생: 턴당 힐
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Stun)     // 스턴: 턴 스킵
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Taunt)    // 도발: 시전자를 우선 타겟
 
 // ─── SetByCaller Data ───────────────────────────────────────────────────────
 // 데미지 GE에서 SetByCaller로 값을 주입할 때 사용

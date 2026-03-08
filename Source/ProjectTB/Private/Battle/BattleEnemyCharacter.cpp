@@ -2,6 +2,7 @@
 #include "Abilities/TBGameplayAbility.h"
 #include "Components/WidgetComponent.h"
 #include "UI/EnemyHealthBarWidget.h"
+#include "TBGameplayTags.h"
 
 ABattleEnemyCharacter::ABattleEnemyCharacter()
 {
@@ -45,6 +46,21 @@ void ABattleEnemyCharacter::RefreshHealthBar()
 {
 	if (UEnemyHealthBarWidget* Widget = Cast<UEnemyHealthBarWidget>(HealthBarWidgetComponent->GetUserWidgetObject()))
 		Widget->UpdateHealth(GetHP(), GetMaxHP());
+}
+
+void ABattleEnemyCharacter::ApplyTaunt(ABattleCombatant* Caster, int32 Turns)
+{
+	if (!Caster || Turns <= 0) return;
+
+	TauntTarget = Caster;
+	TauntRemainingTurns = Turns;
+
+	// 아이콘 표시용 상태이상 적용
+	FStatusEffectInstance TauntEffect;
+	TauntEffect.StatusTag = TAG_Status_Taunt;
+	TauntEffect.MagnitudePerStack = 0.f;
+	TauntEffect.RemainingTurns = Turns;
+	ApplyStatusEffect(TauntEffect);
 }
 
 void ABattleEnemyCharacter::SelectAction_Implementation(
@@ -111,7 +127,20 @@ void ABattleEnemyCharacter::SelectAction_Implementation(
 		Entry.UsedCount++;
 
 		OutAbilityClass = Entry.AbilityClass;
-		OutTarget = ResolveTarget(Entry.TargetCondition, Living);
+
+		// 도발 체크: SingleEnemy 스킬일 때만, TauntAggroChance 확률로 시전자 우선 타겟
+		// AllEnemies/Self 등은 기존 ResolveTarget 그대로 사용
+		const UTBGameplayAbility* CDO = Entry.AbilityClass
+			? Entry.AbilityClass->GetDefaultObject<UTBGameplayAbility>()
+			: nullptr;
+
+		const bool bSingleEnemy = CDO && CDO->TargetType == EAbilityTargetType::SingleEnemy;
+		const bool bTauntValid  = TauntTarget.IsValid() && !TauntTarget->IsDead();
+
+		if (bSingleEnemy && bTauntValid && FMath::FRandRange(0.f, 1.f) < TauntAggroChance)
+			OutTarget = TauntTarget.Get();
+		else
+			OutTarget = ResolveTarget(Entry.TargetCondition, Living);
 	}
 	else
 	{
@@ -221,4 +250,12 @@ void ABattleEnemyCharacter::OnTurnBegin_Implementation()
 {
 	Super::OnTurnBegin_Implementation();
 	++CurrentBattleTurn; // 쿨다운 계산용 턴 카운터
+
+	// 도발 턴 감소 → 0이 되면 해제
+	if (TauntRemainingTurns > 0)
+	{
+		--TauntRemainingTurns;
+		if (TauntRemainingTurns == 0)
+			TauntTarget = nullptr;
+	}
 }
