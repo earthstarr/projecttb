@@ -12,6 +12,7 @@
 #include "TBGameInstance.h"
 #include "Data/LevelDataTypes.h"
 #include "UI/TBBattleHUD.h"
+#include "World/PotalManager.h"
 
 ABattleManager::ABattleManager()
 {
@@ -21,7 +22,7 @@ ABattleManager::ABattleManager()
 void ABattleManager::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	// 0.5초 딜레이 — 레벨의 모든 Actor BeginPlay 완료 후 실행
 	FTimerHandle StartTimer;
 	if (bAutoStartBattle)

@@ -34,7 +34,25 @@ public:
 	void OnLevelLoadFinished();
 	
 	UFUNCTION()
+	void OnLevelShown();
+	
+	UFUNCTION()
 	void TeleportLevel();
+	
+	// 배틀 매니저 탐색
+#pragma region BattleManager
+	void StartBattleManagerSearch();
+	void StopBattleManagerSearch();
+	
+	UFUNCTION()
+	void TryBattleManagerSearch();
+	
+	FTimerHandle BattleManagerSearchTimerHandle;
+	float BattleManagerSearchElapsed = 0.f;
+	
+	static constexpr float BattleManagerSearchInterval = 0.2f;
+	static constexpr float BattleManagerSearchTimeout = 5.0f;
+#pragma endregion
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Room Data")
 	FDataTableRowHandle InitRoomHandle;
