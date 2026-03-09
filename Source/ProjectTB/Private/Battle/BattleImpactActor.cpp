@@ -59,6 +59,14 @@ void ABattleImpactActor::BeginPlay()
 	
 	Super::BeginPlay();
 
+	// Ranged 타입: 거리/속도로 ImpactDelay 자동 계산, 패링 타이밍 0.2초 전으로 고정
+	if (bAutoCalculateImpactDelay && InitialSpeed > 0.f)
+	{
+		const float Distance = FVector::Dist(GetActorLocation(), TargetLocation);
+		ImpactDelay = Distance / InitialSpeed;
+		ParryTimingLeadTime = 0.2f;
+	}
+
 	GetWorldTimerManager().SetTimer(
 		ImpactTimer, this, &ABattleImpactActor::TriggerImpact, ImpactDelay, false);
 
@@ -81,6 +89,9 @@ void ABattleImpactActor::TriggerImpact()
 	{
 		ProjectileMovement->StopMovementImmediately();
 	}
+
+	if (bHideMeshOnImpact && MeshComponent)
+		MeshComponent->SetVisibility(false);
 
 	PlayImpactEffect();
 

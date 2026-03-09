@@ -36,6 +36,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Burn,   "Status.Burn")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Poison, "Status.Poison")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Regen,  "Status.Regen")
 UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Stun,   "Status.Stun")
+UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Taunt,  "Status.Taunt")
 
 // ─── SetByCaller Data ───────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Data_AbilityMultiplier, "Data.AbilityMultiplier")

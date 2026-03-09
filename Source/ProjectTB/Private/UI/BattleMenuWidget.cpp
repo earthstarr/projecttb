@@ -55,6 +55,10 @@ void UBattleMenuWidget::ShowMainMenu_Implementation(ABattleCombatant* ActiveComb
 {
 	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::ShowMainMenu_Implementation Enter"));
 
+	// 타겟 선택 중 메인 메뉴로 복귀 시 인디케이터 정리
+	for (ABattleCombatant* T : CurrentTargets)
+		if (T) T->HideTargetIndicator();
+
 	MenuState     = EMenuState::MainMenu;
 	SelectedIndex = 0;
 	CurrentCombatant = ActiveCombatant;

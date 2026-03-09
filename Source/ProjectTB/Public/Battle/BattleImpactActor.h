@@ -41,9 +41,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	bool bStopOnImpact = true;
 
+	// Impact 시점에 MeshComponent 숨기기 (Ranged 발사체처럼 메시가 사라지고 Niagara만 재생할 때)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
+	bool bHideMeshOnImpact = false;
+
 	// 스폰 후 데미지 발생까지 딜레이 (초) — 운석이 땅에 닿는 시점 등
+	// bAutoCalculateImpactDelay = true이면 런타임에 덮어씀
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact")
 	float ImpactDelay = 1.0f;
+
+	// true면 InitialSpeed + TargetLocation으로 ImpactDelay 자동 계산 (Ranged 타입용)
+	// SpawnSingleImpactActor에서 Ranged일 때 자동 설정
+	UPROPERTY(BlueprintReadWrite, Category="Impact")
+	bool bAutoCalculateImpactDelay = false;
+
+	// 자동 계산 시 타겟 위치. SpawnSingleImpactActor에서 자동 주입됨
+	UPROPERTY(BlueprintReadWrite, Category="Impact")
+	FVector TargetLocation = FVector::ZeroVector;
 
 	// 패링 가능 여부
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Impact|Parry")
