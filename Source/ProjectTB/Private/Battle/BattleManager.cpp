@@ -299,6 +299,10 @@ void ABattleManager::StartBattle(
 		E->OnHealReceived.AddDynamic(this, &ABattleManager::OnCombatantHealed);
 	}
 
+	// 아티펙트 효과 적용
+	ApplyArtifacts();
+	
+	// 이펙트 웜업 로딩
 	WarmUpEffects();
 	SetPhase(EBattlePhase::BattleStart);
 
@@ -1051,4 +1055,94 @@ void ABattleManager::SavePartyStats()
 
 		GI->SavePartyMemberStats(Player->CharacterId, HP, MP, Stamina);
 	}
+}
+
+void ABattleManager::ApplyArtifacts()
+{
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	// 아티팩트 정보 가져오기
+	for (const FName& ArtifactID : GI->PartyArtifactData.EquippedArtifact)
+	{
+		FArtifact_CharacterStats ArtifactRow;
+		if (!GI->GetArtifactRow(ArtifactID, ArtifactRow))
+		{
+			continue;
+		}
+
+		// 적용할 대상 설정
+		TArray<ABattlePlayerCharacter*> Targets = GetArtifactTargets(ArtifactRow);
+
+		for (ABattlePlayerCharacter* Target : Targets)
+		{
+			// 적용
+			ApplyArtifactRowToCombatant(ArtifactID, ArtifactRow, Target);
+		}
+	}
+	
+}
+
+TArray<ABattlePlayerCharacter*> ABattleManager::GetArtifactTargets(const FArtifact_CharacterStats& ArtifactRow) const
+{
+	TArray<ABattlePlayerCharacter*> Result;
+
+	switch (ArtifactRow.TargetMode)
+	{
+	case EArtifactTargetMode::AllParty:
+		for (ABattlePlayerCharacter* Player : PlayerParty)
+		{
+			if (IsValid(Player) && !Player->IsDead())
+			{
+				Result.Add(Player);
+			}
+		}
+		break;
+
+	case EArtifactTargetMode::MatchingJob:
+		for (ABattlePlayerCharacter* Player : PlayerParty)
+		{
+			if (!IsValid(Player) || Player->IsDead())
+			{
+				continue;
+			}
+
+			if (ArtifactRow.TargetJobIds.Contains(Player->CharacterId))
+			{
+				Result.Add(Player);
+			}
+		}
+		break;
+	}
+
+	return Result;
+}
+
+void ABattleManager::ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifact_CharacterStats& ArtifactRow, ABattlePlayerCharacter* Target)
+{
+	if (Target == nullptr) return;
+
+	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
+	if (TargetASC == nullptr) return;
+
+	// GE 생성
+	UGameplayEffect* GEObj = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
+	GEObj->DurationPolicy = EGameplayEffectDurationType::Infinite;
+
+	// GE Modifier 설정
+	for (const FArtifactStatModifier& Modifier : ArtifactRow.StatModifiers)
+	{
+		FGameplayModifierInfo ModInfo;
+		ModInfo.Attribute = Modifier.Attribute;
+		ModInfo.ModifierOp = Modifier.ModifierOp;
+		ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(Modifier.Value);
+		GEObj->Modifiers.Add(ModInfo);
+	}
+
+	// GE Spec 생성, 적용
+	FGameplayEffectSpec Spec(GEObj, TargetASC->MakeEffectContext(), 1.f);
+	FActiveGameplayEffectHandle Handle = TargetASC->ApplyGameplayEffectSpecToSelf(Spec);
+
+	// GE 핸들 관리. 하나의 아티팩트에도 여러 캐릭터가 적용될 수 있으므로 FindOrAdd
+	EquippedArtifactEffect.FindOrAdd(Target->CharacterId).Add(Handle);
 }

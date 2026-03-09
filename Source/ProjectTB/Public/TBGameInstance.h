@@ -108,7 +108,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Stats")
 	bool GetLevelStats(FName CharacterId, int32 Level, FCharacterLevelStats& OutStats);
 	
-	// ─── 재화 ────────────────────────────────────────────────────────────────
+	// ─── 재화 ───────────────────────────────────────────────────────────────
+#pragma region Money
 private:
 	UPROPERTY(BlueprintReadWrite, Category="Money", META = (AllowPrivateAccess))
 	int32 CurrentMoney;
@@ -127,10 +128,18 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Money")
 	int32 GetCurrentMoney() const {return CurrentMoney;}
-
-	// ─── 아티팩트 ─────────────────────────────────────────────────────────────
+#pragma endregion
 	
-	// 파티 보유 아티팩트 데이터
+	// ─── 아티팩트 ─────────────────────────────────────────────────────────────
+#pragma region Artifacts
+	// 아티펙트 데이터 테이블
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Artifact")
+	TSoftObjectPtr<UDataTable> ArtifactStatsTable;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDataTable> CachedArtifactStatsTable;
+	
+	// 파티 보유 아티팩트 데이터 (이름만)
 	UPROPERTY(BlueprintReadWrite, Category="Artifact")
 	FEquippedArtifactData PartyArtifactData;
 	
@@ -140,5 +149,13 @@ public:
 	
 	// 아티팩트 습득
 	UFUNCTION(BlueprintCallable, Category="Artifact")
-	void AcquireArtifact(FName ArtifactID);
+	void EquipArtifact(FName ArtifactID);
+	
+	// 아티펙트 데이터 테이블 캐싱 함수
+	UDataTable* GetArtifactStatsTable();
+	
+	// 아티팩트 데이터 테이블 조회 결과 래퍼 함수
+	UFUNCTION(BlueprintCallable, Category="Artifact")
+	bool GetArtifactRow(FName ArtifactID, FArtifact_CharacterStats& OutArtifactRow);
+#pragma endregion
 };

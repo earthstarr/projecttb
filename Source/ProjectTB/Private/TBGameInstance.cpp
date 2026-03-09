@@ -157,8 +157,41 @@ void UTBGameInstance::RobMoney(int32 Amount)
 	CurrentMoney = FMath::Clamp(NewValue, (int64)MIN_int32, (int64)MAX_int32);
 }
 
+// ─── 아티팩트 시스템 ──────────────────────────────────────────────────────────────
 
-void UTBGameInstance::AcquireArtifact(FName ArtifactID)
+void UTBGameInstance::EquipArtifact(FName ArtifactID)
 {
 	PartyArtifactData.EquippedArtifact.Add(ArtifactID);
+}
+
+UDataTable* UTBGameInstance::GetArtifactStatsTable()
+{
+	if (CachedArtifactStatsTable)
+	{
+		return CachedArtifactStatsTable;
+	}
+
+	CachedArtifactStatsTable = ArtifactStatsTable.LoadSynchronous();
+	return CachedArtifactStatsTable;
+}
+
+// 아티팩트 데이터 테이블에서 ArtifactID를 검색하여 OutArtifactRow에 전달 
+bool UTBGameInstance::GetArtifactRow(FName ArtifactID, FArtifact_CharacterStats& OutArtifactRow)
+{
+	UDataTable* DataTable = GetArtifactStatsTable();
+	if (DataTable == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTBGameInstance의 GetArtifactRow함수 ArtifactStatsTable.LoadSynchronous 실패"));
+		return false;
+	}
+	
+	const FArtifact_CharacterStats* FoundRow = DataTable->FindRow<FArtifact_CharacterStats>(ArtifactID, TEXT("GetArtifactRow"));
+	
+	if (FoundRow == nullptr)
+	{
+		return false;
+	}
+	
+	OutArtifactRow = *FoundRow;
+	return true;
 }
