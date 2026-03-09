@@ -59,6 +59,6 @@ struct FEquippedArtifactData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Artifact")
-	TArray<FName> EquippedArtifact;
+	TSet<FName> EquippedArtifact;
 	//TMap<FName, FActiveGameplayEffectHandle> EquippedArtifact;
 };
