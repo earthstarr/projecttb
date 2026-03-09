@@ -8,8 +8,8 @@
 
 AWorldCharacter::AWorldCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
-
+	PrimaryActorTick.bCanEverTick = true;
+	
 	// ─── 스프링암 & 카메라 ────────────────────────────────────────────────────
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
@@ -21,14 +21,17 @@ AWorldCharacter::AWorldCharacter()
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
-	Camera->bUsePawnControlRotation = false;
+	Camera->bUsePawnControlRotation = true;
 
 	// ─── 이동 세팅 ───────────────────────────────────────────────────────────
 	// 기본적으로 카메라와 캐릭터 이동 별도로 구분, 캐릭터 Yaw 축 정면 방향만 카메라로 조작
+	
+	// todo bUseControllerRotationYaw을 false로 변경하고 제자리 회전 보간 함수 및 애니메이션 구현.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw   = false;
+	bUseControllerRotationYaw   = true;
 	bUseControllerRotationRoll  = false;
 	
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	GetCharacterMovement()->RotationRate              = FRotator(0.f, 500.f, 0.f);
 	GetCharacterMovement()->MaxWalkSpeed              = 400.f;
@@ -36,11 +39,39 @@ AWorldCharacter::AWorldCharacter()
 	GetCharacterMovement()->AirControl                = 0.35f;
 }
 
+void AWorldCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	if (!bAligningToView || !Controller)
+	{
+		return;
+	}
+
+	const FRotator CurrentRotation = GetActorRotation();
+	const FRotator TargetRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
+
+	const FRotator NewRotation =
+		FMath::RInterpConstantTo(CurrentRotation, TargetRotation, DeltaSeconds, 720.f);
+
+	SetActorRotation(NewRotation);
+
+	const float YawDiff = FMath::Abs(FRotator::NormalizeAxis(TargetRotation.Yaw - NewRotation.Yaw));
+	if (YawDiff < 1.0f)
+	{
+		SetActorRotation(TargetRotation);
+		bAligningToView = false;
+		bUseControllerRotationYaw = true;
+		SetActorTickEnabled(false);
+	}
+}
 
 void AWorldCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	SetActorTickEnabled(false);
+	
 	// Enhanced Input 컨텍스트 등록
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -113,14 +144,22 @@ void AWorldCharacter::HandleLook(const FInputActionValue& Value)
 
 void AWorldCharacter::HandleFreeLookStart()
 {
-	//bUseControllerRotationYaw = true;
-	GetCharacterMovement()->bUseControllerDesiredRotation = true;
+	SetActorTickEnabled(false);
+	
+	bUseControllerRotationYaw = false;
+	bAligningToView = false;
+	//GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 }
 
 void AWorldCharacter::HandleFreeLookEnd()
 {
-	//bUseControllerRotationYaw = false;
+	bUseControllerRotationYaw = false;
+	bAligningToView = true;
+	//GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	
+	SetActorTickEnabled(true);
 }
 
 void AWorldCharacter::HandleRunToggle()
