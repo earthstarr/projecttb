@@ -514,6 +514,7 @@ void ABattleManager::StartPlayerTurn()
 // ─── 적 턴 ────────────────────────────────────────────────────────────────────
 void ABattleManager::StartEnemyTurn()
 {
+	PendingDiceMultiplier = 1.0f;
 	SetPhase(EBattlePhase::EnemyTurn);
 	UE_LOG(LogTemp, Display, TEXT("BattleManager: [EnemyTurn] %s"), GetCurrentActor() ? *GetCurrentActor()->GetName() : TEXT("None"));
 
@@ -603,7 +604,12 @@ void ABattleManager::PlayerSelectTarget(ABattleCombatant* Target)
 	}
 
 	if (AbilityToUse)
-		ExecuteAction(Caster, Target, AbilityToUse);
+	{
+		PendingCaster       = Caster;
+		PendingTarget       = Target;
+		PendingAbilityClass = AbilityToUse;
+		RollDiceAndWait();
+	}
 }
 
 void ABattleManager::PlayerSelectDefend()
@@ -625,6 +631,77 @@ void ABattleManager::PlayerCancel()
 		PendingTarget       = nullptr;
 		SetPhase(EBattlePhase::PlayerTurn);
 	}
+	else if (CurrentPhase == EBattlePhase::DiceRolling)
+	{
+		// 주사위 결과 타이머 취소 후 플레이어 턴으로 복귀
+		GetWorldTimerManager().ClearTimer(DiceResultTimer);
+		PendingDiceMultiplier = 1.0f;
+		PendingAbilityClass   = nullptr;
+		PendingTarget         = nullptr;
+		SetPhase(EBattlePhase::PlayerTurn);
+	}
+}
+
+// ─── 주사위 ──────────────────────────────────────────────────────────────────────
+void ABattleManager::RollDiceAndWait()
+{
+	// 시전자의 장착 주사위 가져오기
+	FDiceData Dice;
+	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(PendingCaster))
+		Dice = PC->EquippedDice;
+
+	// 면이 없으면 기본값(1.0) 유지하고 바로 실행
+	if (Dice.BaseFaces.IsEmpty())
+	{
+		PendingDiceMultiplier = 1.0f;
+		ExecuteAction(PendingCaster, PendingTarget, PendingAbilityClass);
+		return;
+	}
+
+	// 랜덤으로 면 뽑기
+	const int32 RawFace = Dice.BaseFaces[FMath::RandRange(0, Dice.BaseFaces.Num() - 1)];
+
+	// GameInstance에서 FaceBonus 읽기
+	int32 FaceBonus = 0, MinFace = -10, MaxFace = 10;
+	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		FaceBonus = GI->DiceModifier.FaceBonus;
+		MinFace   = GI->DiceModifier.MinFace;
+		MaxFace   = GI->DiceModifier.MaxFace;
+	}
+
+	const int32 FinalFace = FMath::Clamp(RawFace + FaceBonus, MinFace, MaxFace);
+	PendingDiceMultiplier = 1.0f + FinalFace * 0.1f;
+
+	OnDiceRolled.Broadcast(FinalFace, PendingDiceMultiplier);
+	SetPhase(EBattlePhase::DiceRolling);
+
+	GetWorldTimerManager().SetTimer(
+		DiceResultTimer, this, &ABattleManager::ExecuteActionAfterDice, 2.0f, false);
+}
+
+void ABattleManager::ExecuteActionAfterDice()
+{
+	ExecuteAction(PendingCaster, PendingTarget, PendingAbilityClass);
+}
+
+FDiceData ABattleManager::GetCurrentCasterDice() const
+{
+	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(PendingCaster))
+		return PC->EquippedDice;
+	return FDiceData{};
+}
+
+FText ABattleManager::GetCurrentCasterDiceFacesText() const
+{
+	const FDiceData Dice = GetCurrentCasterDice();
+	FString Result;
+	for (int32 i = 0; i < Dice.BaseFaces.Num(); ++i)
+	{
+		if (i > 0) Result += TEXT(", ");
+		Result += FString::FromInt(Dice.BaseFaces[i]);
+	}
+	return FText::FromString(Result);
 }
 
 // ─── 어빌리티 실행 ───────────────────────────────────────────────────────────────

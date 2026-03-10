@@ -4,6 +4,7 @@
 #include "Engine/GameInstance.h"
 #include "Data/LevelDataTypes.h"
 #include "Data/ArtifactDataTypes.h"
+#include "Battle/TBDiceData.h"
 #include "TBGameInstance.generated.h"
 
 class ABattleEnemyCharacter;
@@ -128,7 +129,14 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Money")
 	int32 GetCurrentMoney() const {return CurrentMoney;}
+
 #pragma endregion
+
+	// ─── 주사위 ───────────────────────────────────────────────────────────────
+
+	// 유물로 쌓이는 파티 전체 주사위 보정
+	UPROPERTY(BlueprintReadWrite, Category="Dice")
+	FDiceModifier DiceModifier;
 	
 	// ─── 아티팩트 ─────────────────────────────────────────────────────────────
 #pragma region Artifacts

@@ -219,7 +219,9 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 	ABattleManager* BM = GetBattleManager();
 	if (!BM) return;
 
-	const float Multiplier = HitMultipliers.IsValidIndex(HitIndex) ? HitMultipliers[HitIndex] : 1.0f;
+	const float HitMult  = HitMultipliers.IsValidIndex(HitIndex) ? HitMultipliers[HitIndex] : 1.0f;
+	const float DiceMult = BM->GetPendingDiceMultiplier();
+	const float Multiplier = HitMult * DiceMult;
 
 	// TargetType에 따라 단일/전체 타겟 처리
 	TArray<ABattleCombatant*> Targets;
@@ -465,7 +467,10 @@ void UTBGameplayAbility::ApplyDamageToSingleTarget(ABattleCombatant* Target, int
 	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
 	if (!TargetASC) return;
 
-	const float Multiplier = HitMultipliers.IsValidIndex(HitIndex) ? HitMultipliers[HitIndex] : 1.0f;
+	ABattleManager* BM2 = GetBattleManager();
+	const float HitMult2  = HitMultipliers.IsValidIndex(HitIndex) ? HitMultipliers[HitIndex] : 1.0f;
+	const float DiceMult2 = BM2 ? BM2->GetPendingDiceMultiplier() : 1.0f;
+	const float Multiplier = HitMult2 * DiceMult2;
 
 	// 데미지 GE 적용
 	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(

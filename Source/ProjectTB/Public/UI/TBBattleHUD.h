@@ -98,4 +98,17 @@ protected:
 
 	UFUNCTION()
 	void HandleBattleReady();
+
+	UFUNCTION()
+	void HandleDiceRolled(int32 FaceValue, float Multiplier);
+
+	// Blueprint에서 오버레이 위젯 표시/숨김 구현
+	UFUNCTION(BlueprintImplementableEvent, Category="Dice")
+	void ShowDiceResultOverlay(int32 FaceValue, float Multiplier);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Dice")
+	void HideDiceResultOverlay();
+
+private:
+	FTimerHandle DiceOverlayTimer;
 };

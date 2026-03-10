@@ -109,6 +109,12 @@ void UBattleMenuWidget::HideMenu_Implementation()
 	CurrentTargets.Reset();
 }
 
+void UBattleMenuWidget::ShowDiceManagement_Implementation()
+{
+	MenuState     = EMenuState::DiceManagement;
+	SelectedIndex = 0;
+}
+
 // ─── 방향키 네비게이션 ────────────────────────────────────────────────────────
 
 void UBattleMenuWidget::NavigateUp_Implementation()
@@ -166,6 +172,10 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 		}
 		else if (SelectedIndex == 2)
 		{
+			ShowDiceManagement();
+		}
+		else if (SelectedIndex == 3)
+		{
 			BattleManager->PlayerSelectDefend();
 		}
 		break;
@@ -208,8 +218,8 @@ void UBattleMenuWidget::CancelSelection_Implementation()
 {
 	if (!BattleManager) return;
 
-	if (MenuState == EMenuState::AbilityMenu)
-		ShowMainMenu(CurrentCombatant);  // 어빌리티 메뉴 → 메인 메뉴로 복귀
+	if (MenuState == EMenuState::AbilityMenu || MenuState == EMenuState::DiceManagement)
+		ShowMainMenu(CurrentCombatant);  // 서브 메뉴 → 메인 메뉴로 복귀
 	else if (MenuState == EMenuState::SelectingTarget || MenuState == EMenuState::SelectingTargetAll)
 		BattleManager->PlayerCancel();
 	else

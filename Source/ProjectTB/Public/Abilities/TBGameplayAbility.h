@@ -276,6 +276,7 @@ private:
 	// 어빌리티 종료 처리 (원위치 복귀 + OnActionComplete + EndAbility)
 	void FinishAbility();
 
+	UFUNCTION(BlueprintCallable, Category="Battle")
 	ABattleManager* GetBattleManager() const;
 
 	bool bAbilityFinished = false;
@@ -293,7 +294,10 @@ private:
 	int32 PendingHitIndex = 0;
 
 	UFUNCTION() void DoTeleportToTarget();
-	UFUNCTION() void DoPlayMontage();
+
+	// Blueprint에서 호출 가능 — DamageEffectClass 없는 어빌리티(도발 등)에서 직접 몽타주 실행
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	void DoPlayMontage();
 	UFUNCTION() void OnMontageCameraBlendFinished();
 	void PlayMontageInternal();
 
