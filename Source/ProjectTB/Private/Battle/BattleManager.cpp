@@ -1252,7 +1252,7 @@ void ABattleManager::ApplyArtifacts()
 	// 아티팩트 정보 가져오기
 	for (const FName& ArtifactID : GI->PartyArtifactData.EquippedArtifact)
 	{
-		FArtifact_CharacterStats ArtifactRow;
+		FArtifactData ArtifactRow;
 		if (!GI->GetArtifactRow(ArtifactID, ArtifactRow))
 		{
 			continue;
@@ -1270,7 +1270,7 @@ void ABattleManager::ApplyArtifacts()
 	
 }
 
-TArray<ABattlePlayerCharacter*> ABattleManager::GetArtifactTargets(const FArtifact_CharacterStats& ArtifactRow) const
+TArray<ABattlePlayerCharacter*> ABattleManager::GetArtifactTargets(const FArtifactData& ArtifactRow) const
 {
 	TArray<ABattlePlayerCharacter*> Result;
 
@@ -1305,7 +1305,7 @@ TArray<ABattlePlayerCharacter*> ABattleManager::GetArtifactTargets(const FArtifa
 	return Result;
 }
 
-void ABattleManager::ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifact_CharacterStats& ArtifactRow, ABattlePlayerCharacter* Target)
+void ABattleManager::ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifactData& ArtifactRow, ABattlePlayerCharacter* Target)
 {
 	if (Target == nullptr) return;
 

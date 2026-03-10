@@ -338,10 +338,10 @@ private:
 	void ApplyArtifacts();
 	
 	// 어떤 캐릭터에 아티팩트를 적용할지 설정. 단체 혹은 개별
-	TArray<ABattlePlayerCharacter*> GetArtifactTargets(const FArtifact_CharacterStats& ArtifactRow) const;
+	TArray<ABattlePlayerCharacter*> GetArtifactTargets(const FArtifactData& ArtifactRow) const;
 	
 	// 개인 캐릭터에 GE 효과 적용
-	void ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifact_CharacterStats& ArtifactRow,ABattlePlayerCharacter* Target);
+	void ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifactData& ArtifactRow,ABattlePlayerCharacter* Target);
 
 #pragma endregion 
 };
