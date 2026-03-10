@@ -1,7 +1,9 @@
 #include "UI/BattleMenuWidget.h"
 #include "Battle/BattleManager.h"
 #include "Battle/BattleCombatant.h"
+#include "Battle/BattlePlayerCharacter.h"
 #include "Abilities/TBGameplayAbility.h"
+#include "TBGameInstance.h"
 #include "Framework/Application/SlateApplication.h"
 
 void UBattleMenuWidget::NativeConstruct()
@@ -117,8 +119,24 @@ void UBattleMenuWidget::ShowDicePreview_Implementation()
 
 void UBattleMenuWidget::ShowDiceManagement_Implementation()
 {
-	MenuState     = EMenuState::DiceManagement;
-	SelectedIndex = 0;
+	// GameInstance에서 OwnedDice 복사
+	CurrentDiceList.Reset();
+	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		CurrentDiceList = GI->OwnedDice;
+	}
+
+	// 현재 캐릭터의 장착 주사위 인덱스로 초기 선택
+	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(CurrentCombatant))
+	{
+		SelectedIndex = PC->GetEquippedDiceIndex();
+	}
+	else
+	{
+		SelectedIndex = 0;
+	}
+
+	MenuState = EMenuState::DiceManagement;
 }
 
 // ─── 방향키 네비게이션 ────────────────────────────────────────────────────────
@@ -131,8 +149,9 @@ void UBattleMenuWidget::NavigateUp_Implementation()
 void UBattleMenuWidget::NavigateDown_Implementation()
 {
 	int32 MaxIndex = MainMenuItemCount - 1;
-	if      (MenuState == EMenuState::SelectingTarget) MaxIndex = CurrentTargets.Num() - 1;
-	else if (MenuState == EMenuState::AbilityMenu)     MaxIndex = CurrentAbilities.Num() - 1;
+	if      (MenuState == EMenuState::SelectingTarget)  MaxIndex = CurrentTargets.Num() - 1;
+	else if (MenuState == EMenuState::AbilityMenu)      MaxIndex = CurrentAbilities.Num() - 1;
+	else if (MenuState == EMenuState::DiceManagement)   MaxIndex = CurrentDiceList.Num() - 1;
 	SelectedIndex = FMath::Min(FMath::Max(0, MaxIndex), SelectedIndex + 1);
 }
 
@@ -213,6 +232,19 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 		// "굴리기" 확인 → 저장된 타겟으로 액션 실행
 		if (PendingTarget)
 			BattleManager->PlayerSelectTarget(PendingTarget);
+		break;
+
+	case EMenuState::DiceManagement:
+		// 선택한 주사위 장착
+		if (CurrentDiceList.IsValidIndex(SelectedIndex))
+		{
+			if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(CurrentCombatant))
+			{
+				PC->EquipDice(SelectedIndex);
+			}
+			// 메인 메뉴로 복귀
+			ShowMainMenu(CurrentCombatant);
+		}
 		break;
 
 	default:

@@ -134,9 +134,21 @@ public:
 
 	// ─── 주사위 ───────────────────────────────────────────────────────────────
 
+	// 파티 공용 주사위 인벤토리
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Dice")
+	TArray<FDiceData> OwnedDice;
+
 	// 유물로 쌓이는 파티 전체 주사위 보정
 	UPROPERTY(BlueprintReadWrite, Category="Dice")
 	FDiceModifier DiceModifier;
+
+	// 주사위 획득
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	void AddDice(const FDiceData& NewDice);
+
+	// 인덱스로 주사위 조회 (범위 초과 시 빈 주사위 반환)
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	FDiceData GetDiceAt(int32 Index) const;
 	
 	// ─── 아티팩트 ─────────────────────────────────────────────────────────────
 #pragma region Artifacts

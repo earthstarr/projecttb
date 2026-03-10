@@ -658,7 +658,7 @@ void ABattleManager::RollDiceAndWait()
 	// 시전자의 장착 주사위 가져오기
 	FDiceData Dice;
 	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(PendingCaster))
-		Dice = PC->EquippedDice;
+		Dice = PC->GetEquippedDice();
 
 	// 면이 없으면 기본값(1.0) 유지하고 바로 실행
 	if (Dice.BaseFaces.IsEmpty())
@@ -728,8 +728,9 @@ void ABattleManager::ExecuteActionAfterDice()
 
 FDiceData ABattleManager::GetCurrentCasterDice() const
 {
-	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(PendingCaster))
-		return PC->EquippedDice;
+	// DicePreview UI에서는 현재 턴 캐릭터의 주사위를 보여줘야 함
+	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(GetCurrentActor()))
+		return PC->GetEquippedDice();
 	return FDiceData{};
 }
 

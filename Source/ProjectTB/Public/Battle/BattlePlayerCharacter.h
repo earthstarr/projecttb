@@ -26,9 +26,19 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Party")
 	FName CharacterId;
 
-	// 현재 장착 중인 주사위 (Blueprint에서 기본값 설정)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Dice")
-	FDiceData EquippedDice;
+	// ─── 주사위 ───────────────────────────────────────────────────────────────
+
+	// GameInstance.OwnedDice에서 장착된 주사위 반환
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	FDiceData GetEquippedDice() const;
+
+	// 주사위 장착 (GameInstance.PartyData.EquippedDiceIndex 업데이트)
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	void EquipDice(int32 DiceIndex);
+
+	// 현재 장착된 주사위 인덱스 조회
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	int32 GetEquippedDiceIndex() const;
 
 	virtual void OnTurnBegin_Implementation() override;
 	virtual void OnTurnEnd_Implementation() override;

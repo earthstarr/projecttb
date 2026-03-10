@@ -138,10 +138,6 @@ void UTBDamageExecution::Execute_Implementation(
 	if (TargetASC && TargetASC->HasMatchingGameplayTag(TAG_Combatant_State_ParrySuccess))
 		FinalDamage *= 0.5f;
 
-	// 화상 상태인 타겟 → 받는 데미지 +25% 증가 (불에 취약)
-	if (TargetASC && TargetASC->HasMatchingGameplayTag(TAG_Status_Burn))
-		FinalDamage *= 1.25f;
-
 	// 최소 1 보장
 	FinalDamage = FMath::Max(FinalDamage, 1.f);
 

@@ -10,7 +10,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git lfs unlock:*)",
-      "Bash(git lfs locks:*)"
+      "Bash(git lfs locks:*)",
+      "Bash(\"C:\\\\Program Files\\\\Epic Games\\\\UE_5.6\\\\Engine\\\\Build\\\\BatchFiles\\\\Build.bat\" ProjectTBEditor Win64 Development -Project=\"c:\\\\JW\\\\Unreal\\\\Project\\\\ProjectTB\\\\ProjectTB.uproject\" -WaitMutex -FromMsBuild)"
     ]
   }
 }

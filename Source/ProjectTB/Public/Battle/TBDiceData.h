@@ -20,6 +20,24 @@ struct FDiceData
 	// 주사위 면 값 목록 (기본: -3 ~ +3, 7면)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TArray<int32> BaseFaces = {-3, -2, -1, 0, 1, 2, 3};
+
+	// BaseFaces를 문자열로 반환 (예: "[-3, -2, -1, 0, 1, 2, 3]")
+	FString GetFacesAsString() const
+	{
+		if (BaseFaces.Num() == 0) return TEXT("[]");
+
+		FString Result = TEXT("[");
+		for (int32 i = 0; i < BaseFaces.Num(); ++i)
+		{
+			if (i > 0) Result += TEXT(", ");
+			const int32 Face = BaseFaces[i];
+			Result += (Face == 0)
+				? TEXT("0")
+				: FString::Printf(TEXT("%+d"), Face);  // 0은 부호 생략
+		}
+		Result += TEXT("]");
+		return Result;
+	}
 };
 
 /**

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Battle/TBDiceData.h"
 #include "BattleMenuWidget.generated.h"
 
 class ABattleManager;
@@ -98,6 +99,10 @@ public:
 	// 메인 메뉴 항목 수 (Attack=0, Abilities=1, Defend=2, Dice=3)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Menu")
 	int32 MainMenuItemCount = 4;
+
+	// DiceManagement용 주사위 목록 (GameInstance.OwnedDice 복사)
+	UPROPERTY(BlueprintReadOnly, Category="Menu")
+	TArray<FDiceData> CurrentDiceList;
 
 protected:
 	// 방향 입력 — C++에서 SelectedIndex 변경, Blueprint에서 시각적 처리 추가 가능
