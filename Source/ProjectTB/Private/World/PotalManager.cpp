@@ -6,6 +6,7 @@
 #include "Engine/LevelStreamingDynamic.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/TBBattleHUD.h"
 #include "World/WorldPlayerController.h"
 
@@ -58,6 +59,7 @@ void UPotalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHa
 	if (SelectedRoomHandle.IsNull()) { UE_LOG(LogTemp, Warning, TEXT("UPotalManager 클래스. OnLevelLoadStarted 함수의 SelectedRoomHandle이 없습니다.")); return;}
 	if (PC == nullptr) { UE_LOG(LogTemp, Warning, TEXT("UPotalManager 클래스. OnLevelLoadStarted 함수의 PC가 없습니다.")); return; }
 	
+	UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadStarted Debug RowName: %s"), *SelectedRoomHandle.RowName.ToString());
 	CamManager = PC->PlayerCameraManager;
 	
 	// 시작 투명도, 끝 투명도, 페이드 시간, 페이드 색상, 오디오 페이드 여부, 페이드 이후 상태 유지 여부
@@ -74,10 +76,11 @@ void UPotalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHa
 	if (StreamingLevel && bSuccess)
 	{
 		// 로딩이 완료되면 아래 OnLevelLoaded 함수가 실행되도록 예약
-		StreamingLevel->OnLevelLoaded.AddDynamic(this, &UPotalManager::OnLevelLoadFinished);
+		//StreamingLevel->OnLevelLoaded.AddDynamic(this, &UPotalManager::OnLevelLoadFinished);	// 데이터상 로딩 완료 말고 객체 생성까지 마친 LevelShown으로 변경
+		StreamingLevel->OnLevelShown.AddDynamic(this, &UPotalManager::OnLevelShown);
 	}
 	
-	NextLevelInstance = StreamingLevel;	
+	NextLevelInstance = StreamingLevel;
 }
 
 void UPotalManager::OnReturnToWorldLevel(const FDataTableRowHandle& ReturnRoomData)
@@ -87,6 +90,11 @@ void UPotalManager::OnReturnToWorldLevel(const FDataTableRowHandle& ReturnRoomDa
 }
 
 void UPotalManager::OnLevelLoadFinished()
+{
+	//기존 이동 로직 Shown으로 변경
+}
+
+void UPotalManager::OnLevelShown()
 {
 	UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Enter"));
 
@@ -101,24 +109,34 @@ void UPotalManager::OnLevelLoadFinished()
 		GetWorld()->GetTimerManager().SetTimer(DelayTeleportTimerHandle, FTimerDelegate::CreateLambda([this]()
 		{
 			TeleportLevel();
-			ActivateHUDMode(RoomData->RoomType); // 맵에 따라 맞는 위젯 호출
+			GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
+			{
+				if (RoomData)
+				{
+					UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Debug RoomType: %d"), static_cast<int32>(RoomData->RoomType));
+					ActivateHUDMode(RoomData->RoomType);
+				}
+			}));
 		}), Delay, false);
 	}
 	else
 	{
+		UE_LOG(LogTemp, Warning, TEXT("딜레이가 필요 없습니다. 즉시 텔레포트 합니다."));
 		TeleportLevel();
-		ActivateHUDMode(RoomData->RoomType);
+		GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
+		{
+			if (RoomData)
+			{
+				UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Debug RoomType: %d"), static_cast<int32>(RoomData->RoomType));
+				ActivateHUDMode(RoomData->RoomType);
+			}
+		}));
 	}
-	
-
 }
 
 void UPotalManager::TeleportLevel()
 {
 	UE_LOG(LogTemp, Log, TEXT("UPotalManager::TeleportLevel Enter"));
-
-	//컨트롤러를 어떻게 넘겨줄것인가. 턴제 게임의 컨트롤러는 누구인가. 그 컨트롤러에 빙의를 해야 하는가.
-	//전투가 아니라 이벤트나 상점이라면 여전히 내가 이동해야 한다.
 		
 	//월드 캐릭터가 직접 이동
 	if (PC)
@@ -141,14 +159,74 @@ void UPotalManager::TeleportLevel()
 			}
 			CurrentLevelInstance = NextLevelInstance;
 			NextLevelInstance = nullptr;
-			
-			// 페이드 인
-			FTimerHandle DelayFadeInTimerHandle;
-			GetWorld()->GetTimerManager().SetTimer(DelayFadeInTimerHandle, FTimerDelegate::CreateLambda([this]()
-			{
-				CamManager->StartCameraFade(1.f, 0.f, 1.f, FLinearColor::Black, false, false);
-			}), 1.0f, false);
 		}
+	}
+}
+
+void UPotalManager::StartBattleManagerSearch()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	//이미 진행된 타이머는 정리
+	StopBattleManagerSearch();
+	BattleManagerSearchElapsed = 0.0f;
+
+	//짧은 주기동안 배틀 매니저를 찾음
+	GetWorld()->GetTimerManager().SetTimer(BattleManagerSearchTimerHandle,this,&UPotalManager::TryBattleManagerSearch,BattleManagerSearchInterval,true);
+}
+
+void UPotalManager::StopBattleManagerSearch()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	GetWorld()->GetTimerManager().ClearTimer(BattleManagerSearchTimerHandle);
+	BattleManagerSearchElapsed = 0.0f;
+}
+
+void UPotalManager::TryBattleManagerSearch()
+{
+	if (!GetWorld() || PC == nullptr)
+	{
+		StopBattleManagerSearch();
+		return;
+	}
+
+	ATBBattleHUD* TBHUD = Cast<ATBBattleHUD>(PC->GetHUD());
+	if (TBHUD == nullptr)
+	{
+		StopBattleManagerSearch();
+		return;
+	}
+
+	BattleManagerSearchElapsed += BattleManagerSearchInterval;
+
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABattleManager::StaticClass(), FoundActors);
+
+	if (!FoundActors.IsEmpty())
+	{
+		if (ABattleManager* BattleManager = Cast<ABattleManager>(FoundActors[0]))
+		{
+			UE_LOG(LogTemp, Log, TEXT("UPotalManager::TryBattleManagerSearch - BattleManager found"));
+			// TBBattleHUD에 찾은 배틀 매니저를 넘겨줌.
+			TBHUD->SetBattleManager(BattleManager);
+			StopBattleManagerSearch();
+			return;
+		}
+	}
+
+	//탐색 가능 시간 초과
+	if (BattleManagerSearchElapsed >= BattleManagerSearchTimeout)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPotalManager::TryBattleManagerSearch - Timed out finding BattleManager"));
+		TBHUD->ExitBattleMode();
+		StopBattleManagerSearch();
 	}
 }
 
@@ -169,10 +247,12 @@ void UPotalManager::ActivateHUDMode(const ERoomType RoomType)
 	case ERoomType::Battle:
 		TBHUD->EnterBattleMode();
 		PC->SetInputModeBattle();
+		StartBattleManagerSearch();
 		break;
 	case ERoomType::World:
 		TBHUD->ExitBattleMode();
 		PC->SetInputModeWorld();
+		TBHUD->StartFadeIn();
 		break;
 	case ERoomType::Event:
 		break;

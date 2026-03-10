@@ -22,6 +22,7 @@ class PROJECTTB_API AWorldCharacter : public ACharacter
 
 public:
 	AWorldCharacter();
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -63,6 +64,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
 	TObjectPtr<UCameraComponent> Camera;
 	
+	bool bAligningToView = false; // 보간 회전중인지
+	
 	//──── 입력 값 ──────────────────────────────────────────────────────────────
 	
 	UPROPERTY(BlueprintReadOnly)
@@ -72,6 +75,6 @@ protected:
 	FVector2D InputLookAxis;
 	
 	UPROPERTY(BlueprintReadOnly)
-	bool bRunning;
+	bool bRunning = false;
 #pragma endregion;
 };

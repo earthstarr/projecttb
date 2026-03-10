@@ -16,32 +16,27 @@ void ATBBattleHUD::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	EnterBattleMode();
+	//EnterBattleMode();
 }
 
 void ATBBattleHUD::EnterBattleMode()
 {
 	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::EnterBattleMode Enter"));
 
+	//위젯만 활성화 하고 배틀 매니저 바인딩은 포탈 매니저가 찾아서 SetBattleManager로 넘겨줌.
 	CreateBattleWidgets();
-
-	// 레벨에서 BattleManager를 찾아 바인딩
-	TArray<AActor*> Found;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABattleManager::StaticClass(), Found);
-	if (!Found.IsEmpty())
-	{
-		BattleManager = Cast<ABattleManager>(Found[0]);
-		BindToBattleManager();
-	}
 }
 
 void ATBBattleHUD::ExitBattleMode()
 {
 	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::ExitBattleMode Enter"));
 	
-	// 이벤트 연결 해제
-	UnBindToBattleManager();
-	
+	if (BattleManager)
+	{
+		// 이벤트 연결 해제
+		UnBindToBattleManager();
+	}
+		
 	// 배틀 위젯 제거
 	RemoveBattleWidgets();
 	
@@ -51,6 +46,38 @@ void ATBBattleHUD::ExitBattleMode()
 	{
 		PotalManager->OnReturnToWorldLevel(TBGameInstance->BattleTransitionData.ReturnRoomData);
 	}
+}
+
+void ATBBattleHUD::StartFadeOut(float Duration) const
+{
+	
+	if (APlayerController* PC = GetOwningPlayerController())
+	{
+		if (APlayerCameraManager* PlayerCameraManager = PC->PlayerCameraManager)
+		{
+		// 시작 투명도, 끝 투명도, 페이드 시간, 페이드 색상, 오디오 페이드 여부, 페이드 이후 상태 유지 여부
+			PlayerCameraManager->StartCameraFade(0.f, 1.f, Duration, FLinearColor::Black, false, true);
+		}
+	}
+}
+
+void ATBBattleHUD::StartFadeIn(float Duration) const
+{
+	if (APlayerController* PC = GetOwningPlayerController())
+	{
+		if (APlayerCameraManager* PlayerCameraManager = PC->PlayerCameraManager)
+		{
+			PlayerCameraManager->StartCameraFade(
+				1.f, 0.f, Duration, FLinearColor::Black, false, false);
+		}
+	}
+}
+
+void ATBBattleHUD::SetBattleManager(ABattleManager* NewBattleManager)
+{
+	BattleManager = NewBattleManager;
+	BindToBattleManager();
+	StartFadeIn(0.5);
 }
 
 void ATBBattleHUD::CreateBattleWidgets()

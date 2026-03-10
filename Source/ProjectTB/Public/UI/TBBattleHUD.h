@@ -5,6 +5,7 @@
 #include "Battle/BattleManager.h"
 #include "TBBattleHUD.generated.h"
 
+class AWorldPlayerController;
 class UTurnOrderWidget;
 class UBattleMenuWidget;
 class UCharacterStatusWidget;
@@ -30,7 +31,19 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Widgets")
 	void ExitBattleMode();
-
+	
+	// ─── 맵 이동 페이드 인, 아웃 ─────────────────────────────────────────────
+	UPROPERTY()
+	APlayerCameraManager* CamManager;
+	
+	//UPROPERTY()
+	//AWorldPlayerController* PC;
+	
+	float TransitionStartTime;
+	
+	void StartFadeOut(float Duration = 0.5f) const;
+	void StartFadeIn(float Duration = 0.5f) const;
+	
 	// ─── 위젯 클래스 (Blueprint에서 지정) ────────────────────────────────────
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UTurnOrderWidget> TurnOrderWidgetClass;
@@ -52,6 +65,9 @@ public:
 	TObjectPtr<UCharacterStatusWidget> CharacterStatusWidget;
 
 	// BattleManager 참조
+	UFUNCTION(BlueprintCallable, Category="Battle")
+	void SetBattleManager(ABattleManager* NewBattleManager);
+	
 	UPROPERTY(BlueprintReadOnly, Category="Battle")
 	TObjectPtr<ABattleManager> BattleManager;
 
