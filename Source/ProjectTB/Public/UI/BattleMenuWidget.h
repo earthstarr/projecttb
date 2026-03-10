@@ -12,10 +12,11 @@ UENUM(BlueprintType)
 enum class EMenuState : uint8
 {
 	Hidden,
-	MainMenu,          // Attack / Abilities / Dice / Defend
+	MainMenu,          // Attack / Abilities / Defend / Dice
 	AbilityMenu,       // 어빌리티 목록
 	SelectingTarget,   // 단일 타겟 선택
 	SelectingTargetAll,// 전체 타겟 선택 (확인만 누르면 됨)
+	DicePreview,       // 타겟 선택 후 주사위 굴리기 전 미리보기
 	DiceManagement     // 현재 장착 주사위 확인/변경
 };
 
@@ -63,6 +64,11 @@ public:
 	void HideMenu();
 	virtual void HideMenu_Implementation();
 
+	// 주사위 미리보기 (타겟 선택 후, 굴리기 전)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Menu")
+	void ShowDicePreview();
+	virtual void ShowDicePreview_Implementation();
+
 	// 주사위 관리 화면 (장착 주사위 확인/변경)
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Menu")
 	void ShowDiceManagement();
@@ -77,6 +83,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Menu")
 	TArray<TObjectPtr<ABattleCombatant>> CurrentTargets;
 
+	// DicePreview에서 사용할 선택된 타겟
+	UPROPERTY(BlueprintReadOnly, Category="Menu")
+	TObjectPtr<ABattleCombatant> PendingTarget;
+
 	// 현재 턴 컴배턴트 (어빌리티 메뉴 진입 시 사용)
 	UPROPERTY(BlueprintReadOnly, Category="Menu")
 	TObjectPtr<ABattleCombatant> CurrentCombatant;
@@ -85,7 +95,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Menu")
 	TArray<TObjectPtr<UTBGameplayAbility>> CurrentAbilities;
 
-	// 메인 메뉴 항목 수 (Attack=0, Abilities=1, Dice=2, Defend=3)
+	// 메인 메뉴 항목 수 (Attack=0, Abilities=1, Defend=2, Dice=3)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Menu")
 	int32 MainMenuItemCount = 4;
 

@@ -109,6 +109,12 @@ void UBattleMenuWidget::HideMenu_Implementation()
 	CurrentTargets.Reset();
 }
 
+void UBattleMenuWidget::ShowDicePreview_Implementation()
+{
+	MenuState     = EMenuState::DicePreview;
+	SelectedIndex = 0;
+}
+
 void UBattleMenuWidget::ShowDiceManagement_Implementation()
 {
 	MenuState     = EMenuState::DiceManagement;
@@ -172,11 +178,11 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 		}
 		else if (SelectedIndex == 2)
 		{
-			ShowDiceManagement();
+			BattleManager->PlayerSelectDefend();
 		}
 		else if (SelectedIndex == 3)
 		{
-			BattleManager->PlayerSelectDefend();
+			ShowDiceManagement();
 		}
 		break;
 
@@ -187,13 +193,26 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 
 	case EMenuState::SelectingTarget:
 		if (CurrentTargets.IsValidIndex(SelectedIndex))
-			BattleManager->PlayerSelectTarget(CurrentTargets[SelectedIndex]);
+		{
+			// 타겟 저장 후 DicePreview로 전환
+			PendingTarget = CurrentTargets[SelectedIndex];
+			ShowDicePreview();
+		}
 		break;
 
 	case EMenuState::SelectingTargetAll:
-		// 전체 타겟 — 첫 번째 타겟을 넘기면 BattleManager에서 All 처리
+		// 전체 타겟 — 첫 번째 타겟 저장 후 DicePreview로 전환
 		if (!CurrentTargets.IsEmpty())
-			BattleManager->PlayerSelectTarget(CurrentTargets[0]);
+		{
+			PendingTarget = CurrentTargets[0];
+			ShowDicePreview();
+		}
+		break;
+
+	case EMenuState::DicePreview:
+		// "굴리기" 확인 → 저장된 타겟으로 액션 실행
+		if (PendingTarget)
+			BattleManager->PlayerSelectTarget(PendingTarget);
 		break;
 
 	default:
@@ -220,6 +239,12 @@ void UBattleMenuWidget::CancelSelection_Implementation()
 
 	if (MenuState == EMenuState::AbilityMenu || MenuState == EMenuState::DiceManagement)
 		ShowMainMenu(CurrentCombatant);  // 서브 메뉴 → 메인 메뉴로 복귀
+	else if (MenuState == EMenuState::DicePreview)
+	{
+		// DicePreview → 타겟 선택으로 복귀
+		PendingTarget = nullptr;
+		ShowTargetSelection(TArray<ABattleCombatant*>(CurrentTargets));
+	}
 	else if (MenuState == EMenuState::SelectingTarget || MenuState == EMenuState::SelectingTargetAll)
 		BattleManager->PlayerCancel();
 	else
