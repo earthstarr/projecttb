@@ -27,7 +27,7 @@ FReply UBattleMenuWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, c
 
 FReply UBattleMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
-	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::NativeOnKeyDown Enter"));
+	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::NativeOnKeyDown Enter, MenuState=%d"), (int32)MenuState);
 
 	const FKey Key = InKeyEvent.GetKey();
 

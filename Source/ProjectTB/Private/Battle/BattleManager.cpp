@@ -301,9 +301,19 @@ void ABattleManager::StartBattle(
 
 	// 아티펙트 효과 적용
 	ApplyArtifacts();
-	
+
 	// 이펙트 웜업 로딩
 	WarmUpEffects();
+
+	// HUD 바인딩 (bAutoStartBattle 모드에서도 동작하도록)
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
+		{
+			HUD->SetBattleManager(this);
+		}
+	}
+
 	SetPhase(EBattlePhase::BattleStart);
 
 	// 스탯 적용 완료 → UI 초기화 트리거
@@ -658,7 +668,10 @@ void ABattleManager::RollDiceAndWait()
 		return;
 	}
 
-	// 랜덤으로 면 뽑기
+	// 주사위 데이터 저장 (애니메이션용)
+	PendingDiceData = Dice;
+
+	// 랜덤으로 면 뽑기 (최종 결과)
 	const int32 RawFace = Dice.BaseFaces[FMath::RandRange(0, Dice.BaseFaces.Num() - 1)];
 
 	// GameInstance에서 FaceBonus 읽기
@@ -670,19 +683,47 @@ void ABattleManager::RollDiceAndWait()
 		MaxFace   = GI->DiceModifier.MaxFace;
 	}
 
-	const int32 FinalFace = FMath::Clamp(RawFace + FaceBonus, MinFace, MaxFace);
-	PendingDiceMultiplier = 1.0f + FinalFace * 0.1f;
+	// 최종 결과 저장
+	PendingDiceFinalFace = FMath::Clamp(RawFace + FaceBonus, MinFace, MaxFace);
+	PendingDiceMultiplier = 1.0f + PendingDiceFinalFace * 0.1f;
 
-	OnDiceRolled.Broadcast(FinalFace, PendingDiceMultiplier);
 	SetPhase(EBattlePhase::DiceRolling);
 
+	// 0.1초 간격 애니메이션 타이머 시작
+	GetWorldTimerManager().SetTimer(
+		DiceAnimationTimer, this, &ABattleManager::DiceAnimationTick, 0.1f, true);
+
+	// 2초 후 애니메이션 종료 및 결과 표시
 	GetWorldTimerManager().SetTimer(
 		DiceResultTimer, this, &ABattleManager::ExecuteActionAfterDice, 2.0f, false);
 }
 
+void ABattleManager::DiceAnimationTick()
+{
+	if (PendingDiceData.BaseFaces.IsEmpty()) return;
+
+	// 랜덤 면 뽑기
+	const int32 RandomFace = PendingDiceData.BaseFaces[FMath::RandRange(0, PendingDiceData.BaseFaces.Num() - 1)];
+	const float RandomMultiplier = 1.0f + RandomFace * 0.1f;
+
+	OnDiceRolled.Broadcast(RandomFace, RandomMultiplier);
+}
+
 void ABattleManager::ExecuteActionAfterDice()
 {
-	ExecuteAction(PendingCaster, PendingTarget, PendingAbilityClass);
+	// 애니메이션 타이머 정지
+	GetWorldTimerManager().ClearTimer(DiceAnimationTimer);
+
+	// 최종 결과 브로드캐스트
+	OnDiceRolled.Broadcast(PendingDiceFinalFace, PendingDiceMultiplier);
+
+	// 2초 후 액션 실행
+	FTimerHandle ActionDelayTimer;
+	GetWorldTimerManager().SetTimer(
+		ActionDelayTimer,
+		[this]() { ExecuteAction(PendingCaster, PendingTarget, PendingAbilityClass); },
+		2.0f,
+		false);
 }
 
 FDiceData ABattleManager::GetCurrentCasterDice() const

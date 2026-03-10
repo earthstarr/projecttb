@@ -224,8 +224,12 @@ private:
 
 	// 주사위
 	float PendingDiceMultiplier = 1.0f;
+	int32 PendingDiceFinalFace = 0;
+	FDiceData PendingDiceData;
 	FTimerHandle DiceResultTimer;
+	FTimerHandle DiceAnimationTimer;
 	void RollDiceAndWait();
+	void DiceAnimationTick();
 	void ExecuteActionAfterDice();
 
 	// 패링
