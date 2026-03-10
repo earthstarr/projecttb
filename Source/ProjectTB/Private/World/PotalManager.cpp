@@ -66,6 +66,8 @@ void UPotalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHa
 	CamManager->StartCameraFade(0.f, 1.f, 0.5f, FLinearColor::Black, false, true);
 	TransitionStartTime = GetWorld()->GetTimeSeconds();
 
+	//todo 페이드 인 이후에 방 생성하도록 변경할 것
+	
 	// 방 생성
 	RoomData = SelectedRoomHandle.GetRow<FRoomData>(TEXT("RoomData"));
 

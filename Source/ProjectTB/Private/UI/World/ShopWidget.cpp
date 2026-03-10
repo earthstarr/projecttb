@@ -11,9 +11,9 @@ void UShopWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	TBGameInstance = Cast<UTBGameInstance>(GetGameInstance());
+	ensure(SalesProductWidgetClass);
 	
-	MaxProductCnt = MaxRow * MaxCol;
+	TBGameInstance = Cast<UTBGameInstance>(GetGameInstance());
 	
 	RefreshShopProducts();
 }
@@ -33,11 +33,12 @@ void UShopWidget::RefreshShopProducts()
 	
 	for (const FArtifactEntry& Entry : UnownedArtifacts)
 	{
+		// 보스등급 아티팩트는 상점 판매 목록에서 제외
+		if (Entry.ArtifactData.Grade == EArtifactGrade::Boss)
+		{
+			continue;	
+		}
 		
-	}
-	
-	for (const FArtifactEntry& Entry : UnownedArtifacts)
-	{
 		USalesProductWidget* ProductWidget = CreateWidget<USalesProductWidget>(this, SalesProductWidgetClass);
 		if (ProductWidget == nullptr)
 		{

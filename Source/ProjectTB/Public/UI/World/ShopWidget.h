@@ -31,14 +31,12 @@ protected:
 	TSubclassOf<USalesProductWidget> SalesProductWidgetClass;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shop")
-	int32 MaxCol;
+	int32 MaxCol = 1;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shop")
-	int32 MaxRow;
+	int32 MaxRow = 1;
 	
 private:
 	UPROPERTY()
 	TObjectPtr<UTBGameInstance> TBGameInstance;
-	
-	int32 MaxProductCnt;
 };
