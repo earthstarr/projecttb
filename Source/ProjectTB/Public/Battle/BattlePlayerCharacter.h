@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Battle/BattleCombatant.h"
+#include "Battle/TBDiceData.h"
 #include "BattlePlayerCharacter.generated.h"
 
 /**
@@ -24,6 +25,20 @@ public:
 	// GameInstance 파티 데이터와 연결하기 위한 식별자 ("Swordsman", "Mage", "Archer")
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Party")
 	FName CharacterId;
+
+	// ─── 주사위 ───────────────────────────────────────────────────────────────
+
+	// GameInstance.OwnedDice에서 장착된 주사위 반환
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	FDiceData GetEquippedDice() const;
+
+	// 주사위 장착 (GameInstance.PartyData.EquippedDiceIndex 업데이트)
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	void EquipDice(int32 DiceIndex);
+
+	// 현재 장착된 주사위 인덱스 조회
+	UFUNCTION(BlueprintCallable, Category="Dice")
+	int32 GetEquippedDiceIndex() const;
 
 	virtual void OnTurnBegin_Implementation() override;
 	virtual void OnTurnEnd_Implementation() override;

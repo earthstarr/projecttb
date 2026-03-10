@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "Abilities/TBGameplayAbility.h"
 #include "Data/ArtifactDataTypes.h"
+#include "Battle/TBDiceData.h"
 #include "BattleManager.generated.h"
 
 class ABattleCombatant;
@@ -19,6 +20,7 @@ enum class EBattlePhase : uint8
 	BattleStart,      // 전투 시작 연출
 	PlayerTurn,       // 플레이어 메뉴 입력 대기
 	SelectingTarget,  // 타겟 선택 대기
+	DiceRolling,      // 주사위 굴리는 중 (0.5초 결과 표시 후 액션 실행)
 	ExecutingAction,  // 어빌리티 애니메이션 재생 중
 	EnemyTurn,        // 적 AI 행동 처리 중
 	BattleVictory,
@@ -31,6 +33,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnOrderUpdated,   const TArray<
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnyDamageDealt,    ABattleCombatant*, Target, float, Damage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnyHealDealt,      ABattleCombatant*, Target, float, Heal);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleReady);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDiceRolled,        int32, FaceValue, float, Multiplier);
 
 /**
  * 배틀 씬에 배치되는 전투 관리 Actor.
@@ -178,6 +181,22 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FOnBattleReady OnBattleReady;
 
+	// 주사위 롤 결과 (FaceValue: 면 값, Multiplier: 배율)
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnDiceRolled OnDiceRolled;
+
+	// ─── 주사위 쿼리 ──────────────────────────────────────────────────────────
+	UFUNCTION(BlueprintCallable, Category="Battle|Dice")
+	float GetPendingDiceMultiplier() const { return PendingDiceMultiplier; }
+
+	// 현재 시전자의 장착 주사위 반환 (UI 표시용)
+	UFUNCTION(BlueprintCallable, Category="Battle|Dice")
+	FDiceData GetCurrentCasterDice() const;
+
+	// 현재 시전자의 주사위 면 목록을 텍스트로 반환 (예: "-3, -2, -1, 0, 1, 2, 3")
+	UFUNCTION(BlueprintCallable, Category="Battle|Dice")
+	FText GetCurrentCasterDiceFacesText() const;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -202,6 +221,16 @@ private:
 	FTimerHandle EnemyActionTimer;
 	FTimerHandle ActionCameraDelayTimer;
 	void ActivatePendingAbility();
+
+	// 주사위
+	float PendingDiceMultiplier = 1.0f;
+	int32 PendingDiceFinalFace = 0;
+	FDiceData PendingDiceData;
+	FTimerHandle DiceResultTimer;
+	FTimerHandle DiceAnimationTimer;
+	void RollDiceAndWait();
+	void DiceAnimationTick();
+	void ExecuteActionAfterDice();
 
 	// 패링
 	bool bParryTimingOpen = false;

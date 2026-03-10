@@ -16,7 +16,7 @@ void ATBBattleHUD::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	//EnterBattleMode();
+	EnterBattleMode();
 }
 
 void ATBBattleHUD::EnterBattleMode()
@@ -162,6 +162,7 @@ void ATBBattleHUD::BindToBattleManager()
 	BattleManager->OnAnyDamageDealt.AddDynamic(this,     &ATBBattleHUD::HandleDamageDealt);
 	BattleManager->OnAnyHealDealt.AddDynamic(this,       &ATBBattleHUD::HandleHealDealt);
 	BattleManager->OnBattleReady.AddDynamic(this,        &ATBBattleHUD::HandleBattleReady);
+	BattleManager->OnDiceRolled.AddDynamic(this,         &ATBBattleHUD::HandleDiceRolled);
 
 	// CharacterStatusWidget 초기화는 OnBattleReady에서 수행 (스탯 적용 완료 후)
 
@@ -195,6 +196,7 @@ void ATBBattleHUD::UnBindToBattleManager()
 	BattleManager->OnAnyDamageDealt.RemoveDynamic(this,     &ATBBattleHUD::HandleDamageDealt);
 	BattleManager->OnAnyHealDealt.RemoveDynamic(this,       &ATBBattleHUD::HandleHealDealt);
 	BattleManager->OnBattleReady.RemoveDynamic(this,        &ATBBattleHUD::HandleBattleReady);
+	BattleManager->OnDiceRolled.RemoveDynamic(this,         &ATBBattleHUD::HandleDiceRolled);
 	
 	// MP/Stamina 변경 구독
 	for (ABattlePlayerCharacter* P : BattleManager->GetPlayerParty())
@@ -270,6 +272,12 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 				break;
 			}
 		}
+		break;
+
+	case EBattlePhase::DiceRolling:
+		if (BattleMenuWidget)
+			BattleMenuWidget->HideMenu();
+		// OnDiceRolled 델리게이트 결과 오버레이는 Blueprint에서 처리
 		break;
 
 	case EBattlePhase::ExecutingAction:
@@ -351,4 +359,11 @@ void ATBBattleHUD::HandleBattleReady()
 	// MP/Stamina 변경 구독
 	for (ABattlePlayerCharacter* P : BattleManager->GetPlayerParty())
 		if (P) P->OnStatChanged.AddUniqueDynamic(this, &ATBBattleHUD::HandleStatChanged);
+}
+
+void ATBBattleHUD::HandleDiceRolled(int32 FaceValue, float Multiplier)
+{
+	GetWorldTimerManager().ClearTimer(DiceOverlayTimer);
+	ShowDiceResultOverlay(FaceValue, Multiplier);
+	GetWorldTimerManager().SetTimer(DiceOverlayTimer, this, &ATBBattleHUD::HideDiceResultOverlay, 2.0f, false);
 }

@@ -82,6 +82,10 @@ struct FPartyMemberData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stats")
 	float CurrentStamina = -1.f;  // -1 = 풀스태미나로 시작
 
+	// ─── 장착 주사위 ─────────────────────────────────────────────────────────
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Dice")
+	int32 EquippedDiceIndex = 0;  // GameInstance.OwnedDice 인덱스
+
 	// ─── 유틸 함수 ────────────────────────────────────────────────────────────
 
 	// 해당 레벨에서 다음 레벨까지 필요한 경험치

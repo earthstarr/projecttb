@@ -301,9 +301,19 @@ void ABattleManager::StartBattle(
 
 	// 아티펙트 효과 적용
 	ApplyArtifacts();
-	
+
 	// 이펙트 웜업 로딩
 	WarmUpEffects();
+
+	// HUD 바인딩 (bAutoStartBattle 모드에서도 동작하도록)
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
+		{
+			HUD->SetBattleManager(this);
+		}
+	}
+
 	SetPhase(EBattlePhase::BattleStart);
 
 	// 스탯 적용 완료 → UI 초기화 트리거
@@ -514,6 +524,7 @@ void ABattleManager::StartPlayerTurn()
 // ─── 적 턴 ────────────────────────────────────────────────────────────────────
 void ABattleManager::StartEnemyTurn()
 {
+	PendingDiceMultiplier = 1.0f;
 	SetPhase(EBattlePhase::EnemyTurn);
 	UE_LOG(LogTemp, Display, TEXT("BattleManager: [EnemyTurn] %s"), GetCurrentActor() ? *GetCurrentActor()->GetName() : TEXT("None"));
 
@@ -603,7 +614,12 @@ void ABattleManager::PlayerSelectTarget(ABattleCombatant* Target)
 	}
 
 	if (AbilityToUse)
-		ExecuteAction(Caster, Target, AbilityToUse);
+	{
+		PendingCaster       = Caster;
+		PendingTarget       = Target;
+		PendingAbilityClass = AbilityToUse;
+		RollDiceAndWait();
+	}
 }
 
 void ABattleManager::PlayerSelectDefend()
@@ -625,6 +641,109 @@ void ABattleManager::PlayerCancel()
 		PendingTarget       = nullptr;
 		SetPhase(EBattlePhase::PlayerTurn);
 	}
+	else if (CurrentPhase == EBattlePhase::DiceRolling)
+	{
+		// 주사위 결과 타이머 취소 후 플레이어 턴으로 복귀
+		GetWorldTimerManager().ClearTimer(DiceResultTimer);
+		PendingDiceMultiplier = 1.0f;
+		PendingAbilityClass   = nullptr;
+		PendingTarget         = nullptr;
+		SetPhase(EBattlePhase::PlayerTurn);
+	}
+}
+
+// ─── 주사위 ──────────────────────────────────────────────────────────────────────
+void ABattleManager::RollDiceAndWait()
+{
+	// 시전자의 장착 주사위 가져오기
+	FDiceData Dice;
+	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(PendingCaster))
+		Dice = PC->GetEquippedDice();
+
+	// 면이 없으면 기본값(1.0) 유지하고 바로 실행
+	if (Dice.BaseFaces.IsEmpty())
+	{
+		PendingDiceMultiplier = 1.0f;
+		ExecuteAction(PendingCaster, PendingTarget, PendingAbilityClass);
+		return;
+	}
+
+	// 주사위 데이터 저장 (애니메이션용)
+	PendingDiceData = Dice;
+
+	// 랜덤으로 면 뽑기 (최종 결과)
+	const int32 RawFace = Dice.BaseFaces[FMath::RandRange(0, Dice.BaseFaces.Num() - 1)];
+
+	// GameInstance에서 FaceBonus 읽기
+	int32 FaceBonus = 0, MinFace = -10, MaxFace = 10;
+	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		FaceBonus = GI->DiceModifier.FaceBonus;
+		MinFace   = GI->DiceModifier.MinFace;
+		MaxFace   = GI->DiceModifier.MaxFace;
+	}
+
+	// 최종 결과 저장
+	PendingDiceFinalFace = FMath::Clamp(RawFace + FaceBonus, MinFace, MaxFace);
+	PendingDiceMultiplier = 1.0f + PendingDiceFinalFace * 0.1f;
+
+	SetPhase(EBattlePhase::DiceRolling);
+
+	// 0.1초 간격 애니메이션 타이머 시작
+	GetWorldTimerManager().SetTimer(
+		DiceAnimationTimer, this, &ABattleManager::DiceAnimationTick, 0.1f, true);
+
+	// 2초 후 애니메이션 종료 및 결과 표시
+	GetWorldTimerManager().SetTimer(
+		DiceResultTimer, this, &ABattleManager::ExecuteActionAfterDice, 2.0f, false);
+}
+
+void ABattleManager::DiceAnimationTick()
+{
+	if (PendingDiceData.BaseFaces.IsEmpty()) return;
+
+	// 랜덤 면 뽑기
+	const int32 RandomFace = PendingDiceData.BaseFaces[FMath::RandRange(0, PendingDiceData.BaseFaces.Num() - 1)];
+	const float RandomMultiplier = 1.0f + RandomFace * 0.1f;
+
+	OnDiceRolled.Broadcast(RandomFace, RandomMultiplier);
+}
+
+void ABattleManager::ExecuteActionAfterDice()
+{
+	// 애니메이션 타이머 정지
+	GetWorldTimerManager().ClearTimer(DiceAnimationTimer);
+
+	// 최종 결과 브로드캐스트
+	OnDiceRolled.Broadcast(PendingDiceFinalFace, PendingDiceMultiplier);
+
+	// 2초 후 액션 실행
+	FTimerHandle ActionDelayTimer;
+	GetWorldTimerManager().SetTimer(
+		ActionDelayTimer,
+		[this]() { ExecuteAction(PendingCaster, PendingTarget, PendingAbilityClass); },
+		2.0f,
+		false);
+}
+
+FDiceData ABattleManager::GetCurrentCasterDice() const
+{
+	// DicePreview UI에서는 현재 턴 캐릭터의 주사위를 보여줘야 함
+	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(GetCurrentActor()))
+		return PC->GetEquippedDice();
+	return FDiceData{};
+}
+
+FText ABattleManager::GetCurrentCasterDiceFacesText() const
+{
+	const FDiceData Dice = GetCurrentCasterDice();
+	FString Result;
+	for (int32 i = 0; i < Dice.BaseFaces.Num(); ++i)
+	{
+		if (i > 0) Result += TEXT(", ");
+		Result += FString::FromInt(Dice.BaseFaces[i]);
+	}
+	return FText::FromString(Result);
 }
 
 // ─── 어빌리티 실행 ───────────────────────────────────────────────────────────────

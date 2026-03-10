@@ -157,6 +157,20 @@ void UTBGameInstance::RobMoney(int32 Amount)
 	CurrentMoney = FMath::Clamp(NewValue, (int64)MIN_int32, (int64)MAX_int32);
 }
 
+// ─── 주사위 시스템 ──────────────────────────────────────────────────────────────
+
+void UTBGameInstance::AddDice(const FDiceData& NewDice)
+{
+	OwnedDice.Add(NewDice);
+}
+
+FDiceData UTBGameInstance::GetDiceAt(int32 Index) const
+{
+	if (OwnedDice.IsValidIndex(Index))
+		return OwnedDice[Index];
+	return FDiceData{};
+}
+
 // ─── 아티팩트 시스템 ──────────────────────────────────────────────────────────────
 
 void UTBGameInstance::EquipArtifact(FName ArtifactID)

@@ -1,7 +1,9 @@
 #include "UI/BattleMenuWidget.h"
 #include "Battle/BattleManager.h"
 #include "Battle/BattleCombatant.h"
+#include "Battle/BattlePlayerCharacter.h"
 #include "Abilities/TBGameplayAbility.h"
+#include "TBGameInstance.h"
 #include "Framework/Application/SlateApplication.h"
 
 void UBattleMenuWidget::NativeConstruct()
@@ -27,7 +29,7 @@ FReply UBattleMenuWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, c
 
 FReply UBattleMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
-	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::NativeOnKeyDown Enter"));
+	UE_LOG(LogTemp, Log, TEXT("UBattleMenuWidget::NativeOnKeyDown Enter, MenuState=%d"), (int32)MenuState);
 
 	const FKey Key = InKeyEvent.GetKey();
 
@@ -109,6 +111,34 @@ void UBattleMenuWidget::HideMenu_Implementation()
 	CurrentTargets.Reset();
 }
 
+void UBattleMenuWidget::ShowDicePreview_Implementation()
+{
+	MenuState     = EMenuState::DicePreview;
+	SelectedIndex = 0;
+}
+
+void UBattleMenuWidget::ShowDiceManagement_Implementation()
+{
+	// GameInstance에서 OwnedDice 복사
+	CurrentDiceList.Reset();
+	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		CurrentDiceList = GI->OwnedDice;
+	}
+
+	// 현재 캐릭터의 장착 주사위 인덱스로 초기 선택
+	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(CurrentCombatant))
+	{
+		SelectedIndex = PC->GetEquippedDiceIndex();
+	}
+	else
+	{
+		SelectedIndex = 0;
+	}
+
+	MenuState = EMenuState::DiceManagement;
+}
+
 // ─── 방향키 네비게이션 ────────────────────────────────────────────────────────
 
 void UBattleMenuWidget::NavigateUp_Implementation()
@@ -119,8 +149,9 @@ void UBattleMenuWidget::NavigateUp_Implementation()
 void UBattleMenuWidget::NavigateDown_Implementation()
 {
 	int32 MaxIndex = MainMenuItemCount - 1;
-	if      (MenuState == EMenuState::SelectingTarget) MaxIndex = CurrentTargets.Num() - 1;
-	else if (MenuState == EMenuState::AbilityMenu)     MaxIndex = CurrentAbilities.Num() - 1;
+	if      (MenuState == EMenuState::SelectingTarget)  MaxIndex = CurrentTargets.Num() - 1;
+	else if (MenuState == EMenuState::AbilityMenu)      MaxIndex = CurrentAbilities.Num() - 1;
+	else if (MenuState == EMenuState::DiceManagement)   MaxIndex = CurrentDiceList.Num() - 1;
 	SelectedIndex = FMath::Min(FMath::Max(0, MaxIndex), SelectedIndex + 1);
 }
 
@@ -168,6 +199,10 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 		{
 			BattleManager->PlayerSelectDefend();
 		}
+		else if (SelectedIndex == 3)
+		{
+			ShowDiceManagement();
+		}
 		break;
 
 	case EMenuState::AbilityMenu:
@@ -177,13 +212,39 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 
 	case EMenuState::SelectingTarget:
 		if (CurrentTargets.IsValidIndex(SelectedIndex))
-			BattleManager->PlayerSelectTarget(CurrentTargets[SelectedIndex]);
+		{
+			// 타겟 저장 후 DicePreview로 전환
+			PendingTarget = CurrentTargets[SelectedIndex];
+			ShowDicePreview();
+		}
 		break;
 
 	case EMenuState::SelectingTargetAll:
-		// 전체 타겟 — 첫 번째 타겟을 넘기면 BattleManager에서 All 처리
+		// 전체 타겟 — 첫 번째 타겟 저장 후 DicePreview로 전환
 		if (!CurrentTargets.IsEmpty())
-			BattleManager->PlayerSelectTarget(CurrentTargets[0]);
+		{
+			PendingTarget = CurrentTargets[0];
+			ShowDicePreview();
+		}
+		break;
+
+	case EMenuState::DicePreview:
+		// "굴리기" 확인 → 저장된 타겟으로 액션 실행
+		if (PendingTarget)
+			BattleManager->PlayerSelectTarget(PendingTarget);
+		break;
+
+	case EMenuState::DiceManagement:
+		// 선택한 주사위 장착
+		if (CurrentDiceList.IsValidIndex(SelectedIndex))
+		{
+			if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(CurrentCombatant))
+			{
+				PC->EquipDice(SelectedIndex);
+			}
+			// 메인 메뉴로 복귀
+			ShowMainMenu(CurrentCombatant);
+		}
 		break;
 
 	default:
@@ -208,8 +269,14 @@ void UBattleMenuWidget::CancelSelection_Implementation()
 {
 	if (!BattleManager) return;
 
-	if (MenuState == EMenuState::AbilityMenu)
-		ShowMainMenu(CurrentCombatant);  // 어빌리티 메뉴 → 메인 메뉴로 복귀
+	if (MenuState == EMenuState::AbilityMenu || MenuState == EMenuState::DiceManagement)
+		ShowMainMenu(CurrentCombatant);  // 서브 메뉴 → 메인 메뉴로 복귀
+	else if (MenuState == EMenuState::DicePreview)
+	{
+		// DicePreview → 타겟 선택으로 복귀
+		PendingTarget = nullptr;
+		ShowTargetSelection(TArray<ABattleCombatant*>(CurrentTargets));
+	}
 	else if (MenuState == EMenuState::SelectingTarget || MenuState == EMenuState::SelectingTargetAll)
 		BattleManager->PlayerCancel();
 	else

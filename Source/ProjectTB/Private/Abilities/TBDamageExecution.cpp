@@ -42,15 +42,15 @@ UTBDamageExecution::UTBDamageExecution()
 	RelevantAttributesToCapture.Add(GetCaptureStruct().CriticalMultiplierDef);
 }
 
-// ─── 실제 데미지 계산 ────────────────────────────────────────────────────────
+// ─── 실제 데미지/힐 계산 ────────────────────────────────────────────────────────
 void UTBDamageExecution::Execute_Implementation(
 	const FGameplayEffectCustomExecutionParameters& ExecutionParams,
 	FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
 {
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
 
-	// 물리/마법 구분
-	const bool bIsPhysical = Spec.CapturedSourceTags.GetAggregatedTags()->HasTag(TAG_Effect_Damage_Physical);
+	// 힐 여부 체크
+	const bool bIsHeal = Spec.CapturedSourceTags.GetAggregatedTags()->HasTag(TAG_Effect_Heal);
 
 	// 어빌리티 배율 (SetByCaller)
 	const float AbilityMultiplier = Spec.GetSetByCallerMagnitude(TAG_Data_AbilityMultiplier, false, 1.0f);
@@ -58,6 +58,36 @@ void UTBDamageExecution::Execute_Implementation(
 	FAggregatorEvaluateParameters EvalParams;
 	EvalParams.SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	EvalParams.TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
+
+	// ─── 힐 처리 ─────────────────────────────────────────────────────────────
+	if (bIsHeal)
+	{
+		float MagicAttack = 0.f;
+		ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(GetCaptureStruct().MagicAttackDef, EvalParams, MagicAttack);
+
+		float FinalHeal = MagicAttack * AbilityMultiplier;
+
+		// ±10% 랜덤 편차
+		FinalHeal *= FMath::RandRange(0.9f, 1.1f);
+
+		// 최소 1 보장
+		FinalHeal = FMath::Max(FinalHeal, 1.f);
+
+		UE_LOG(LogTemp, Warning, TEXT("TBDamageExecution: HEAL MagicAttack=%.1f, Multiplier=%.2f, FinalHeal=%.1f"),
+			MagicAttack, AbilityMultiplier, FinalHeal);
+
+		// IncomingHeal 메타 어트리뷰트에 출력
+		OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(
+			UTBAttributeSet::GetIncomingHealAttribute(),
+			EGameplayModOp::Additive,
+			FinalHeal));
+
+		return;
+	}
+
+	// ─── 데미지 처리 ─────────────────────────────────────────────────────────
+	// 물리/마법 구분
+	const bool bIsPhysical = Spec.CapturedSourceTags.GetAggregatedTags()->HasTag(TAG_Effect_Damage_Physical);
 
 	float Attack = 0.f, Defense = 0.f, CritChance = 0.f, CritMulti = 1.5f;
 
@@ -107,10 +137,6 @@ void UTBDamageExecution::Execute_Implementation(
 	// 패링 성공 → 데미지 50% 감소
 	if (TargetASC && TargetASC->HasMatchingGameplayTag(TAG_Combatant_State_ParrySuccess))
 		FinalDamage *= 0.5f;
-
-	// 화상 상태인 타겟 → 받는 데미지 +25% 증가 (불에 취약)
-	if (TargetASC && TargetASC->HasMatchingGameplayTag(TAG_Status_Burn))
-		FinalDamage *= 1.25f;
 
 	// 최소 1 보장
 	FinalDamage = FMath::Max(FinalDamage, 1.f);
