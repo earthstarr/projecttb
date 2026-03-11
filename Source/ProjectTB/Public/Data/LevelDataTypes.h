@@ -160,4 +160,9 @@ struct FLevelUpDisplayData
 
 	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
 	FCharacterLevelStats NewStats;
+	
+	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
+	bool bLeveledUp = false;
+	
+	
 };

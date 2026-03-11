@@ -1181,17 +1181,15 @@ void ABattleManager::HandleBattleVictory()
 		ExpData.bLeveledUp = bLeveledUp;
 		AfterExpData.Add(ExpData);
 
-		// 레벨업 정보 수집
-		if (bLeveledUp)
-		{
-			FLevelUpDisplayData Data;
-			Data.CharacterId = Member.CharacterId;
-			Data.OldLevel = *OldLevel;
-			Data.NewLevel = Member.Level;
-			GI->GetLevelStats(Member.CharacterId, *OldLevel, Data.OldStats);
-			GI->GetLevelStats(Member.CharacterId, Member.Level, Data.NewStats);
-			LevelUpData.Add(Data);
-		}
+		// 레벨업 UI 데이터		
+		FLevelUpDisplayData Data;
+		Data.CharacterId = Member.CharacterId;
+		Data.OldLevel = *OldLevel;
+		Data.NewLevel = Member.Level;
+		Data.bLeveledUp = bLeveledUp;
+		GI->GetLevelStats(Member.CharacterId, *OldLevel, Data.OldStats);
+		GI->GetLevelStats(Member.CharacterId, Member.Level, Data.NewStats);
+		LevelUpData.Add(Data);		
 	}
 
 	// 파티 스탯 저장
