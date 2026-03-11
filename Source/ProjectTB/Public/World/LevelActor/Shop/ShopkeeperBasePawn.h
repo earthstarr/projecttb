@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "ShopkeeperBasePawn.generated.h"
 
+struct FArtifactEntry;
 class AWorldPlayerController;
 class USphereComponent;
 
@@ -42,7 +43,23 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// 판매할 상품 목록 초기화 여부
+	UPROPERTY()
+	bool bShopInventoryInitialized = false;
 	
+	// 상품 목록 초기화
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void InitializeShopInventory();
+
+	// 판매할 상품 아이템 선별
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	const TArray<FArtifactEntry>& GetShopProductEntries() const;
+	
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	bool IsSoldOut(FName ArtifactID) const;
+
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void MarkProductSoldOut(FName ArtifactID);
 	
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "UI")
@@ -51,6 +68,13 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UUserWidget* ShopWidget;
 	
+	// 판매할 상품 목록
+	UPROPERTY(BlueprintReadOnly, Category="Shop")
+	TArray<FArtifactEntry> ShopProductEntries;
+	
+	// 판매된 아티팩트 이름
+	UPROPERTY()
+	TSet<FName> SoldOutArtifactIds;
 	
 private:
 	bool CreateShopWidget();

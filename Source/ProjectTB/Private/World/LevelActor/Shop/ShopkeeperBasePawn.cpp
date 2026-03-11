@@ -3,8 +3,10 @@
 
 #include "World/LevelActor/Shop/ShopkeeperBasePawn.h"
 
+#include "TBGameInstance.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/SphereComponent.h"
+#include "UI/World/ShopWidget.h"
 #include "World/WorldCharacter.h"
 #include "World/WorldCharacterBase.h"
 #include "World/WorldPlayerController.h"
@@ -34,12 +36,13 @@ void AShopkeeperBasePawn::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	//상품 목록 설정
+	InitializeShopInventory();
+	
 	if (ShopArea)
 	{
 		ShopArea->OnComponentBeginOverlap.AddDynamic(this, &AShopkeeperBasePawn::OnAreaOverlap);
 	}
-	
-	
 }
 
 void AShopkeeperBasePawn::OnAreaOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -73,9 +76,47 @@ void AShopkeeperBasePawn::Tick(float DeltaTime)
 void AShopkeeperBasePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }
 
+
+void AShopkeeperBasePawn::InitializeShopInventory()
+{
+	if (bShopInventoryInitialized)
+	{
+		return;
+	}
+
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (GI == nullptr)
+	{
+		return;
+	}
+
+	ShopProductEntries = GI->GetUnownedArtifacts();
+
+	// 보스 등급은 제외
+	ShopProductEntries.RemoveAll([](const FArtifactEntry& Entry)
+	{
+		return Entry.ArtifactData.Grade == EArtifactGrade::Boss;
+	});
+
+	bShopInventoryInitialized = true;
+}
+
+const TArray<FArtifactEntry>& AShopkeeperBasePawn::GetShopProductEntries() const
+{
+	return ShopProductEntries;
+}
+
+bool AShopkeeperBasePawn::IsSoldOut(FName ArtifactID) const
+{
+	return SoldOutArtifactIds.Contains(ArtifactID);
+}
+
+void AShopkeeperBasePawn::MarkProductSoldOut(FName ArtifactID)
+{
+	SoldOutArtifactIds.Add(ArtifactID);
+}
 
 bool AShopkeeperBasePawn::CreateShopWidget()
 {
@@ -87,6 +128,10 @@ bool AShopkeeperBasePawn::CreateShopWidget()
 	else
 	{
 		ShopWidget = CreateWidget<UUserWidget>(GetWorld(), ShopWidgetClass);
+		if (UShopWidget* TypedShopWidget = Cast<UShopWidget>(ShopWidget))
+		{
+			TypedShopWidget->InitializeShop(this);
+		}
 		return true;
 	}
 }

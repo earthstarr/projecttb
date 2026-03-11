@@ -6,6 +6,10 @@
 #include "Blueprint/UserWidget.h"
 #include "ShopWidget.generated.h"
 
+class UScrollBox;
+class AShopkeeperBasePawn;
+struct FArtifactEntry;
+class UTextBlock;
 class UTBGameInstance;
 class USalesProductWidget;
 class UUniformGridPanel;
@@ -22,7 +26,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Shop")
 	void RefreshShopProducts();
-	
+
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void InitializeShop(AShopkeeperBasePawn* InShopkeeper);
+
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void HandleProductPurchased(FName PurchasedArtifactID);
+
 protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UUniformGridPanel> SalesProductGrid;
@@ -36,7 +46,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shop")
 	int32 MaxRow = 1;
 	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> Money;
+	
+	UPROPERTY(BlueprintReadOnly, Category="Shop")
+	TArray<FArtifactEntry> ShopProductEntries;
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UTBGameInstance> TBGameInstance;
+	
+	UPROPERTY()
+	TObjectPtr<AShopkeeperBasePawn> OwningShopkeeper;
 };

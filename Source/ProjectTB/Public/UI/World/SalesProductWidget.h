@@ -7,8 +7,11 @@
 #include "Data/ArtifactDataTypes.h"
 #include "SalesProductWidget.generated.h"
 
+class UBorder;
 class UTextBlock;
 class UImage;
+class UShopWidget;
+class UPurchaseStepsWidget;
 /**
  * 
  */
@@ -19,8 +22,17 @@ class PROJECTTB_API USalesProductWidget : public UUserWidget
 	
 public:
 	UFUNCTION(BlueprintCallable, Category="Shop")
-	void SetupProduct(const FArtifactEntry& InArtifactEntry);
+	void SetupProduct(const FArtifactEntry& InArtifactEntry, UShopWidget* InOwningShopWidget);
 
+	UFUNCTION(BlueprintCallable, Category="SalesProduct")
+	UPurchaseStepsWidget* OpenPurchaseStepsWidget();
+
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void SetSoldOut(bool bInSoldOut);
+
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void HandlePurchaseSucceeded(FName PurchasedArtifactID);
+	
 protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> ArtifactIcon;
@@ -33,8 +45,22 @@ protected:
 
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UTextBlock> DescriptionText;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UBorder> SoldOutBorder;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Shop")
+	TSubclassOf<UPurchaseStepsWidget> ProductDetailWidgetClass;
 
 private:
 	UPROPERTY(BlueprintReadOnly, Category="Shop", meta=(AllowPrivateAccess="true"))
 	FArtifactEntry ArtifactEntry;
+
+	UPROPERTY()
+	TObjectPtr<UShopWidget> OwningShopWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPurchaseStepsWidget> ActiveDetailWidget;
+	
+	bool bSoldOut = false;
 };

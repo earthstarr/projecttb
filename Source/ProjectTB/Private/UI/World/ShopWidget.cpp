@@ -4,51 +4,54 @@
 #include "UI/World/ShopWidget.h"
 
 #include "TBGameInstance.h"
+#include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "UI/World/SalesProductWidget.h"
+#include "World/LevelActor/Shop/ShopkeeperBasePawn.h"
 
 void UShopWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
 	ensure(SalesProductWidgetClass);
-	
-	TBGameInstance = Cast<UTBGameInstance>(GetGameInstance());
-	
-	RefreshShopProducts();
 }
 
 void UShopWidget::RefreshShopProducts()
 {
-	if (TBGameInstance == nullptr || SalesProductGrid == nullptr || SalesProductWidgetClass == nullptr)
+	if (OwningShopkeeper == nullptr || SalesProductGrid == nullptr || SalesProductWidgetClass == nullptr)
 	{
 		return;
 	}
-
+	
+	if (Money != nullptr && TBGameInstance != nullptr)
+	{
+		Money->SetText(FText::AsNumber(TBGameInstance->GetCurrentMoney()));
+	}
+	
+	
 	SalesProductGrid->ClearChildren();
 
-	const TArray<FArtifactEntry> UnownedArtifacts = TBGameInstance->GetUnownedArtifacts();
+	const TArray<FArtifactEntry>& Entries = OwningShopkeeper->GetShopProductEntries();
 
 	int Col = 0,Row = 0;
 	
-	for (const FArtifactEntry& Entry : UnownedArtifacts)
+	for (const FArtifactEntry& Entry : Entries)
 	{
-		// 보스등급 아티팩트는 상점 판매 목록에서 제외
-		if (Entry.ArtifactData.Grade == EArtifactGrade::Boss)
-		{
-			continue;	
-		}
-		
 		USalesProductWidget* ProductWidget = CreateWidget<USalesProductWidget>(this, SalesProductWidgetClass);
 		if (ProductWidget == nullptr)
 		{
 			continue;
 		}
-		ProductWidget->SetupProduct(Entry);
+
+		const bool bSoldOut = OwningShopkeeper->IsSoldOut(Entry.ArtifactID);
+		ProductWidget->SetupProduct(Entry, this);
+		ProductWidget->SetSoldOut(bSoldOut);
+
 		SalesProductGrid->AddChildToUniformGrid(ProductWidget, Row, Col);
+
+		// 제한된 수량만큼 상품 등록
 		Col++;
 		
-		// 제한된 수량만큼 상품 등록
 		if (Col >= MaxCol)
 		{
 			Row++;
@@ -59,4 +62,35 @@ void UShopWidget::RefreshShopProducts()
 			}
 		}
 	}
+}
+
+void UShopWidget::InitializeShop(AShopkeeperBasePawn* InShopkeeper)
+{
+	TBGameInstance = Cast<UTBGameInstance>(GetGameInstance());
+	if (TBGameInstance == nullptr)
+	{
+		UE_LOG(LogTemp,Warning,TEXT("UShopWidget::InitializeShop 의 TBGameInstance 가 nullptr 입니다."));
+	}
+	
+	
+	if (InShopkeeper == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UShopWidget의 InitializeShop함수 InShopkeeper 이 없습니다."));
+		return;
+	}
+	OwningShopkeeper = InShopkeeper;
+	OwningShopkeeper->InitializeShopInventory();
+	RefreshShopProducts();
+}
+
+void UShopWidget::HandleProductPurchased(FName PurchasedArtifactID)
+{
+	if (OwningShopkeeper == nullptr)
+	{
+		return;
+	}
+
+	OwningShopkeeper->MarkProductSoldOut(PurchasedArtifactID);
+	
+	RefreshShopProducts();
 }

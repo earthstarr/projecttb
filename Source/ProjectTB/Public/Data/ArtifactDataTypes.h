@@ -90,6 +90,7 @@ struct FEquippedArtifactData
 	TSet<FName> EquippedArtifact;
 };
 
+// 아티팩트 ID, 데이터 묶음 반환용 구조체
 USTRUCT(BlueprintType)
 struct FArtifactEntry
 {
