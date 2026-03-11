@@ -3,12 +3,15 @@
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
 #include "Battle/BattleManager.h"
+#include "Data/LevelDataTypes.h"
 #include "TBBattleHUD.generated.h"
 
 class AWorldPlayerController;
 class UTurnOrderWidget;
 class UBattleMenuWidget;
 class UCharacterStatusWidget;
+class UVictoryWidget;
+class ULevelUpWidget;
 
 /**
  * 배틀 씬 HUD.
@@ -54,6 +57,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UCharacterStatusWidget> CharacterStatusWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UVictoryWidget> VictoryWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<ULevelUpWidget> LevelUpWidgetClass;
+
 	// ─── 생성된 위젯 참조 ────────────────────────────────────────────────────
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UTurnOrderWidget> TurnOrderWidget;
@@ -63,6 +72,28 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UCharacterStatusWidget> CharacterStatusWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UVictoryWidget> VictoryWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<ULevelUpWidget> LevelUpWidget;
+
+	// ─── Victory/LevelUp 함수 ────────────────────────────────────────────────
+
+	/** 승리 위젯 표시 */
+	UFUNCTION(BlueprintCallable, Category="Victory")
+	void ShowVictoryWidget(const TArray<FCharacterExpData>& BeforeExpData,
+	                       const TArray<FCharacterExpData>& AfterExpData,
+	                       const TArray<FLevelUpDisplayData>& LevelUpData);
+
+	/** 레벨업 위젯 표시 */
+	UFUNCTION(BlueprintCallable, Category="Victory")
+	void ShowLevelUpWidget(const TArray<FLevelUpDisplayData>& LevelUpData);
+
+	/** 월드로 복귀 */
+	UFUNCTION(BlueprintCallable, Category="Victory")
+	void ReturnToWorld();
 
 	// BattleManager 참조
 	UFUNCTION(BlueprintCallable, Category="Battle")

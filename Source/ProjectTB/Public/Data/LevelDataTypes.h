@@ -113,3 +113,51 @@ struct FLevelUpInfo
 	UPROPERTY(BlueprintReadOnly)
 	int32 NewLevel = 0;
 };
+
+// ─── 캐릭터별 경험치 표시용 데이터 ────────────────────────────────────────────
+USTRUCT(BlueprintType)
+struct FCharacterExpData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category="Exp")
+	FName CharacterId;
+
+	UPROPERTY(BlueprintReadOnly, Category="Exp")
+	int32 Level = 1;
+
+	UPROPERTY(BlueprintReadOnly, Category="Exp")
+	int32 CurrentExp = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category="Exp")
+	int32 ExpToNextLevel = 100;
+
+	/** 이번 전투에서 획득한 경험치 */
+	UPROPERTY(BlueprintReadOnly, Category="Exp")
+	int32 GainedExp = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category="Exp")
+	bool bLeveledUp = false;
+};
+
+// ─── 레벨업 UI 표시용 데이터 ──────────────────────────────────────────────────
+USTRUCT(BlueprintType)
+struct FLevelUpDisplayData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
+	FName CharacterId;
+
+	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
+	int32 OldLevel = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
+	int32 NewLevel = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
+	FCharacterLevelStats OldStats;
+
+	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
+	FCharacterLevelStats NewStats;
+};

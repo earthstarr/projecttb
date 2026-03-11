@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "Abilities/TBGameplayAbility.h"
 #include "Data/ArtifactDataTypes.h"
+#include "Data/LevelDataTypes.h"
 #include "Battle/TBDiceData.h"
 #include "BattleManager.generated.h"
 
@@ -12,6 +13,7 @@ class ABattlePlayerCharacter;
 class ABattleEnemyCharacter;
 class UTBGameplayAbility;
 class ACameraActor;
+class ATBBattleHUD;
 
 UENUM(BlueprintType)
 enum class EBattlePhase : uint8
@@ -318,6 +320,13 @@ private:
 	void HandleBattleVictory();
 	void HandleBattleDefeat();
 	void SavePartyStats();
+
+	// Victory 위젯 딜레이 표시용
+	FTimerHandle VictoryWidgetTimer;
+	TArray<FCharacterExpData> CachedBeforeExpData;
+	TArray<FCharacterExpData> CachedAfterExpData;
+	TArray<FLevelUpDisplayData> CachedLevelUpData;
+	void ShowVictoryWidgetDelayed();
 
 	// 아티펙트 관련
 #pragma region Artifacts

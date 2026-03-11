@@ -4,6 +4,8 @@
 #include "UI/TurnOrderWidget.h"
 #include "UI/BattleMenuWidget.h"
 #include "UI/CharacterStatusWidget.h"
+#include "UI/VictoryWidget.h"
+#include "UI/LevelUpWidget.h"
 #include "Battle/BattleCombatant.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Abilities/TBGameplayAbility.h"
@@ -366,4 +368,41 @@ void ATBBattleHUD::HandleDiceRolled(int32 FaceValue, float Multiplier)
 	GetWorldTimerManager().ClearTimer(DiceOverlayTimer);
 	ShowDiceResultOverlay(FaceValue, Multiplier);
 	GetWorldTimerManager().SetTimer(DiceOverlayTimer, this, &ATBBattleHUD::HideDiceResultOverlay, 2.0f, false);
+}
+
+// ─── Victory/LevelUp ──────────────────────────────────────────────────────────
+
+void ATBBattleHUD::ShowVictoryWidget(const TArray<FCharacterExpData>& BeforeExpData,
+                                      const TArray<FCharacterExpData>& AfterExpData,
+                                      const TArray<FLevelUpDisplayData>& LevelUpData)
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !VictoryWidgetClass) return;
+
+	VictoryWidget = CreateWidget<UVictoryWidget>(PC, VictoryWidgetClass);
+	if (VictoryWidget)
+	{
+		VictoryWidget->OwningHUD = this;
+		VictoryWidget->Initialize(BeforeExpData, AfterExpData, LevelUpData);
+		VictoryWidget->AddToViewport(10);
+	}
+}
+
+void ATBBattleHUD::ShowLevelUpWidget(const TArray<FLevelUpDisplayData>& LevelUpData)
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !LevelUpWidgetClass) return;
+
+	LevelUpWidget = CreateWidget<ULevelUpWidget>(PC, LevelUpWidgetClass);
+	if (LevelUpWidget)
+	{
+		LevelUpWidget->OwningHUD = this;
+		LevelUpWidget->Initialize(LevelUpData);
+		LevelUpWidget->AddToViewport(10);
+	}
+}
+
+void ATBBattleHUD::ReturnToWorld()
+{
+	ExitBattleMode();
 }
