@@ -927,20 +927,16 @@ void ABattleManager::SetPhase(EBattlePhase NewPhase)
 
 void ABattleManager::CheckBattleEnd()
 {
+	// 이미 종료 페이즈면 중복 실행 방지
+	if (CurrentPhase == EBattlePhase::BattleVictory ||
+	    CurrentPhase == EBattlePhase::BattleDefeat)
+		return;
+
 	if (GetLivingEnemies().IsEmpty())
 	{
 		SetPhase(EBattlePhase::BattleVictory);
 		HandleBattleVictory();
-		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-		{
-			if (PC->GetHUD())
-			{
-				if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
-				{
-					HUD->ExitBattleMode();
-				}
-			}
-		}
+		// VictoryWidget에서 ReturnToWorld() 호출 시 ExitBattleMode() 처리
 	}
 	else if (GetLivingPlayers().IsEmpty())
 	{
@@ -948,7 +944,6 @@ void ABattleManager::CheckBattleEnd()
 		HandleBattleDefeat();
 		//게임오버
 	}
-	
 }
 
 void ABattleManager::BroadcastTurnOrder()
@@ -1137,7 +1132,26 @@ void ABattleManager::HandleBattleVictory()
 	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
 	if (!GI) return;
 
-	// 총 경험치 계산 (죽은 적 전체)
+	// ─── 경험치 분배 전 데이터 저장 ─────────────────────────────────────────────
+	TArray<FCharacterExpData> BeforeExpData;
+	TMap<FName, int32> OldLevels;
+	TMap<FName, int32> OldExps;
+
+	for (const FPartyMemberData& Member : GI->PartyData)
+	{
+		OldLevels.Add(Member.CharacterId, Member.Level);
+		OldExps.Add(Member.CharacterId, Member.CurrentExp);
+
+		FCharacterExpData ExpData;
+		ExpData.CharacterId = Member.CharacterId;
+		ExpData.Level = Member.Level;
+		ExpData.CurrentExp = Member.CurrentExp;
+		ExpData.ExpToNextLevel = FPartyMemberData::GetRequiredExpForLevel(Member.Level);
+		ExpData.bLeveledUp = false;
+		BeforeExpData.Add(ExpData);
+	}
+
+	// ─── 총 경험치 계산 (죽은 적 전체) ─────────────────────────────────────────
 	int32 TotalExp = 0;
 	for (ABattleEnemyCharacter* Enemy : EnemyParty)
 	{
@@ -1145,11 +1159,65 @@ void ABattleManager::HandleBattleVictory()
 			TotalExp += Enemy->ExpReward;
 	}
 
-	// 파티에 경험치 분배
+	// ─── 파티에 경험치 분배 ────────────────────────────────────────────────────
 	GI->AddExpToParty(TotalExp);
+
+	// ─── 경험치 분배 후 데이터 수집 ────────────────────────────────────────────
+	TArray<FCharacterExpData> AfterExpData;
+	TArray<FLevelUpDisplayData> LevelUpData;
+
+	for (const FPartyMemberData& Member : GI->PartyData)
+	{
+		int32* OldLevel = OldLevels.Find(Member.CharacterId);
+		bool bLeveledUp = OldLevel && Member.Level > *OldLevel;
+
+		// AfterExpData 구성
+		FCharacterExpData ExpData;
+		ExpData.CharacterId = Member.CharacterId;
+		ExpData.Level = Member.Level;
+		ExpData.CurrentExp = Member.CurrentExp;
+		ExpData.ExpToNextLevel = FPartyMemberData::GetRequiredExpForLevel(Member.Level);
+		ExpData.GainedExp = TotalExp / GI->PartyData.Num();  // 균등 분배된 경험치
+		ExpData.bLeveledUp = bLeveledUp;
+		AfterExpData.Add(ExpData);
+
+		// 레벨업 UI 데이터		
+		FLevelUpDisplayData Data;
+		Data.CharacterId = Member.CharacterId;
+		Data.OldLevel = *OldLevel;
+		Data.NewLevel = Member.Level;
+		Data.bLeveledUp = bLeveledUp;
+		GI->GetLevelStats(Member.CharacterId, *OldLevel, Data.OldStats);
+		GI->GetLevelStats(Member.CharacterId, Member.Level, Data.NewStats);
+		LevelUpData.Add(Data);		
+	}
 
 	// 파티 스탯 저장
 	SavePartyStats();
+
+	// 데이터 캐싱 후 3초 딜레이로 위젯 표시
+	CachedBeforeExpData = BeforeExpData;
+	CachedAfterExpData = AfterExpData;
+	CachedLevelUpData = LevelUpData;
+
+	GetWorldTimerManager().SetTimer(
+		VictoryWidgetTimer,
+		this,
+		&ABattleManager::ShowVictoryWidgetDelayed,
+		3.0f,
+		false
+	);
+}
+
+void ABattleManager::ShowVictoryWidgetDelayed()
+{
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
+		{
+			HUD->ShowVictoryWidget(CachedBeforeExpData, CachedAfterExpData, CachedLevelUpData);
+		}
+	}
 }
 
 void ABattleManager::HandleBattleDefeat()
