@@ -1,4 +1,4 @@
-#include "Battle/BattleManager.h"
+﻿#include "Battle/BattleManager.h"
 #include "TBGameplayTags.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Battle/BattleEnemyCharacter.h"

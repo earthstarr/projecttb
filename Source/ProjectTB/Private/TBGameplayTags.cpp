@@ -1,4 +1,4 @@
-#include "TBGameplayTags.h"
+﻿#include "TBGameplayTags.h"
 
 // ─── Battle Phase ───────────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Battle_Phase_None,       "Battle.Phase.None")

@@ -1,4 +1,4 @@
-#include "Attributes/TBAttributeSet.h"
+﻿#include "Attributes/TBAttributeSet.h"
 #include "GameplayEffectExtension.h"
 #include "Battle/BattleCombatant.h"
 #include "TBGameplayTags.h"
