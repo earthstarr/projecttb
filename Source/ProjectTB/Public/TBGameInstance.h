@@ -42,6 +42,7 @@ struct FBattleTransitionData
 
 // 레벨업 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPartyMemberLevelUp, const FLevelUpInfo&, LevelUpInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOwnedArtifactsChanged);
 
 /**
  * GAS 전역 초기화 및 레벨 간 데이터 유지 담당.
@@ -75,6 +76,9 @@ public:
 	// ─── 델리게이트 ───────────────────────────────────────────────────────────
 	UPROPERTY(BlueprintAssignable, Category="Party")
 	FOnPartyMemberLevelUp OnPartyMemberLevelUp;
+
+	UPROPERTY(BlueprintAssignable, Category="Artifact")
+	FOnOwnedArtifactsChanged OnOwnedArtifactsChanged;
 
 	// ─── 파티 관리 함수 ───────────────────────────────────────────────────────
 
@@ -117,11 +121,11 @@ private:
 	
 public:
 	UFUNCTION(BlueprintCallable, Category="Money")
-	void AddGold(int32 Amount);
+	void AddMoney(int32 Amount);
 	
 	// 소모. 결과가 0원 이상인 경우 소모하며 true 반환. 결과가 음수일 경우 소모하지 않고 false
 	UFUNCTION(BlueprintCallable, Category="Money")
-	bool SpendGold(int32 Amount);
+	bool SpendMoney(int32 Amount);
 	
 	// 강탈. 언더 플로우 방지 적용됨
 	UFUNCTION(BlueprintCallable, Category="Money")
@@ -152,7 +156,7 @@ public:
 	
 	// ─── 아티팩트 ─────────────────────────────────────────────────────────────
 #pragma region Artifacts
-	// 아티펙트 데이터 테이블
+	// 아티팩트 데이터 테이블
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Artifact")
 	TSoftObjectPtr<UDataTable> ArtifactStatsTable;
 
@@ -171,11 +175,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Artifact")
 	void EquipArtifact(FName ArtifactID);
 	
-	// 아티펙트 데이터 테이블 캐싱 함수
+	// 아티팩트 데이터 테이블 캐싱 함수
 	UDataTable* GetArtifactStatsTable();
 	
 	// 아티팩트 데이터 테이블 조회 결과 래퍼 함수
 	UFUNCTION(BlueprintCallable, Category="Artifact")
-	bool GetArtifactRow(FName ArtifactID, FArtifact_CharacterStats& OutArtifactRow);
+	bool GetArtifactRow(FName ArtifactID, FArtifactData& OutArtifactRow);
+	
+	// 대상 아티팩트 보유 여부 체크
+	UFUNCTION(BlueprintCallable, Category="Artifact")
+	bool HasArtifact(FName ArtifactID) const;
+
+	// <미보유 아티팩트 아이디 + 데이터 테이블> 구조체 배열 반환 함수
+	UFUNCTION(BlueprintCallable, Category="Artifact")
+	TArray<FArtifactEntry> GetUnownedArtifacts();
+	
+	
 #pragma endregion
 };

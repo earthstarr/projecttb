@@ -7,6 +7,30 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "UI/Artifact/OwnedArtifactListWidget.h"
+#include "UI/World/ShopWidget.h"
+
+void AWorldPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (OwnedArtifactListWidgetClass == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] OwnedArtifactListWidgetClass is nullptr in AWorldPlayerController::BeginPlay"));
+		return;
+	}
+
+	OwnedArtifactListWidget = CreateWidget<UOwnedArtifactListWidget>(this, OwnedArtifactListWidgetClass);
+	if (OwnedArtifactListWidget == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] Failed to create OwnedArtifactListWidget in AWorldPlayerController::BeginPlay"));
+		return;
+	}
+
+	OwnedArtifactListWidget->AddToViewport(10);
+	OwnedArtifactListWidget->RestoreFieldLayout();
+	UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] OwnedArtifactListWidget created and added to viewport in AWorldPlayerController::BeginPlay"));
+}
 
 void AWorldPlayerController::ShowWidget(UUserWidget* Widget, bool bIgnoreMoveInput)
 {
@@ -16,11 +40,36 @@ void AWorldPlayerController::ShowWidget(UUserWidget* Widget, bool bIgnoreMoveInp
 		return;
 	}
 
-	Widget->AddToViewport();
+	if (Widget->IsInViewport() == false)
+	{
+		Widget->AddToViewport();
+	}
+
+	if (UShopWidget* ShopWidget = Cast<UShopWidget>(Widget))
+	{
+		ShopWidget->ShowShopWidget();
+		UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] Showing ShopWidget in AWorldPlayerController::ShowWidget"));
+
+		if (OwnedArtifactListWidget)
+		{
+			OwnedArtifactListWidget->SetVisibility(ESlateVisibility::Collapsed);
+			UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] Hid field OwnedArtifactListWidget in AWorldPlayerController::ShowWidget"));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] OwnedArtifactListWidget is nullptr while showing ShopWidget"));
+		}
+	}
+	else
+	{
+		Widget->SetVisibility(ESlateVisibility::Visible);
+	}
 	
 	FInputModeUIOnly InputMode;
 	InputMode.SetWidgetToFocus(Widget->TakeWidget());
 	SetInputMode(InputMode);
+
+	CurrentWidget = Widget;
 	
 	if (bIgnoreMoveInput)
 	{
@@ -36,10 +85,29 @@ void AWorldPlayerController::CloseWidget(UUserWidget* Widget, bool bActiveMoveIn
 		return;
 	}
 
-	Widget->RemoveFromParent();
+	if (UShopWidget* ShopWidget = Cast<UShopWidget>(Widget))
+	{
+		ShopWidget->HideShopWidget();
+		UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] Hiding ShopWidget in AWorldPlayerController::CloseWidget"));
+
+		if (OwnedArtifactListWidget)
+		{
+			OwnedArtifactListWidget->SetVisibility(ESlateVisibility::Visible);
+			UE_LOG(LogTemp, Warning, TEXT("[ArtifactListDebug] Showed field OwnedArtifactListWidget in AWorldPlayerController::CloseWidget"));
+		}
+	}
+	else
+	{
+		Widget->RemoveFromParent();
+	}
 	
 	FInputModeGameOnly InputMode;
 	SetInputMode(InputMode);
+
+	if (CurrentWidget == Widget)
+	{
+		CurrentWidget = nullptr;
+	}
 	
 	if (bActiveMoveInput)
 	{

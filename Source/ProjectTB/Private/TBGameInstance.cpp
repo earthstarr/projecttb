@@ -132,13 +132,13 @@ bool UTBGameInstance::GetLevelStats(FName CharacterId, int32 Level, FCharacterLe
 
 // ─── 재화 시스템 ──────────────────────────────────────────────────────────────
 
-void UTBGameInstance::AddGold(int32 Amount)
+void UTBGameInstance::AddMoney(int32 Amount)
 {
 	int64 NewValue = (int64)CurrentMoney + Amount;
 	CurrentMoney = FMath::Clamp(NewValue, (int64)MIN_int32, (int64)MAX_int32);
 }
 
-bool UTBGameInstance::SpendGold(int32 Amount)
+bool UTBGameInstance::SpendMoney(int32 Amount)
 {
 	if (CurrentMoney < Amount)
 	{
@@ -176,6 +176,7 @@ FDiceData UTBGameInstance::GetDiceAt(int32 Index) const
 void UTBGameInstance::EquipArtifact(FName ArtifactID)
 {
 	PartyArtifactData.EquippedArtifact.Add(ArtifactID);
+	OnOwnedArtifactsChanged.Broadcast();
 }
 
 UDataTable* UTBGameInstance::GetArtifactStatsTable()
@@ -190,7 +191,7 @@ UDataTable* UTBGameInstance::GetArtifactStatsTable()
 }
 
 // 아티팩트 데이터 테이블에서 ArtifactID를 검색하여 OutArtifactRow에 전달 
-bool UTBGameInstance::GetArtifactRow(FName ArtifactID, FArtifact_CharacterStats& OutArtifactRow)
+bool UTBGameInstance::GetArtifactRow(FName ArtifactID, FArtifactData& OutArtifactRow)
 {
 	UDataTable* DataTable = GetArtifactStatsTable();
 	if (DataTable == nullptr)
@@ -199,7 +200,7 @@ bool UTBGameInstance::GetArtifactRow(FName ArtifactID, FArtifact_CharacterStats&
 		return false;
 	}
 	
-	const FArtifact_CharacterStats* FoundRow = DataTable->FindRow<FArtifact_CharacterStats>(ArtifactID, TEXT("GetArtifactRow"));
+	const FArtifactData* FoundRow = DataTable->FindRow<FArtifactData>(ArtifactID, TEXT("GetArtifactRow"));
 	
 	if (FoundRow == nullptr)
 	{
@@ -208,4 +209,43 @@ bool UTBGameInstance::GetArtifactRow(FName ArtifactID, FArtifact_CharacterStats&
 	
 	OutArtifactRow = *FoundRow;
 	return true;
+}
+
+bool UTBGameInstance::HasArtifact(FName ArtifactID) const
+{
+	return PartyArtifactData.EquippedArtifact.Contains(ArtifactID);
+}
+
+TArray<FArtifactEntry> UTBGameInstance::GetUnownedArtifacts()
+{
+	TArray<FArtifactEntry> Result;
+
+	UDataTable* DataTable = GetArtifactStatsTable();
+	if (DataTable == nullptr)
+	{
+		return Result;
+	}
+
+	const TArray<FName> RowNames = DataTable->GetRowNames();
+	for (const FName& RowName : RowNames)
+	{
+		if (HasArtifact(RowName))
+		{
+			continue;
+		}
+
+		const FArtifactData* FoundRow = DataTable->FindRow<FArtifactData>(RowName, TEXT("GetUnownedArtifacts"));
+		if (FoundRow == nullptr)
+		{
+			continue;
+		}
+
+		FArtifactEntry Entry;
+		Entry.ArtifactID = RowName;
+		Entry.ArtifactData = *FoundRow;
+		Result.Add(Entry);
+	}
+
+	// 보유중이지 않은 아티팩트 데이터와 아이디 구조체 배열 반환
+	return Result;
 }

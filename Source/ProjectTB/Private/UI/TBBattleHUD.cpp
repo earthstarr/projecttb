@@ -18,7 +18,7 @@ void ATBBattleHUD::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	EnterBattleMode();
+	//EnterBattleMode();
 }
 
 void ATBBattleHUD::EnterBattleMode()

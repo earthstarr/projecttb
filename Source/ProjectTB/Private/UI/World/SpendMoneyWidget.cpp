@@ -16,7 +16,7 @@ bool USpendMoneyWidget::TrySpendMoney(int32 Amount)
 {
 	if (TBInstance)
 	{
-		return TBInstance->SpendGold(Amount);
+		return TBInstance->SpendMoney(Amount);
 	}
 	return false;
 }
