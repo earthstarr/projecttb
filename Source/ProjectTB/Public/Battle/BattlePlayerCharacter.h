@@ -26,6 +26,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Party")
 	FName CharacterId;
 
+	// 캐릭터 레벨 (스폰 시 GameInstance에서 복사)
+	UPROPERTY(BlueprintReadOnly, Category="Party")
+	int32 CharacterLevel = 1;
+
 	// ─── 주사위 ───────────────────────────────────────────────────────────────
 
 	// GameInstance.OwnedDice에서 장착된 주사위 반환

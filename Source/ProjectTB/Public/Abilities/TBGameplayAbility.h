@@ -79,6 +79,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Display")
 	bool bShowInAbilityMenu = true;
 
+	// 해금에 필요한 캐릭터 레벨 (1 = 처음부터 해금)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Display")
+	int32 RequiredLevel = 1;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Display")
 	FText AbilityDescription;
 

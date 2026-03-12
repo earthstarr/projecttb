@@ -127,4 +127,8 @@ protected:
 
 	// 현재 SelectedIndex에 맞춰 타겟 인디케이터 갱신
 	void UpdateTargetIndicators();
+
+	// 어빌리티 코스트를 지불할 수 있는지 체크
+	UFUNCTION(BlueprintCallable, Category="Menu")
+	bool CanAffordAbility(const UTBGameplayAbility* Ability) const;
 };

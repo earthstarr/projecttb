@@ -5,7 +5,7 @@
 
 UTBAttributeSet::UTBAttributeSet()
 {
-	// 기본값 — StartingEffects(Blueprint GE)로 덮어씌워진다
+	// 기본�???StartingEffects(Blueprint GE)�???��?�워진다
 	InitHP(100.f);
 	InitMaxHP(100.f);
 	InitMP(50.f);
@@ -44,8 +44,8 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	// ─── IncomingCritical 처리 후 IncomingDamage → HP 차감 ──────────────────
-	// IncomingCritical이 마지막에 처리되므로, 여기서 데미지를 실제로 적용한다.
+	// ?�?�?� IncomingCritical 처리 ??IncomingDamage ??HP 차감 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+	// IncomingCritical??마�?막에 처리?��?�? ?�기???��?지�??�제�??�용?�다.
 	if (Data.EvaluatedData.Attribute == GetIncomingCriticalAttribute())
 	{
 		const float DamageValue = GetIncomingDamage();
@@ -56,7 +56,7 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		if (DamageValue > 0.f)
 		{
 			const float NewHP = FMath::Max(GetHP() - DamageValue, 0.f);
-			UE_LOG(LogTemp, Display, TEXT("TBAttributeSet: Damage=%.1f%s, HP %.1f → %.1f"),
+			UE_LOG(LogTemp, Display, TEXT("TBAttributeSet: Damage=%.1f%s, HP %.1f ??%.1f"),
 				DamageValue, bIsCritical ? TEXT(" (CRIT)") : TEXT(""), GetHP(), NewHP);
 			SetHP(NewHP);
 
@@ -67,20 +67,20 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 					Combatant->OnDeathInternal();
 			}
 
-			// 패링 태그 소모 (히트당 1회 — 다단히트는 각 히트마다 따로 패링)
+			// ?�링 ?�그 ?�모 (?�트??1?????�단?�트??�??�트마다 ?�로 ?�링)
 			UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 			if (ASC)
 				ASC->RemoveLooseGameplayTag(TAG_Combatant_State_ParrySuccess);
 		}
 	}
-	// ─── MP/Stamina 직접 변경 (코스트 GE 등) → 즉시 UI 갱신 ────────────────
+	// ?�?�?� MP/Stamina 직접 변�?(코스??GE ?? ??즉시 UI 갱신 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 	else if (Data.EvaluatedData.Attribute == GetMPAttribute() ||
 	         Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
 		if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
 			Combatant->OnStatChangedInternal();
 	}
-	// ─── IncomingHeal → HP 회복 ─────────────────────────────────────────────
+	// ?�?�?� IncomingHeal ??HP ?�복 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealAttribute())
 	{
 		const float HealValue = GetIncomingHeal();
@@ -94,3 +94,4 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		}
 	}
 }
+

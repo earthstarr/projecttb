@@ -78,7 +78,7 @@ public:
 	// ─── 패링 ────────────────────────────────────────────────────────────────
 	// 적 몽타주 AnimNotify 또는 ImpactActor에서 호출 — 패링 입력 창 열기
 	UFUNCTION(BlueprintCallable, Category="Battle|Parry")
-	void OpenParryTiming(float Duration = 0.6f);
+	void OpenParryTiming(float Duration = 0.2f);
 
 	// 패링 키 입력 시 BattleMenuWidget에서 호출
 	// 패링 성공 시 true 반환
