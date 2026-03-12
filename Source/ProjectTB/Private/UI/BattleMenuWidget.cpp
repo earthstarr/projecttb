@@ -190,9 +190,14 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 		}
 		else if (SelectedIndex == 1 && CurrentCombatant)
 		{
-			// bShowInAbilityMenu=true인 어빌리티만 표시 (기본 공격 제외)
+			// bShowInAbilityMenu=true이고 레벨 조건을 만족하는 어빌리티만 표시
+			const int32 CharLevel = Cast<ABattlePlayerCharacter>(CurrentCombatant)
+				? Cast<ABattlePlayerCharacter>(CurrentCombatant)->CharacterLevel : 1;
 			TArray<UTBGameplayAbility*> Skills = CurrentCombatant->GetGrantedAbilities().FilterByPredicate(
-				[](const UTBGameplayAbility* A) { return A && A->bShowInAbilityMenu; });
+				[CharLevel](const UTBGameplayAbility* A)
+				{
+					return A && A->bShowInAbilityMenu && A->RequiredLevel <= CharLevel;
+				});
 			ShowAbilityMenu(Skills);
 		}
 		else if (SelectedIndex == 2)
@@ -206,8 +211,15 @@ void UBattleMenuWidget::ConfirmSelection_Implementation()
 		break;
 
 	case EMenuState::AbilityMenu:
-		if (CurrentAbilities.IsValidIndex(SelectedIndex))
-			BattleManager->PlayerSelectAbility(CurrentAbilities[SelectedIndex]->GetClass());
+		if (CurrentAbilities.IsValidIndex(SelectedIndex) && CurrentCombatant)
+		{
+			UTBGameplayAbility* SelectedAbility = CurrentAbilities[SelectedIndex];
+			if (SelectedAbility && CanAffordAbility(SelectedAbility))
+			{
+				BattleManager->PlayerSelectAbility(SelectedAbility->GetClass());
+			}
+			// 코스트 부족 시 무시 (아무것도 안 함)
+		}
 		break;
 
 	case EMenuState::SelectingTarget:
@@ -281,4 +293,25 @@ void UBattleMenuWidget::CancelSelection_Implementation()
 		BattleManager->PlayerCancel();
 	else
 		BattleManager->PlayerCancel();
+}
+
+bool UBattleMenuWidget::CanAffordAbility(const UTBGameplayAbility* Ability) const
+{
+	if (!Ability || !CurrentCombatant) return false;
+
+	const float CostAmount = Ability->CostAmount;
+	if (CostAmount <= 0.f) return true;  // 코스트 없음
+
+	switch (Ability->CostType)
+	{
+	case EAbilityCostType::Stamina:
+		return CurrentCombatant->GetStamina() >= CostAmount;
+	case EAbilityCostType::MP:
+		return CurrentCombatant->GetMP() >= CostAmount;
+	case EAbilityCostType::HP:
+		return CurrentCombatant->GetHP() > CostAmount;  // HP는 코스트보다 커야 함 (0 방지)
+	case EAbilityCostType::None:
+	default:
+		return true;
+	}
 }

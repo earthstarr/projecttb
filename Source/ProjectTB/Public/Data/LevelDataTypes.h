@@ -4,6 +4,8 @@
 #include "Engine/DataTable.h"
 #include "LevelDataTypes.generated.h"
 
+class UTBGameplayAbility;
+
 // ─── DataTable 행: 캐릭터별 레벨 스탯 ─────────────────────────────────────────
 USTRUCT(BlueprintType)
 struct FCharacterLevelStats : public FTableRowBase
@@ -160,9 +162,11 @@ struct FLevelUpDisplayData
 
 	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
 	FCharacterLevelStats NewStats;
-	
+
 	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
 	bool bLeveledUp = false;
-	
-	
+
+	/** 이번 레벨업으로 해금된 스킬 목록 */
+	UPROPERTY(BlueprintReadOnly, Category="LevelUp")
+	TArray<TSubclassOf<UTBGameplayAbility>> UnlockedAbilities;
 };

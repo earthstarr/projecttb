@@ -176,6 +176,7 @@ void ABattleManager::SpawnAndStartBattle()
 		if (Player)
 		{
 			Player->CharacterId = Data.CharacterId;
+			Player->CharacterLevel = Data.Level;
 			Players.Add(Player);
 			UE_LOG(LogTemp, Display, TEXT("BattleManager: 플레이어 스폰 - %s (Lv.%d)"),
 				*Data.CharacterId.ToString(), Data.Level);
@@ -270,6 +271,7 @@ void ABattleManager::StartBattle(
 			FPartyMemberData* PartyMember = GI->GetPartyMemberData(P->CharacterId);
 			if (PartyMember)
 			{
+				P->CharacterLevel = PartyMember->Level;
 				FCharacterLevelStats LevelStats;
 				if (GI->GetLevelStats(P->CharacterId, PartyMember->Level, LevelStats))
 				{
@@ -279,6 +281,7 @@ void ABattleManager::StartBattle(
 			else
 			{
 				// 파티 데이터 없으면 기본 레벨 1로 조회
+				P->CharacterLevel = 1;
 				FCharacterLevelStats LevelStats;
 				FPartyMemberData DefaultData;
 				DefaultData.CharacterId = P->CharacterId;
@@ -1181,7 +1184,7 @@ void ABattleManager::HandleBattleVictory()
 		ExpData.bLeveledUp = bLeveledUp;
 		AfterExpData.Add(ExpData);
 
-		// 레벨업 UI 데이터		
+		// 레벨업 UI 데이터
 		FLevelUpDisplayData Data;
 		Data.CharacterId = Member.CharacterId;
 		Data.OldLevel = *OldLevel;
@@ -1189,6 +1192,31 @@ void ABattleManager::HandleBattleVictory()
 		Data.bLeveledUp = bLeveledUp;
 		GI->GetLevelStats(Member.CharacterId, *OldLevel, Data.OldStats);
 		GI->GetLevelStats(Member.CharacterId, Member.Level, Data.NewStats);
+
+		// 레벨업으로 해금된 스킬 수집
+		if (bLeveledUp)
+		{
+			// PlayerParty에서 해당 캐릭터 찾기
+			for (ABattlePlayerCharacter* Player : PlayerParty)
+			{
+				if (Player && Player->CharacterId == Member.CharacterId)
+				{
+					for (TSubclassOf<UTBGameplayAbility> AbilityClass : Player->StartingAbilities)
+					{
+						if (!AbilityClass) continue;
+						const UTBGameplayAbility* AbilityCDO = AbilityClass.GetDefaultObject();
+						// OldLevel < RequiredLevel <= NewLevel 인 스킬
+						if (AbilityCDO->RequiredLevel > *OldLevel &&
+						    AbilityCDO->RequiredLevel <= Member.Level)
+						{
+							Data.UnlockedAbilities.Add(AbilityClass);
+						}
+					}
+					break;
+				}
+			}
+		}
+
 		LevelUpData.Add(Data);		
 	}
 

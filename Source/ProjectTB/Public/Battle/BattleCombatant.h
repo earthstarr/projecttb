@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
+#include "GameplayEffectTypes.h"
 #include "Data/LevelDataTypes.h"
 #include "BattleCombatant.generated.h"
 
@@ -144,7 +145,7 @@ public:
 
 	// AnimNotify_OpenParryTiming → BattleManager의 패링 타이밍 열기
 	UFUNCTION(BlueprintCallable, Category="Battle")
-	void OnOpenParryTimingNotify(float Duration = 0.6f);
+	void OnOpenParryTimingNotify(float Duration = 0.2f);
 
 	// 패링 성공 시 BattleManager에서 호출
 	void PlayParryMontage();
@@ -245,6 +246,7 @@ protected:
 private:
 	bool bAbilitySystemInitialized = false;
 	void DestroyAfterDeath();
+	void HandleGameplayEffectApplied(UAbilitySystemComponent* Target, const FGameplayEffectSpec& Spec, FActiveGameplayEffectHandle Handle);
 
 	// 다중 데미지 숫자 스택 시스템
 	void SpawnDamageNumber(float Value, bool bIsHeal, bool bIsCritical = false);
