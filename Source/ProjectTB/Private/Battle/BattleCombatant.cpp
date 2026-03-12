@@ -241,6 +241,45 @@ void ABattleCombatant::OnStatChangedInternal()
 	OnStatChanged.Broadcast(this);
 }
 
+bool ABattleCombatant::TryConsumeResurrectionStack()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (ASC == nullptr)
+	{
+		return false;
+	}
+
+	for (int32 i = AppliedArtifactEffects.Num() - 1; i >= 0; --i)
+	{
+		FAppliedArtifactEffect& Entry = AppliedArtifactEffects[i];
+
+		// 헨들이 없는 요소 스킵
+		if (Entry.Handle.IsValid() == false)
+		{
+			AppliedArtifactEffects.RemoveAt(i);
+			continue;
+		}
+
+		// 부활 Resurrection 태그가 없으면 스킵
+		if (Entry.Traits.HasTagExact(TAG_Artifact_Resurrection) == false)
+		{
+			continue;
+		}
+
+		// 부활 Resurrection 태그가 있으니 해당 GE 제거.
+		bool RemoveResult = ASC->RemoveActiveGameplayEffect(Entry.Handle, -1);
+		if (RemoveResult)
+		{
+			AppliedArtifactEffects.RemoveAt(i);
+			return true;
+		}
+		
+		continue;
+	}
+
+	return false;
+}
+
 void ABattleCombatant::OnHealReceivedInternal(float Heal)
 {
 	OnHealReceived.Broadcast(this, Heal);
@@ -423,6 +462,21 @@ void ABattleCombatant::SyncStatusTags()
 		else if (!bShouldHave && bCurrentlyHas)
 			AbilitySystemComponent->RemoveLooseGameplayTag(Tag);
 	}
+}
+
+void ABattleCombatant::RegisterArtifactEffectHandle(FActiveGameplayEffectHandle Handle,
+	const FGameplayTagContainer& Traits)
+{
+	if (!Handle.IsValid())
+	{
+		return;
+	}
+	
+	FAppliedArtifactEffect Entry;
+	Entry.Handle = Handle;
+	Entry.Traits = Traits;
+
+	AppliedArtifactEffects.Add(Entry);
 }
 
 void ABattleCombatant::ApplyStatusTickDamage(float Damage)

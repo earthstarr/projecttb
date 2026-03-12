@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "GameplayTagContainer.h"
 #include "GameplayEffectTypes.h"
 #include "Data/LevelDataTypes.h"
@@ -28,6 +29,16 @@ struct FStatusEffectInstance
 	// 남은 스택 수 = 남은 턴 수. 0 되면 제거.
 	UPROPERTY(BlueprintReadOnly)
 	int32 RemainingTurns = 0;
+};
+
+// 적용된 아티팩트의 GE Handle과 태그들을 소유
+USTRUCT()
+struct FAppliedArtifactEffect
+{
+	GENERATED_BODY()
+	
+	FActiveGameplayEffectHandle Handle;
+	FGameplayTagContainer Traits;
 };
 
 class UAbilitySystemComponent;
@@ -114,6 +125,7 @@ public:
 	void OnDamageReceivedInternal(float Damage, bool bIsCritical = false);
 	void OnHealReceivedInternal(float Heal);
 	void OnStatChangedInternal();
+	bool TryConsumeResurrectionStack();	// 부활 아티팩트 효과 사용 시도
 
 	// ─── 데미지 숫자 위젯 ────────────────────────────────────────────────────
 	// Blueprint에서 WBP_DamageNumber 클래스를 지정
@@ -265,4 +277,11 @@ private:
 
 	// ActiveStatusEffects → GAS Loose Tag 동기화
 	void SyncStatusTags();
+	
+	// 보유 아티팩트
+public:
+	void RegisterArtifactEffectHandle(FActiveGameplayEffectHandle Handle, const FGameplayTagContainer& Traits);
+	
+private:
+	TArray<FAppliedArtifactEffect> AppliedArtifactEffects;
 };

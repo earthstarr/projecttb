@@ -6,7 +6,9 @@
 #include "ActiveGameplayEffectHandle.h"
 #include "GameplayEffectTypes.h"
 #include "AttributeSet.h"
+#include "Battle/TBDiceData.h"
 #include "Engine//DataTable.h"
+#include "GameplayTagContainer.h"
 #include "ArtifactDataTypes.generated.h"
 
 class AArtifactBase;
@@ -78,6 +80,9 @@ struct FArtifactData : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FArtifactStatModifier> StatModifiers;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayTagContainer Traits;
 };
 
 // ─── GameInstance 저장용: 파티원 보유 아이템 데이터 ────────────────────────────────

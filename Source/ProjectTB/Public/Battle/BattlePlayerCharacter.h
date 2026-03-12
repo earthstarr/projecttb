@@ -46,4 +46,9 @@ public:
 
 	virtual void OnTurnBegin_Implementation() override;
 	virtual void OnTurnEnd_Implementation() override;
+	
+	
+	UFUNCTION(BlueprintCallable, Category="Attributes") 
+	FDiceModifier GetCurrentDiceModifier() const;
+	
 };

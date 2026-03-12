@@ -1,5 +1,6 @@
 #include "Battle/BattlePlayerCharacter.h"
 #include "TBGameInstance.h"
+#include "Attributes/TBAttributeSet.h"
 
 ABattlePlayerCharacter::ABattlePlayerCharacter() {}
 
@@ -64,4 +65,25 @@ void ABattlePlayerCharacter::OnTurnBegin_Implementation()
 void ABattlePlayerCharacter::OnTurnEnd_Implementation()
 {
 	Super::OnTurnEnd_Implementation();
+}
+
+FDiceModifier ABattlePlayerCharacter::GetCurrentDiceModifier() const
+{
+	FDiceModifier Result{};
+
+	if (!AttributeSet)
+	{
+		return Result;
+	}
+
+	Result.FaceBonus = FMath::RoundToInt(AttributeSet->GetDiceFaceBonus());
+	Result.MinFace   = FMath::RoundToInt(AttributeSet->GetDiceMinFace());
+	Result.MaxFace   = FMath::RoundToInt(AttributeSet->GetDiceMaxFace());
+
+	if (Result.MinFace > Result.MaxFace)
+	{
+		Swap(Result.MinFace, Result.MaxFace);
+	}
+
+	return Result;
 }

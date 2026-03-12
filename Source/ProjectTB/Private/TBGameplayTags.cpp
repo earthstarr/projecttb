@@ -40,3 +40,6 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Taunt,  "Status.Taunt")
 
 // ─── SetByCaller Data ───────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Data_AbilityMultiplier, "Data.AbilityMultiplier")
+
+// ─── Artifact Data ──────────────────────────────────────────────────────────
+UE_DEFINE_GAMEPLAY_TAG(TAG_Artifact_Resurrection,  "Artifact.Resurrection")
