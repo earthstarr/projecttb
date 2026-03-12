@@ -55,7 +55,7 @@ bool UPurchaseStepsWidget::TryPurchaseProduct()
 		return false;
 	}
 
-	if (!TBGameInstance->SpendGold(ArtifactEntry.ArtifactData.Price))
+	if (!TBGameInstance->SpendMoney(ArtifactEntry.ArtifactData.Price))
 	{
 		OnPurchaseFailed(ArtifactEntry);
 		return false;

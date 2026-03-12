@@ -132,13 +132,13 @@ bool UTBGameInstance::GetLevelStats(FName CharacterId, int32 Level, FCharacterLe
 
 // ─── 재화 시스템 ──────────────────────────────────────────────────────────────
 
-void UTBGameInstance::AddGold(int32 Amount)
+void UTBGameInstance::AddMoney(int32 Amount)
 {
 	int64 NewValue = (int64)CurrentMoney + Amount;
 	CurrentMoney = FMath::Clamp(NewValue, (int64)MIN_int32, (int64)MAX_int32);
 }
 
-bool UTBGameInstance::SpendGold(int32 Amount)
+bool UTBGameInstance::SpendMoney(int32 Amount)
 {
 	if (CurrentMoney < Amount)
 	{
@@ -176,6 +176,7 @@ FDiceData UTBGameInstance::GetDiceAt(int32 Index) const
 void UTBGameInstance::EquipArtifact(FName ArtifactID)
 {
 	PartyArtifactData.EquippedArtifact.Add(ArtifactID);
+	OnOwnedArtifactsChanged.Broadcast();
 }
 
 UDataTable* UTBGameInstance::GetArtifactStatsTable()

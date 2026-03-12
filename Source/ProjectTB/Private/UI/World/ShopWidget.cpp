@@ -6,6 +6,7 @@
 #include "TBGameInstance.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
+#include "UI/Artifact/OwnedArtifactListWidget.h"
 #include "UI/World/SalesProductWidget.h"
 #include "World/LevelActor/Shop/ShopkeeperBasePawn.h"
 
@@ -93,4 +94,21 @@ void UShopWidget::HandleProductPurchased(FName PurchasedArtifactID)
 	OwningShopkeeper->MarkProductSoldOut(PurchasedArtifactID);
 	
 	RefreshShopProducts();
+}
+
+void UShopWidget::ShowShopWidget()
+{
+	SetVisibility(ESlateVisibility::Visible);
+	
+	if (EquippedArtifactList)
+	{
+		EquippedArtifactList->RefreshOwnedArtifacts();
+	}
+
+	RefreshShopProducts();
+}
+
+void UShopWidget::HideShopWidget()
+{
+	SetVisibility(ESlateVisibility::Collapsed);
 }

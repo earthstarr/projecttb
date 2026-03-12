@@ -9,12 +9,16 @@
 /**
  * 
  */
+class UOwnedArtifactListWidget;
+
 UCLASS()
 class PROJECTTB_API AWorldPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
 public:
+	virtual void BeginPlay() override;
+
 	void ShowWidget(UUserWidget* Widget, bool bIgnoreMoveInput);
 	void CloseWidget(UUserWidget* Widget, bool bActiveMoveInput);
 	void SetInputModeGameOnly();
@@ -23,6 +27,12 @@ public:
 	void SetInputModeWorld();
 	
 private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI", Meta = (AllowPrivateAccess = true))
+	TSubclassOf<UOwnedArtifactListWidget> OwnedArtifactListWidgetClass;
+
 	UPROPERTY(Meta = (AllowPrivateAccess = true))
-	UUserWidget* CurrentWidget;
+	TObjectPtr<UOwnedArtifactListWidget> OwnedArtifactListWidget;
+
+	UPROPERTY(Meta = (AllowPrivateAccess = true))
+	TObjectPtr<UUserWidget> CurrentWidget;
 };

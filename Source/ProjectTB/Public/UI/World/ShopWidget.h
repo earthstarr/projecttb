@@ -6,7 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "ShopWidget.generated.h"
 
-class UScrollBox;
+class UOwnedArtifactListWidget;
 class AShopkeeperBasePawn;
 struct FArtifactEntry;
 class UTextBlock;
@@ -33,6 +33,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Shop")
 	void HandleProductPurchased(FName PurchasedArtifactID);
 
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void ShowShopWidget();
+
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	void HideShopWidget();
+
 protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UUniformGridPanel> SalesProductGrid;
@@ -51,6 +57,9 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly, Category="Shop")
 	TArray<FArtifactEntry> ShopProductEntries;
+
+	UPROPERTY(meta=(BindWidgetOptional), BlueprintReadOnly, Category="Shop")
+	TObjectPtr<UOwnedArtifactListWidget> EquippedArtifactList;
 	
 private:
 	UPROPERTY()
