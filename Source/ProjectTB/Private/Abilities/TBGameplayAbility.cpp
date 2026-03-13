@@ -4,6 +4,7 @@
 #include "Attributes/TBAttributeSet.h"
 #include "Battle/BattleManager.h"
 #include "Battle/BattleCombatant.h"
+#include "Battle/BattlePlayerCharacter.h"
 #include "TBGameplayTags.h"
 #include "Battle/BattleImpactActor.h"
 #include "Kismet/GameplayStatics.h"
@@ -75,10 +76,21 @@ void UTBGameplayAbility::DoTeleportToTarget()
 	if (TargetType == EAbilityTargetType::AllEnemies || TargetType == EAbilityTargetType::AllAllies)
 	{
 		TArray<ABattleCombatant*> Targets;
+
+		// 시전자가 플레이어인지 적인지 확인
+		ABattlePlayerCharacter* PlayerCaster = Cast<ABattlePlayerCharacter>(Avatar);
+		const bool bCasterIsPlayer = (PlayerCaster != nullptr);
+
 		if (TargetType == EAbilityTargetType::AllEnemies)
-			Targets = BM->GetLivingEnemies();
-		else
-			Targets = BM->GetLivingPlayers();
+		{
+			// 플레이어 시전 → 적 파티 공격, 적 시전 → 플레이어 파티 공격
+			Targets = bCasterIsPlayer ? BM->GetLivingEnemies() : BM->GetLivingPlayers();
+		}
+		else // AllAllies
+		{
+			// 플레이어 시전 → 플레이어 파티 회복, 적 시전 → 적 파티 회복
+			Targets = bCasterIsPlayer ? BM->GetLivingPlayers() : BM->GetLivingEnemies();
+		}
 
 		if (!Targets.IsEmpty())
 		{
@@ -226,13 +238,19 @@ void UTBGameplayAbility::ApplyDamage(int32 HitIndex)
 	// TargetType에 따라 단일/전체 타겟 처리
 	TArray<ABattleCombatant*> Targets;
 
+	// 시전자가 플레이어인지 적인지 확인
+	ABattlePlayerCharacter* PlayerCaster = Cast<ABattlePlayerCharacter>(Avatar);
+	const bool bCasterIsPlayer = (PlayerCaster != nullptr);
+
 	switch (TargetType)
 	{
 	case EAbilityTargetType::AllEnemies:
-		Targets = BM->GetLivingEnemies();
+		// 플레이어 시전 → 적 파티 공격, 적 시전 → 플레이어 파티 공격
+		Targets = bCasterIsPlayer ? BM->GetLivingEnemies() : BM->GetLivingPlayers();
 		break;
 	case EAbilityTargetType::AllAllies:
-		Targets = BM->GetLivingPlayers();
+		// 플레이어 시전 → 플레이어 파티 회복, 적 시전 → 적 파티 회복
+		Targets = bCasterIsPlayer ? BM->GetLivingPlayers() : BM->GetLivingEnemies();
 		break;
 	case EAbilityTargetType::Self:
 		if (ABattleCombatant* Caster = Cast<ABattleCombatant>(CurrentActorInfo->AvatarActor.Get()))
