@@ -35,6 +35,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Widgets")
 	void ExitBattleMode();
 	
+	
+	
 	// ─── 맵 이동 페이드 인, 아웃 ─────────────────────────────────────────────
 	UPROPERTY()
 	APlayerCameraManager* CamManager;
