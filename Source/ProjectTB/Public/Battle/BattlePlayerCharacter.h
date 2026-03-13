@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Battle/BattleCombatant.h"
@@ -46,4 +46,9 @@ public:
 
 	virtual void OnTurnBegin_Implementation() override;
 	virtual void OnTurnEnd_Implementation() override;
+	
+	
+	UFUNCTION(BlueprintCallable, Category="Attributes") 
+	FDiceModifier GetCurrentDiceModifier() const;
+	
 };

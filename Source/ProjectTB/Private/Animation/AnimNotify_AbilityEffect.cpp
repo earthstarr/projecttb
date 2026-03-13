@@ -1,4 +1,4 @@
-#include "Animation/AnimNotify_AbilityEffect.h"
+﻿#include "Animation/AnimNotify_AbilityEffect.h"
 #include "Battle/BattleCombatant.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/TBGameplayAbility.h"

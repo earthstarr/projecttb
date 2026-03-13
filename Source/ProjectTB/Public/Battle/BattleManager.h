@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -233,7 +233,12 @@ private:
 	void RollDiceAndWait();
 	void DiceAnimationTick();
 	void ExecuteActionAfterDice();
-
+	
+	// 아티팩트 적용 후 최종 주사위 보정
+	UPROPERTY(BlueprintReadOnly, Category="Dice", meta=(AllowPrivateAccess=true))
+	FDiceModifier DiceModifier;
+	
+	
 	// 패링
 	bool bParryTimingOpen = false;
 	FTimerHandle ParryTimingTimer;
@@ -328,12 +333,9 @@ private:
 	TArray<FLevelUpDisplayData> CachedLevelUpData;
 	void ShowVictoryWidgetDelayed();
 
-	// 아티펙트 관련
+	// 아티팩트 관련
 #pragma region Artifacts
 private:
-	// 전투에서 사용될 GE 헨들이 포함된 아티팩트 목록. Key : 아티팩트 ID, Value : GE 핸들 (여러개 가능)
-	TMap<FName, TArray<FActiveGameplayEffectHandle>> EquippedArtifactEffect;
-	
 	// 게임 인스턴스 GI 에서 아티팩트의 효과를 가져와서 GE를 만들고 적용
 	void ApplyArtifacts();
 	

@@ -1,4 +1,4 @@
-#include "Abilities/AnimNotify_SpawnImpact.h"
+﻿#include "Abilities/AnimNotify_SpawnImpact.h"
 #include "Battle/BattleCombatant.h"
 
 void UAnimNotify_SpawnImpact::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)

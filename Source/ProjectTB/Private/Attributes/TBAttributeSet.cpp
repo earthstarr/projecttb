@@ -1,11 +1,11 @@
-#include "Attributes/TBAttributeSet.h"
+﻿#include "Attributes/TBAttributeSet.h"
 #include "GameplayEffectExtension.h"
 #include "Battle/BattleCombatant.h"
 #include "TBGameplayTags.h"
 
 UTBAttributeSet::UTBAttributeSet()
 {
-	// 기본�???StartingEffects(Blueprint GE)�???��?�워진다
+	// 기본값 — StartingEffects(Blueprint GE)로 덮어씌워진다
 	InitHP(100.f);
 	InitMaxHP(100.f);
 	InitMP(50.f);
@@ -22,6 +22,10 @@ UTBAttributeSet::UTBAttributeSet()
 	InitIncomingDamage(0.f);
 	InitIncomingHeal(0.f);
 	InitIncomingCritical(0.f);
+	
+	InitDiceFaceBonus(0.f);
+	InitDiceMinFace(-10.f);
+	InitDiceMaxFace(10.f);
 }
 
 void UTBAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -38,14 +42,17 @@ void UTBAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, fl
 	else if (Attribute == GetSpeedAttribute())            NewValue = FMath::Max(NewValue, 1.f);
 	else if (Attribute == GetCriticalChanceAttribute())   NewValue = FMath::Clamp(NewValue, 0.f, 1.f);
 	else if (Attribute == GetCriticalMultiplierAttribute()) NewValue = FMath::Max(NewValue, 1.f);
+	
+	else if (Attribute == GetDiceMinFaceAttribute())	  NewValue = FMath::Min(NewValue, GetDiceMaxFace());
+	else if (Attribute == GetDiceMaxFaceAttribute())	  NewValue = FMath::Max(NewValue, GetDiceMinFace());
 }
 
 void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	// ?�?�?� IncomingCritical 처리 ??IncomingDamage ??HP 차감 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-	// IncomingCritical??마�?막에 처리?��?�? ?�기???��?지�??�제�??�용?�다.
+	// ─── IncomingCritical 처리 후 IncomingDamage → HP 차감 ──────────────────
+	// IncomingCritical이 마지막에 처리되므로, 여기서 데미지를 실제로 적용한다.
 	if (Data.EvaluatedData.Attribute == GetIncomingCriticalAttribute())
 	{
 		const float DamageValue = GetIncomingDamage();
@@ -56,31 +63,46 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		if (DamageValue > 0.f)
 		{
 			const float NewHP = FMath::Max(GetHP() - DamageValue, 0.f);
-			UE_LOG(LogTemp, Display, TEXT("TBAttributeSet: Damage=%.1f%s, HP %.1f ??%.1f"),
+			UE_LOG(LogTemp, Display, TEXT("TBAttributeSet: Damage=%.1f%s, HP %.1f → %.1f"),
 				DamageValue, bIsCritical ? TEXT(" (CRIT)") : TEXT(""), GetHP(), NewHP);
 			SetHP(NewHP);
+			
 
 			if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
 			{
 				Combatant->OnDamageReceivedInternal(DamageValue, bIsCritical);
 				if (NewHP <= 0.f)
-					Combatant->OnDeathInternal();
-			}
+				{
+					// 부활 태그 소모
+					if (Combatant->TryConsumeResurrectionStack())
+					{
+						const float ReviveHP = FMath::Max(1.f, GetMaxHP() * 0.5f);
+						SetHP(ReviveHP);
 
-			// ?�링 ?�그 ?�모 (?�트??1?????�단?�트??�??�트마다 ?�로 ?�링)
+						Combatant->OnHealReceivedInternal(ReviveHP);
+						Combatant->OnStatChangedInternal();
+					}
+					// 부활 태그 소모 실패시 사망
+					else
+					{
+						Combatant->OnDeathInternal();
+					}
+				}
+			}
+			// 패링 태그 소모 (히트당 1회 — 다단히트는 각 히트마다 따로 패링)
 			UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 			if (ASC)
-				ASC->RemoveLooseGameplayTag(TAG_Combatant_State_ParrySuccess);
+			ASC->RemoveLooseGameplayTag(TAG_Combatant_State_ParrySuccess);
 		}
 	}
-	// ?�?�?� MP/Stamina 직접 변�?(코스??GE ?? ??즉시 UI 갱신 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+	// ─── MP/Stamina 직접 변경 (코스트 GE 등) → 즉시 UI 갱신 ────────────────
 	else if (Data.EvaluatedData.Attribute == GetMPAttribute() ||
 	         Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
 		if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
 			Combatant->OnStatChangedInternal();
 	}
-	// ?�?�?� IncomingHeal ??HP ?�복 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+	// ─── IncomingHeal → HP 회복 ─────────────────────────────────────────────
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealAttribute())
 	{
 		const float HealValue = GetIncomingHeal();
@@ -94,4 +116,3 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		}
 	}
 }
-

@@ -1,4 +1,4 @@
-#include "UI/TBBattleHUD.h"
+﻿#include "UI/TBBattleHUD.h"
 
 #include "TBGameInstance.h"
 #include "UI/TurnOrderWidget.h"
@@ -18,7 +18,7 @@ void ATBBattleHUD::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	EnterBattleMode();
+	//EnterBattleMode();
 }
 
 void ATBBattleHUD::EnterBattleMode()

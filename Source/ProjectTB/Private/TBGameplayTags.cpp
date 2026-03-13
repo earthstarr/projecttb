@@ -1,4 +1,4 @@
-#include "TBGameplayTags.h"
+﻿#include "TBGameplayTags.h"
 
 // ─── Battle Phase ───────────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Battle_Phase_None,       "Battle.Phase.None")
@@ -40,3 +40,6 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Taunt,  "Status.Taunt")
 
 // ─── SetByCaller Data ───────────────────────────────────────────────────────
 UE_DEFINE_GAMEPLAY_TAG(TAG_Data_AbilityMultiplier, "Data.AbilityMultiplier")
+
+// ─── Artifact Data ──────────────────────────────────────────────────────────
+UE_DEFINE_GAMEPLAY_TAG(TAG_Artifact_Resurrection,  "Artifact.Resurrection")

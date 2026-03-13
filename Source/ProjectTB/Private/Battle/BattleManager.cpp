@@ -1,4 +1,4 @@
-#include "Battle/BattleManager.h"
+﻿#include "Battle/BattleManager.h"
 #include "TBGameplayTags.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Battle/BattleEnemyCharacter.h"
@@ -13,6 +13,7 @@
 #include "Data/LevelDataTypes.h"
 #include "UI/TBBattleHUD.h"
 #include "World/PotalManager.h"
+#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 
 ABattleManager::ABattleManager()
 {
@@ -660,7 +661,8 @@ void ABattleManager::RollDiceAndWait()
 {
 	// 시전자의 장착 주사위 가져오기
 	FDiceData Dice;
-	if (ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(PendingCaster))
+	ABattlePlayerCharacter* PC = Cast<ABattlePlayerCharacter>(PendingCaster);
+	if (PC)
 		Dice = PC->GetEquippedDice();
 
 	// 면이 없으면 기본값(1.0) 유지하고 바로 실행
@@ -677,14 +679,14 @@ void ABattleManager::RollDiceAndWait()
 	// 랜덤으로 면 뽑기 (최종 결과)
 	const int32 RawFace = Dice.BaseFaces[FMath::RandRange(0, Dice.BaseFaces.Num() - 1)];
 
-	// GameInstance에서 FaceBonus 읽기
+	// Attribute에서 Dice Modifier 읽기 (주사위 보정)
+	DiceModifier = PC->GetCurrentDiceModifier();
+	
 	int32 FaceBonus = 0, MinFace = -10, MaxFace = 10;
-	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
-	{
-		FaceBonus = GI->DiceModifier.FaceBonus;
-		MinFace   = GI->DiceModifier.MinFace;
-		MaxFace   = GI->DiceModifier.MaxFace;
-	}
+	
+	FaceBonus = DiceModifier.FaceBonus;
+	MinFace   = DiceModifier.MinFace;
+	MaxFace   = DiceModifier.MaxFace;
 
 	// 최종 결과 저장
 	PendingDiceFinalFace = FMath::Clamp(RawFace + FaceBonus, MinFace, MaxFace);
@@ -1343,7 +1345,12 @@ void ABattleManager::ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifa
 	// GE 생성
 	UGameplayEffect* GEObj = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
 	GEObj->DurationPolicy = EGameplayEffectDurationType::Infinite;
-
+	FGameplayTagContainer ArtifactTraits = ArtifactRow.Traits;
+	
+	// 태그 전달
+	FInheritedTagContainer GrantedTagChanges;
+	GrantedTagChanges.Added = ArtifactTraits;
+	
 	// GE Modifier 설정
 	for (const FArtifactStatModifier& Modifier : ArtifactRow.StatModifiers)
 	{
@@ -1353,11 +1360,19 @@ void ABattleManager::ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifa
 		ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(Modifier.Value);
 		GEObj->Modifiers.Add(ModInfo);
 	}
+	
+	// 태그 목록을 GE에 삽입
+	if (GrantedTagChanges.Added.IsEmpty() == false)
+	{
+		UTargetTagsGameplayEffectComponent& TargetTagsComp = GEObj->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
 
+		TargetTagsComp.SetAndApplyTargetTagChanges(GrantedTagChanges);
+	}
+	
 	// GE Spec 생성, 적용
 	FGameplayEffectSpec Spec(GEObj, TargetASC->MakeEffectContext(), 1.f);
 	FActiveGameplayEffectHandle Handle = TargetASC->ApplyGameplayEffectSpecToSelf(Spec);
 
-	// GE 핸들 관리. 하나의 아티팩트에도 여러 캐릭터가 적용될 수 있으므로 FindOrAdd
-	EquippedArtifactEffect.FindOrAdd(Target->CharacterId).Add(Handle);
+	// 아티팩트의 GE와 Tag를 캐릭터에게 전달
+	Target->RegisterArtifactEffectHandle(Handle, ArtifactTraits);
 }

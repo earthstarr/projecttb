@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
@@ -92,4 +92,17 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Attributes|Meta")
 	FGameplayAttributeData IncomingCritical;
 	ATTRIBUTE_ACCESSORS(UTBAttributeSet, IncomingCritical)
+	
+	// ─── Dice Modifier ──────────────────────────────────────────────────
+	UPROPERTY(BlueprintReadOnly, Category="Attributes|Dice")
+	FGameplayAttributeData DiceFaceBonus;
+	ATTRIBUTE_ACCESSORS(UTBAttributeSet, DiceFaceBonus)
+	
+	UPROPERTY(BlueprintReadOnly, Category="Attributes|Dice")
+	FGameplayAttributeData DiceMinFace;
+	ATTRIBUTE_ACCESSORS(UTBAttributeSet, DiceMinFace)
+	
+	UPROPERTY(BlueprintReadOnly, Category="Attributes|Dice")
+	FGameplayAttributeData DiceMaxFace;
+	ATTRIBUTE_ACCESSORS(UTBAttributeSet, DiceMaxFace)
 };

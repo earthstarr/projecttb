@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -32,6 +32,9 @@ public:
 	
 	UFUNCTION()
 	void OnLevelLoadFinished();
+	
+	UFUNCTION()
+	void OnFadeInFinished();
 	
 	UFUNCTION()
 	void OnLevelShown();
@@ -70,6 +73,8 @@ private:
 	
 	float TransitionStartTime;
 	
+	FTimerHandle FadeInTimerHandle;
+	
 	// 레벨 언로드, 로드
 	FRoomData* RoomData;
 	
@@ -78,4 +83,6 @@ private:
 	
 	UPROPERTY()
 	ULevelStreamingDynamic* NextLevelInstance;
+	
+	FDataTableRowHandle PendingRoomHandle;
 };

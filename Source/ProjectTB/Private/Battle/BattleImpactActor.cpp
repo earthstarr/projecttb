@@ -1,4 +1,4 @@
-#include "Battle/BattleImpactActor.h"
+﻿#include "Battle/BattleImpactActor.h"
 #include "Battle/BattleManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/SceneComponent.h"

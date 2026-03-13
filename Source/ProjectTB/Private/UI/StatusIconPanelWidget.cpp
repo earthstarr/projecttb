@@ -1,4 +1,4 @@
-#include "UI/StatusIconPanelWidget.h"
+﻿#include "UI/StatusIconPanelWidget.h"
 #include "Battle/BattleCombatant.h"
 
 void UStatusIconPanelWidget::InitWithCombatant(ABattleCombatant* Combatant)
