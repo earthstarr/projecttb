@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TBGameInstance.h"
 #include "World/LevelActor/Potal/PotalBase.h"
 #include "BattlePotal.generated.h"
 
@@ -20,4 +21,7 @@ public:
 protected:
 	virtual void PotalActivate() override;
 	void CleanRoom() override;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
+	FBattleTransitionData BattleTransitionData;
 };

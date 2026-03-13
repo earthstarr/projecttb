@@ -196,6 +196,7 @@ void ABattleManager::SpawnAndStartBattle()
 	{
 		const int32 EnemyCount = EnemyClasses.Num();
 		const FVector CenterLoc = EnemySpawnCenter->GetActorLocation();
+		EnemySpawnRotation = EnemySpawnCenter->GetActorRotation();
 
 		// 중심 기준 좌우 대칭 배치 (Y축)
 		// 예: 3마리 → -1, 0, +1 → 간격 곱해서 -200, 0, +200
@@ -243,8 +244,8 @@ void ABattleManager::SpawnAndStartBattle()
 		return;
 	}
 
-	UE_LOG(LogTemp, Display, TEXT("BattleManager: SpawnAndStartBattle → Player %d명, Enemy %d명"),
-		Players.Num(), Enemies.Num());
+	UE_LOG(LogTemp, Display, TEXT("BattleManager: SpawnAndStartBattle → Player %d명, Enemy %d명"), Players.Num(), Enemies.Num());
+	
 	StartBattle(Players, Enemies);
 }
 
@@ -310,13 +311,20 @@ void ABattleManager::StartBattle(
 	WarmUpEffects();
 
 	// HUD 바인딩 (bAutoStartBattle 모드에서도 동작하도록)
-	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (PC == nullptr)
 	{
-		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
-		{
-			HUD->SetBattleManager(this);
-		}
+		UE_LOG(LogTemp,Error,TEXT("ABattleManager::StartBattle 함수의 PC 가 nullptr입니다."));
+		return;
 	}
+	
+	ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD());
+	if (HUD == nullptr)
+	{
+		UE_LOG(LogTemp,Error,TEXT("ABattleManager::StartBattle 함수의 HUD 가 nullptr입니다."));
+		return;
+	}
+	HUD->SetBattleManager(this);
 
 	SetPhase(EBattlePhase::BattleStart);
 
@@ -326,12 +334,15 @@ void ABattleManager::StartBattle(
 	// 고정 카메라로 전환
 	if (BattleCamera)
 	{
-		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		if (PC)
 		{
 			PC->SetViewTargetWithBlend(BattleCamera, 0.5f);
 		}
 	}
 
+	// 전투 세팅이 끝났으니 BattleHUD에서 페이드 인 진행
+	HUD->StartFadeIn();
+	
 	// 1초 후 첫 턴 시작 (BattleStart 연출 시간)
 	FTimerHandle StartTimer;
 	GetWorldTimerManager().SetTimer(StartTimer, this, &ABattleManager::AdvanceTurn, 1.f, false);
@@ -936,7 +947,7 @@ void ABattleManager::CheckBattleEnd()
 	if (CurrentPhase == EBattlePhase::BattleVictory ||
 	    CurrentPhase == EBattlePhase::BattleDefeat)
 		return;
-
+	
 	if (GetLivingEnemies().IsEmpty())
 	{
 		SetPhase(EBattlePhase::BattleVictory);

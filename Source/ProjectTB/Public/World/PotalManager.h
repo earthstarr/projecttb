@@ -7,6 +7,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "PotalManager.generated.h"
 
+struct FBattleTransitionData;
 class AWorldPlayerController;
 struct FRoomData;
 class ULevelStreamingDynamic;
@@ -41,6 +42,10 @@ public:
 	
 	UFUNCTION()
 	void TeleportLevel();
+	
+	//배틀 맵 정보 제공
+	UFUNCTION()
+	void SetBattleTransitionData(FBattleTransitionData& InBattleTransitionData);
 	
 	// 배틀 매니저 탐색
 #pragma region BattleManager
