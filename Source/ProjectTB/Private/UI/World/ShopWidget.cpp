@@ -73,7 +73,6 @@ void UShopWidget::InitializeShop(AShopkeeperBasePawn* InShopkeeper)
 		UE_LOG(LogTemp,Warning,TEXT("UShopWidget::InitializeShop 의 TBGameInstance 가 nullptr 입니다."));
 	}
 	
-	
 	if (InShopkeeper == nullptr)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UShopWidget의 InitializeShop함수 InShopkeeper 이 없습니다."));

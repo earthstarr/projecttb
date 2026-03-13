@@ -238,13 +238,20 @@ void UPotalManager::ActivateHUDMode(const ERoomType RoomType)
 		StartBattleManagerSearch();
 		break;
 	case ERoomType::World:
-		TBHUD->ExitBattleMode();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 		break;
 	case ERoomType::Event:
+		PC->SetInputModeWorld();
+		TBHUD->StartFadeIn();
+		//이벤트 맵 입장
+		//월드랑 동일
+		//
 		break;
 	case ERoomType::Shop:
+		PC->SetInputModeWorld();
+		TBHUD->StartFadeIn();
+		
 		break;
 	default:
 		break;

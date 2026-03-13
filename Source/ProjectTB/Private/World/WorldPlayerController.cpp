@@ -199,5 +199,8 @@ void AWorldPlayerController::SetInputModeWorld()
 	// 액터 활성화
 	ControlledPawn->SetActorHiddenInGame(false);    
 	ControlledPawn->SetActorEnableCollision(true);
+	
+	// 카메라 활성화
+	SetViewTarget(ControlledPawn);
 }
 
