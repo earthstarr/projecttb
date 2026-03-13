@@ -21,7 +21,6 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 		return;
 	}
 	
-	
 	//한틱 다음에 실행
 	
 	// 이동 비활성화
@@ -45,7 +44,6 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 		InitRoomHandle.RowName = FName("Map_World");
 		InitRoomLoad();
 	}
-
 }
 
 void UPotalManager::InitRoomLoad()
@@ -68,8 +66,30 @@ void UPotalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHa
 
 	//todo 페이드 인 이후에 방 생성하도록 변경할 것
 	
+	PendingRoomHandle = SelectedRoomHandle;
+
+	//CamManager->StartCameraFade(0.f, 1.f, 0.5f, FLinearColor::Black, false, true);
+	//OnFadeInFinished(SelectedRoomHandle);
+
+	GetWorld()->GetTimerManager().ClearTimer(FadeInTimerHandle);
+	GetWorld()->GetTimerManager().SetTimer(FadeInTimerHandle, this, &UPotalManager::OnFadeInFinished, 0.5f, false);
+}
+
+void UPotalManager::OnReturnToWorldLevel(const FDataTableRowHandle& ReturnRoomData)
+{
+	//지금은 테스트로 지정한 방으로 복귀
+	OnLevelLoadStarted(ReturnRoomData);
+}
+
+void UPotalManager::OnLevelLoadFinished()
+{
+	//호출 시점의 문제로 인해 기존 이동 로직 Shown으로 변경.
+}
+
+void UPotalManager::OnFadeInFinished()
+{
 	// 방 생성
-	RoomData = SelectedRoomHandle.GetRow<FRoomData>(TEXT("RoomData"));
+	RoomData = PendingRoomHandle.GetRow<FRoomData>(TEXT("RoomData"));
 
 	bool bSuccess = false;
 	ULevelStreamingDynamic* StreamingLevel = ULevelStreamingDynamic::LoadLevelInstanceBySoftObjectPtr(
@@ -83,57 +103,23 @@ void UPotalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHa
 	}
 	
 	NextLevelInstance = StreamingLevel;
-}
-
-void UPotalManager::OnReturnToWorldLevel(const FDataTableRowHandle& ReturnRoomData)
-{
-	//지금은 테스트로 지정한 방으로 복귀
-	OnLevelLoadStarted(ReturnRoomData);
-}
-
-void UPotalManager::OnLevelLoadFinished()
-{
-	//기존 이동 로직 Shown으로 변경
+	
 }
 
 void UPotalManager::OnLevelShown()
 {
 	UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Enter"));
 
-	//진행중인 페이드 인 시간을 확인하고 잔여 시간이 있다면 대기
-	float CurrentTime = GetWorld()->GetTimeSeconds();
-	float DeltaTime = CurrentTime - TransitionStartTime;
-	
-	if (DeltaTime < 0.5f)
+	TeleportLevel();
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
 	{
-		float Delay = 0.5f - DeltaTime;
-		FTimerHandle DelayTeleportTimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(DelayTeleportTimerHandle, FTimerDelegate::CreateLambda([this]()
+		if (RoomData)
 		{
-			TeleportLevel();
-			GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
-			{
-				if (RoomData)
-				{
-					UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Debug RoomType: %d"), static_cast<int32>(RoomData->RoomType));
-					ActivateHUDMode(RoomData->RoomType);
-				}
-			}));
-		}), Delay, false);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("딜레이가 필요 없습니다. 즉시 텔레포트 합니다."));
-		TeleportLevel();
-		GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
-		{
-			if (RoomData)
-			{
-				UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Debug RoomType: %d"), static_cast<int32>(RoomData->RoomType));
-				ActivateHUDMode(RoomData->RoomType);
-			}
-		}));
-	}
+			UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Debug RoomType: %d"),
+			       static_cast<int32>(RoomData->RoomType));
+			ActivateHUDMode(RoomData->RoomType);
+		}
+	}));
 }
 
 void UPotalManager::TeleportLevel()

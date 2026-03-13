@@ -34,6 +34,9 @@ public:
 	void OnLevelLoadFinished();
 	
 	UFUNCTION()
+	void OnFadeInFinished();
+	
+	UFUNCTION()
 	void OnLevelShown();
 	
 	UFUNCTION()
@@ -70,6 +73,8 @@ private:
 	
 	float TransitionStartTime;
 	
+	FTimerHandle FadeInTimerHandle;
+	
 	// 레벨 언로드, 로드
 	FRoomData* RoomData;
 	
@@ -78,4 +83,6 @@ private:
 	
 	UPROPERTY()
 	ULevelStreamingDynamic* NextLevelInstance;
+	
+	FDataTableRowHandle PendingRoomHandle;
 };

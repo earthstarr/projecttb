@@ -1,4 +1,4 @@
-﻿﻿#include "Battle/BattleCombatant.h"
+﻿#include "Battle/BattleCombatant.h"
 #include "AbilitySystemComponent.h"
 #include "Attributes/TBAttributeSet.h"
 #include "Abilities/TBGameplayAbility.h"
@@ -249,32 +249,33 @@ bool ABattleCombatant::TryConsumeResurrectionStack()
 		return false;
 	}
 
+	// 1차 확인: 실제 GAS 상태 기준으로 부활 권한이 있는가
+	if (!ASC->HasMatchingGameplayTag(TAG_Artifact_Resurrection))
+	{
+		return false;
+	}
+
+	// 2차 확인: 캐시된 Traits로 실제 제거할 아티팩트 GE 찾기
 	for (int32 i = AppliedArtifactEffects.Num() - 1; i >= 0; --i)
 	{
 		FAppliedArtifactEffect& Entry = AppliedArtifactEffects[i];
 
-        // 핸들이 없는 요소 스킵
-		if (Entry.Handle.IsValid() == false)
+		if (!Entry.Handle.IsValid())
 		{
 			AppliedArtifactEffects.RemoveAt(i);
 			continue;
 		}
 
-        // 부활 Resurrection 태그가 없으면 스킵
-		if (Entry.Traits.HasTagExact(TAG_Artifact_Resurrection) == false)
+		if (!Entry.Traits.HasTagExact(TAG_Artifact_Resurrection))
 		{
 			continue;
 		}
 
-        // 부활 Resurrection 태그가 있으니 해당 GE 제거.
-		bool RemoveResult = ASC->RemoveActiveGameplayEffect(Entry.Handle, -1);
-		if (RemoveResult)
+		if (ASC->RemoveActiveGameplayEffect(Entry.Handle, -1))
 		{
 			AppliedArtifactEffects.RemoveAt(i);
 			return true;
 		}
-		
-		continue;
 	}
 
 	return false;
