@@ -26,6 +26,7 @@ void ABattleManager::BeginPlay()
 	
 	// 0.5초 딜레이 — 레벨의 모든 Actor BeginPlay 완료 후 실행
 	FTimerHandle StartTimer;
+	
 	if (bAutoStartBattle)
 	{
 		// 테스트용: 맵에 배치된 캐릭터 자동 감지
@@ -165,8 +166,15 @@ void ABattleManager::SpawnAndStartBattle()
 		}
 
 		FActorSpawnParameters SpawnParams;
+		
+		// 배틀 맵에 종속되도록 스폰
+		SpawnParams.OverrideLevel = GetLevel();
+		
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
+		
+		// 배틀 맵에 중속되도록 스폰
+		SpawnParams.OverrideLevel = GetLevel();
+		
 		ABattlePlayerCharacter* Player = GetWorld()->SpawnActor<ABattlePlayerCharacter>(
 			Data.CharacterClass,
 			SpawnPoint->GetActorLocation(),
@@ -787,9 +795,14 @@ void ABattleManager::ExecuteAction(
 	FVector LookAtLocation = FVector::ZeroVector;
 	bool bShouldRotate = false;
 
+	// 시전자가 플레이어인지 적인지 확인
+	ABattlePlayerCharacter* PlayerCaster = Cast<ABattlePlayerCharacter>(Caster);
+	const bool bCasterIsPlayer = (PlayerCaster != nullptr);
+
 	if (CDO->TargetType == EAbilityTargetType::AllEnemies)
 	{
-		TArray<ABattleCombatant*> Enemies = GetLivingEnemies();
+		// 플레이어 시전 → 적 파티, 적 시전 → 플레이어 파티
+		TArray<ABattleCombatant*> Enemies = bCasterIsPlayer ? GetLivingEnemies() : GetLivingPlayers();
 		for (ABattleCombatant* E : Enemies)
 			if (E) LookAtLocation += E->GetActorLocation();
 		if (!Enemies.IsEmpty())
@@ -800,7 +813,8 @@ void ABattleManager::ExecuteAction(
 	}
 	else if (CDO->TargetType == EAbilityTargetType::AllAllies)
 	{
-		TArray<ABattleCombatant*> Allies = GetLivingPlayers();
+		// 플레이어 시전 → 플레이어 파티, 적 시전 → 적 파티
+		TArray<ABattleCombatant*> Allies = bCasterIsPlayer ? GetLivingPlayers() : GetLivingEnemies();
 		for (ABattleCombatant* A : Allies)
 			if (A) LookAtLocation += A->GetActorLocation();
 		if (!Allies.IsEmpty())
@@ -920,6 +934,12 @@ TArray<ABattleCombatant*> ABattleManager::GetLivingEnemies() const
 {
 	TArray<ABattleCombatant*> Result;
 	for (ABattleCombatant* E : EnemyParty) if (IsValid(E) && !E->IsDead()) Result.Add(E);
+	
+	// Y좌표 기준 오름차순으로 배치
+	Result.Sort([](const ABattleCombatant& A, const ABattleCombatant& B)
+	{
+		return A.GetActorLocation().Y < B.GetActorLocation().Y;
+	});
 	return Result;
 }
 
@@ -952,13 +972,14 @@ void ABattleManager::CheckBattleEnd()
 	{
 		SetPhase(EBattlePhase::BattleVictory);
 		HandleBattleVictory();
-		// VictoryWidget에서 ReturnToWorld() 호출 시 ExitBattleMode() 처리
+		
 	}
 	else if (GetLivingPlayers().IsEmpty())
 	{
 		SetPhase(EBattlePhase::BattleDefeat);
-		HandleBattleDefeat();
-		//게임오버
+		
+		// TODO : 게임 인스턴스에 ReturnRoomData를 메인화면으로 변경
+		HandleBattleDefeat();		
 	}
 }
 

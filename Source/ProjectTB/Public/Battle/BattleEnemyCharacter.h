@@ -97,7 +97,7 @@ class PROJECTTB_API ABattleEnemyCharacter : public ABattleCombatant
 public:
 	ABattleEnemyCharacter();
 
-	// Blueprint에서 WBP_EnemyHealthBar 클래스를 지정한다
+	// Blueprint에서 WBP_EnemyHealthBar 클래스를 지정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
 	TSubclassOf<UUserWidget> HealthBarWidgetClass;
 
