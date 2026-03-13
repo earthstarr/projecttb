@@ -18,7 +18,7 @@ void ATBBattleHUD::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	//EnterBattleMode();
+	EnterBattleMode();
 }
 
 void ATBBattleHUD::EnterBattleMode()
@@ -38,16 +38,23 @@ void ATBBattleHUD::ExitBattleMode()
 		// 이벤트 연결 해제
 		UnBindToBattleManager();
 	}
-		
+	
 	// 배틀 위젯 제거
 	RemoveBattleWidgets();
 	
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (GI == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPotalManager::SetBattleTransitionData GI is Nullptr"));
+		return;
+	}
+	
 	// 포탈 매니저에게 월드 맵으로 이동 요청
 	UPotalManager* PotalManager = GetWorld()->GetSubsystem<UPotalManager>();
-	if (UTBGameInstance* TBGameInstance = Cast<UTBGameInstance>(GetGameInstance()))
-	{
-		PotalManager->OnReturnToWorldLevel(TBGameInstance->BattleTransitionData.ReturnRoomData);
-	}
+	PotalManager->OnReturnToWorldLevel(GI->BattleTransitionData.ReturnRoomData);
+
+	// 게임 인스턴스에서 BattleTransitionData 정보 초기화
+	GI->BattleTransitionData = FBattleTransitionData();
 }
 
 void ATBBattleHUD::StartFadeOut(float Duration) const
@@ -79,7 +86,7 @@ void ATBBattleHUD::SetBattleManager(ABattleManager* NewBattleManager)
 {
 	BattleManager = NewBattleManager;
 	BindToBattleManager();
-	StartFadeIn(0.5);
+	//StartFadeIn();
 }
 
 void ATBBattleHUD::CreateBattleWidgets()

@@ -125,7 +125,7 @@ public:
 	// 레벨에 배치된 모든 Player/EnemyCharacter를 자동 감지해서 전투 시작
 	// GameInstance 방식 구현 후 false로 설정
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle|Debug")
-	bool bAutoStartBattle = true;
+	bool bAutoStartBattle = false;
 
 	// ─── 캐릭터 스폰 위치 (레벨에서 설정) ────────────────────────────────────
 	// 플레이어 스폰 포인트 (3개 배치)
@@ -142,7 +142,7 @@ public:
 
 	// 적이 바라볼 방향 (스폰 시 적용)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
-	FRotator EnemySpawnRotation = FRotator::ZeroRotator;
+	FRotator EnemySpawnRotation;
 
 	// ─── 카메라 ───────────────────────────────────────────────────────────────
 	// 전투 전체 고정 카메라 (레벨에 배치)

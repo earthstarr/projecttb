@@ -44,8 +44,8 @@ public:
 	
 	float TransitionStartTime;
 	
-	void StartFadeOut(float Duration = 0.5f) const;
-	void StartFadeIn(float Duration = 0.5f) const;
+	void StartFadeOut(float Duration = 0.2f) const;
+	void StartFadeIn(float Duration = 0.2f) const;
 	
 	// ─── 위젯 클래스 (Blueprint에서 지정) ────────────────────────────────────
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")

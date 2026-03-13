@@ -14,6 +14,11 @@ ABattlePotal::ABattlePotal()
 
 void ABattlePotal::PotalActivate()
 {
+	// 전투 맵 세팅 먼저
+	UPotalManager* PotalManager = GetWorld()->GetSubsystem<UPotalManager>();
+	PotalManager->SetBattleTransitionData(BattleTransitionData);
+	
+	// 로딩
 	Super::PotalActivate();
 }
 

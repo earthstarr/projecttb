@@ -17,27 +17,12 @@ struct FBattleTransitionData
 	GENERATED_BODY()
 
 	// 배틀 씬에서 스폰할 적 Blueprint 클래스 목록
-	UPROPERTY(BlueprintReadWrite, Category="Battle")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
 	TArray<TSoftClassPtr<ABattleEnemyCharacter>> EnemyClasses;
 
 	// 전투 종료 후 복귀할 월드 데이터
-	UPROPERTY(BlueprintReadWrite, Category="Battle")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
 	FDataTableRowHandle ReturnRoomData;
-	
-	// 전투 종료 후 복귀할 월드 레벨 이름
-	UPROPERTY(BlueprintReadWrite, Category="Battle")
-	FName WorldLevelName;
-
-	// 복귀 위치/방향
-	UPROPERTY(BlueprintReadWrite, Category="Battle")
-	FVector  WorldReturnLocation  = FVector::ZeroVector;
-
-	UPROPERTY(BlueprintReadWrite, Category="Battle")
-	FRotator WorldReturnRotation  = FRotator::ZeroRotator;
-
-	// 열 배틀맵 이름 (예: "BattleMap_Forest", "BattleMap_Dungeon")
-	UPROPERTY(BlueprintReadWrite, Category="Battle")
-	FName BattleMapName;
 };
 
 // 레벨업 델리게이트
