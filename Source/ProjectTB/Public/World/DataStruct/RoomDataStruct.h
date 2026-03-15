@@ -4,6 +4,15 @@
 #include "Engine/DataTable.h"
 #include "RoomDataStruct.generated.h"
 
+class ABattleEnemyCharacter;
+
+UENUM(BlueprintType)
+enum class EBattleType : uint8
+{
+	Normal,
+	Elite,
+	Boss,
+};
 
 UENUM(BlueprintType)
 enum class ERoomType : uint8
@@ -36,4 +45,16 @@ public:
 	// 스폰 회전 값
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
 	FRotator StartRotation;
+};
+
+USTRUCT(BlueprintType)
+struct FEnemyGroupData : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
+	EBattleType BattleType;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
+	TArray<TSoftClassPtr<ABattleEnemyCharacter>> EnemyClasses;
 };

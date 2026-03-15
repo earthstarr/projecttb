@@ -35,16 +35,27 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 		PC->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_None);
 	}
 
+	// Map_World로 이동.
 	FString Path = TEXT("/Game/Blueprints2/DataTable/DT_Room.DT_Room");
 	UDataTable* LoadedTable = Cast<UDataTable>(StaticLoadObject(UDataTable::StaticClass(), nullptr, *Path));
 
-	if (LoadedTable)
+	if (LoadedTable == nullptr)
 	{
-		// 2. InitRoomHandle 구조체 채우기
-		InitRoomHandle.DataTable = LoadedTable;
-		InitRoomHandle.RowName = FName("Map_World");
-		InitRoomLoad();
+		UE_LOG(LogTemp,Error,TEXT("UPotalManager::OnWorldBeginPlay의 LoadedTable가 비었습니다. 이동할 맵 데이터의 경로가 코드상의 Path와 동일한지 확인해주세요."))
+		return;
 	}
+	
+	// 이벤트 맵이 이동할 수 있는 맵 선별 및 캐시화
+	CacheEventRoomCandidates(LoadedTable);
+	
+	// 적 정보에 대한 데이터 테이블
+	Path = TEXT("/Game/Blueprints2/DataTable/DT_EnemySetup.DT_EnemySetup");
+	EnemyDataTable = Cast<UDataTable>(StaticLoadObject(UDataTable::StaticClass(), nullptr, *Path));
+	
+	// InitRoomHandle 구조체 채우기
+	InitRoomHandle.DataTable = LoadedTable;
+	InitRoomHandle.RowName = FName("Map_World");
+	InitRoomLoad();
 }
 
 void UPotalManager::InitRoomLoad()
@@ -256,6 +267,83 @@ void UPotalManager::ActivateHUDMode(const ERoomType RoomType)
 	default:
 		break;
 	}
+}
+
+bool UPotalManager::GetRandomEnemyGroup(EBattleType BattleType, FEnemyGroupData& OutData)
+{
+	OutData = FEnemyGroupData();
+
+	UDataTable* LoadedEnemyTable = EnemyDataTable.LoadSynchronous();
+	if (LoadedEnemyTable == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPotalManager::GetRandomEnemyGroup - EnemyDataTable is nullptr"));
+		return false;
+	}
+
+	TArray<const FEnemyGroupData*> Candidates;
+	static const FString ContextString(TEXT("GetRandomEnemyGroup"));
+
+	for (const FName& RowName : LoadedEnemyTable->GetRowNames())
+	{
+		const FEnemyGroupData* EnemyGroupRow =
+			LoadedEnemyTable->FindRow<FEnemyGroupData>(RowName, ContextString);
+
+		if (EnemyGroupRow == nullptr)
+		{
+			continue;
+		}
+
+		if (EnemyGroupRow->BattleType != BattleType)
+		{
+			continue;
+		}
+
+		Candidates.Add(EnemyGroupRow);
+	}
+
+	if (Candidates.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPotalManager::GetRandomEnemyGroup - No candidates for BattleType"));
+		return false;
+	}
+
+	const int32 RandomIndex = FMath::RandRange(0, Candidates.Num() - 1);
+	OutData = *Candidates[RandomIndex];
+
+	return true;
+}
+
+void UPotalManager::CacheEventRoomCandidates(UDataTable* RoomTable)
+{
+	EventRoomCandidates.Reset();
+
+	if (RoomTable == nullptr)
+	{
+		return;
+	}
+
+	static const FString ContextString(TEXT("CacheRoomCandidates"));
+
+	for (const FName& RowName : RoomTable->GetRowNames())
+	{
+		const FRoomData* RoomRow = RoomTable->FindRow<FRoomData>(RowName, ContextString);
+		if (RoomRow == nullptr)
+		{
+			continue;
+		}
+
+		if (RoomRow->RoomType == ERoomType::Event
+			|| RoomRow->RoomType == ERoomType::Shop)
+		{
+			FDataTableRowHandle NewHandle;
+			NewHandle.DataTable = RoomTable;
+			NewHandle.RowName = RowName;
+
+			EventRoomCandidates.Add(NewHandle);
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Cached EventRoomCandidates: %d"), EventRoomCandidates.Num());
 }
 
 void UPotalManager::SetBattleTransitionData(FBattleTransitionData& InBattleTransitionData)
