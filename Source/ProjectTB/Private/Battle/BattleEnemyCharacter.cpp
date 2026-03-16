@@ -3,6 +3,8 @@
 #include "Components/WidgetComponent.h"
 #include "UI/EnemyHealthBarWidget.h"
 #include "TBGameplayTags.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 
 ABattleEnemyCharacter::ABattleEnemyCharacter()
 {
@@ -96,12 +98,15 @@ void ABattleEnemyCharacter::SelectAction_Implementation(
 				Phase.bActivated = true;
 				ActivePhaseIndex = i;
 
+				// 페이즈 이펙트 활성화
+				ActivatePhaseEffect(i);
+
 				// 페이즈 전환 어빌리티가 있으면 이번 턴에 즉시 사용
 				if (Phase.PhaseTransitionAbility)
 				{
 					OutAbilityClass = Phase.PhaseTransitionAbility;
 					OutTarget = Living[FMath::RandRange(0, Living.Num() - 1)];
-					return;  
+					return;
 				}
 			}
 			else if (Phase.bActivated)
@@ -257,5 +262,34 @@ void ABattleEnemyCharacter::OnTurnBegin_Implementation()
 		--TauntRemainingTurns;
 		if (TauntRemainingTurns == 0)
 			TauntTarget = nullptr;
+	}
+}
+
+void ABattleEnemyCharacter::ActivatePhaseEffect(int32 PhaseIndex)
+{
+	if (!Phases.IsValidIndex(PhaseIndex)) return;
+
+	const FPhaseData& Phase = Phases[PhaseIndex];
+
+	// 이전 Phase 이펙트 제거
+	if (ActivePhaseNiagaraComponent)
+	{
+		ActivePhaseNiagaraComponent->DestroyComponent();
+		ActivePhaseNiagaraComponent = nullptr;
+	}
+
+	// 새 Phase 이펙트 활성화
+	if (Phase.PhaseNiagaraEffect)
+	{
+		// 캐릭터에 Attach된 Niagara 컴포넌트 생성
+		ActivePhaseNiagaraComponent = NewObject<UNiagaraComponent>(this, UNiagaraComponent::StaticClass());
+		if (ActivePhaseNiagaraComponent)
+		{
+			ActivePhaseNiagaraComponent->SetAsset(Phase.PhaseNiagaraEffect);
+			ActivePhaseNiagaraComponent->SetupAttachment(GetRootComponent());
+			ActivePhaseNiagaraComponent->SetRelativeLocation(Phase.EffectOffset);
+			ActivePhaseNiagaraComponent->RegisterComponent();
+			ActivePhaseNiagaraComponent->Activate(true);
+		}
 	}
 }
