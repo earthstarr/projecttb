@@ -7,13 +7,27 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "PotalManager.generated.h"
 
-struct FBattleTransitionData;
+
 class AWorldPlayerController;
-struct FRoomData;
 class ULevelStreamingDynamic;
+
+struct FBattleTransitionData;
+struct FRoomData;
+struct FEnemyGroupData;
+
 /**
  * 
  */
+
+
+UENUM(BlueprintType)
+enum class EEventRoomType : uint8
+{
+	Battle,
+	Event,
+	Shop
+};
+
 UCLASS()
 class PROJECTTB_API UPotalManager : public UWorldSubsystem
 {
@@ -68,6 +82,13 @@ public:
 	UFUNCTION()
 	void ActivateHUDMode(const ERoomType RoomType);
 	
+	UFUNCTION()
+	TArray<FDataTableRowHandle> GetCachedEventRoomCandidates() { return EventRoomCandidates; }
+	
+	// 전투 방 종류에 따라 랜덤 적 조합을 제공
+	UFUNCTION()
+	bool GetRandomEnemyGroup(EBattleType BattleType, FEnemyGroupData& OutData);
+
 private:
 	// 페이드 인, 아웃
 	UPROPERTY()
@@ -90,4 +111,14 @@ private:
 	ULevelStreamingDynamic* NextLevelInstance;
 	
 	FDataTableRowHandle PendingRoomHandle;
+	
+	UPROPERTY()
+	TArray<FDataTableRowHandle> EventRoomCandidates;
+	
+	// 이벤트 방 목록 캐시화 (이벤트, 상점이 후보 대상)
+	void CacheEventRoomCandidates(UDataTable* RoomTable);
+	
+	// 적 정보 목록
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Battle Data", meta=(AllowPrivateAccess="true"))
+	TSoftObjectPtr<UDataTable> EnemyDataTable;
 };

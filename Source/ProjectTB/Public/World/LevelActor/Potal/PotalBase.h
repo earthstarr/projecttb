@@ -15,11 +15,14 @@ class PROJECTTB_API APotalBase : public AActor
 public:	
 	// Sets default values for this actor's properties
 	APotalBase();
-
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+	
+	// 다음 방 정보 설정. 각 클래스에서 재정의.
+	virtual void SetNextRoom() {};
+	
 #pragma region Components
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Potal")
 	UStaticMeshComponent* PotalMesh;
@@ -37,6 +40,7 @@ public:
 
 	virtual void PotalActivate();
 	virtual void CleanRoom();
+	
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Room Data")
 	FDataTableRowHandle SelectedRoomHandle;
