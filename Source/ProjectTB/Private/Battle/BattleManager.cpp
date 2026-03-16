@@ -916,8 +916,8 @@ void ABattleManager::OnActionComplete()
 
 	if (ABattleCombatant* Current = GetCurrentActor())
 		Current->OnTurnEnd();
-	
-	CurrentActor = nullptr; 
+
+	CurrentActor = nullptr;
 	BroadcastTurnOrder(); // 리스트 갱신
 
 	CheckBattleEnd();

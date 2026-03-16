@@ -7,6 +7,8 @@
 
 class UWidgetComponent;
 class UEnemyHealthBarWidget;
+class UNiagaraComponent;
+class UNiagaraSystem;
 
 // ─── 타겟 선택 조건 ────────────────────────────────────────────────────────────
 UENUM(BlueprintType)
@@ -78,6 +80,14 @@ struct FPhaseData
 	// 페이즈 진입 시 즉시 실행할 어빌리티 (없으면 바로 PhaseSkills 사용)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UTBGameplayAbility> PhaseTransitionAbility;
+
+	// 페이즈 전환 시 활성화할 Niagara 이펙트 (비워두면 이펙트 없음)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<class UNiagaraSystem> PhaseNiagaraEffect;
+
+	// 이펙트 스폰 오프셋 (캐릭터 기준, 예: 뒤쪽 FVector(-150, 0, 0))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FVector EffectOffset = FVector::ZeroVector;
 
 	// ─── 런타임 ────────────────────────────────────────────────────────────
 	bool bActivated = false;
@@ -187,6 +197,10 @@ private:
 	/** 현재 활성 페이즈 인덱스 (-1 = 페이즈 없음 → DefaultSkills 사용) */
 	int32 ActivePhaseIndex = -1;
 
+	/** 현재 활성화된 Phase Niagara 컴포넌트 (Phase 전환 시 이전 이펙트 제거용) */
+	UPROPERTY()
+	TObjectPtr<class UNiagaraComponent> ActivePhaseNiagaraComponent;
+
 	// ─── 도발 런타임 ──────────────────────────────────────────────────────────
 	/** 도발 시전자. 유효하지 않으면 도발 없음 */
 	TWeakObjectPtr<ABattleCombatant> TauntTarget;
@@ -206,4 +220,7 @@ private:
 	 * 반환값: 선택된 항목의 인덱스 (-1 = 없음).
 	 */
 	int32 SelectSkillFromPool(TArray<FEnemySkillEntry>& Pool, float SelfHPPercent);
+
+	/** Phase 전환 시 Niagara 이펙트 활성화 (이전 이펙트 제거 후 새 이펙트 스폰) */
+	void ActivatePhaseEffect(int32 PhaseIndex);
 };
