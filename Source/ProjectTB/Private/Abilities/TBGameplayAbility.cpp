@@ -354,12 +354,16 @@ void UTBGameplayAbility::SpawnImpactActor()
 	TArray<ABattleCombatant*> SpawnTargets;
 	bool bIsAllTargetType = (TargetType == EAbilityTargetType::AllEnemies || TargetType == EAbilityTargetType::AllAllies);
 
+	// 시전자가 플레이어인지 적인지 확인
+	ABattlePlayerCharacter* PlayerCaster = Cast<ABattlePlayerCharacter>(Avatar);
+	const bool bCasterIsPlayer = (PlayerCaster != nullptr);
+
 	if (bIsAllTargetType)
 	{
 		if (TargetType == EAbilityTargetType::AllEnemies)
-			SpawnTargets = BM->GetLivingEnemies();
+			SpawnTargets = bCasterIsPlayer ? BM->GetLivingEnemies() : BM->GetLivingPlayers();
 		else
-			SpawnTargets = BM->GetLivingPlayers();
+			SpawnTargets = bCasterIsPlayer ? BM->GetLivingPlayers() : BM->GetLivingEnemies();
 
 		if (SpawnTargets.IsEmpty()) return;
 
