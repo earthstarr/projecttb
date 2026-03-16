@@ -7,6 +7,8 @@
 #include "EventWidget.generated.h"
 
 class AEventBase;
+
+class AEventBase;
 /**
  * 
  */
@@ -16,5 +18,16 @@ class PROJECTTB_API UEventWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	UFUNCTION(BlueprintCallable, Category="Event")
+	void SetOwnerEvent(AEventBase* InOwnerEvent);
+
+	UFUNCTION(BlueprintCallable, Category="Event")
+	void RequestCloseEvent();
+
+protected:
+	UPROPERTY(BlueprintReadOnly, Category="Event")
+	TObjectPtr<AEventBase> OwnerEvent;
+	
+	
 	
 };

@@ -94,10 +94,11 @@ void AShopkeeperBasePawn::InitializeShopInventory()
 
 	ShopProductEntries = GI->GetUnownedArtifacts();
 
-	// 보스 등급은 제외
+	// 보스, 이벤트 등급은 제외
 	ShopProductEntries.RemoveAll([](const FArtifactEntry& Entry)
 	{
-		return Entry.ArtifactData.Grade == EArtifactGrade::Boss;
+		return Entry.ArtifactData.Grade == EArtifactGrade::Boss
+			|| Entry.ArtifactData.Grade == EArtifactGrade::Event;
 	});
 
 	bShopInventoryInitialized = true;

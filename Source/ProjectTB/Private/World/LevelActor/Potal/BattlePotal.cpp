@@ -12,11 +12,30 @@ ABattlePotal::ABattlePotal()
 	
 }
 
+void ABattlePotal::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (EnemyGroupData.EnemyClasses.Num() == 0)
+	{
+		UPotalManager* PotalManager = GetWorld()->GetSubsystem<UPotalManager>();
+		if (PotalManager != nullptr)
+		{
+			// 적 배치 정보 가져오기
+			PotalManager->GetRandomEnemyGroup(BattleType , EnemyGroupData);
+			BattleTransitionData.EnemyClasses = EnemyGroupData.EnemyClasses;
+		}
+	}
+}
+
 void ABattlePotal::PotalActivate()
 {
 	// 전투 맵 세팅 먼저
 	UPotalManager* PotalManager = GetWorld()->GetSubsystem<UPotalManager>();
-	PotalManager->SetBattleTransitionData(BattleTransitionData);
+	if (PotalManager != nullptr)
+	{
+		PotalManager->SetBattleTransitionData(BattleTransitionData);
+	}
 	
 	// 로딩
 	Super::PotalActivate();

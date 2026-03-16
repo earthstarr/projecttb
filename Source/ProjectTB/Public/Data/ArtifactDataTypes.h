@@ -29,7 +29,8 @@ enum class EArtifactGrade : uint8
 	Rare,
 	Epic,
 	Legendary,
-	Boss	// 보스전 보상으로만 획득 가능
+	Boss,			// 보스전 보상으로만 획득 가능
+	Event			// 이벤트 보상으로만 획득 가능
 };
 
 // ─── 데이터 테이블의 아티팩트 GE 설정 ────────────────────────────────
