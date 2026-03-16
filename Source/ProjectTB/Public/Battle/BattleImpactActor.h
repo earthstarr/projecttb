@@ -11,6 +11,7 @@ class UNiagaraSystem;
 class UProjectileMovementComponent;
 class ABattleCombatant;
 class UTBGameplayAbility;
+class UAudioComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleImpact);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBattleImpactFinished);
@@ -112,6 +113,20 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+	
+	// ──────────── 사운드 ────────────────────────────────────
+	
+	UPROPERTY()
+	TObjectPtr<class UAudioComponent> FlyingLoopAudioComponent;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sound")
+	TObjectPtr<USoundBase> SpawnSound;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sound")
+	TObjectPtr<USoundBase> FlyingLoopSound;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sound")
+	TObjectPtr<USoundBase> ImpactSound;
 
 	// ─── 개별 타겟 모드 (bSpawnImpactPerTarget 용) ────────────────────────────
 	// true면 OnImpact 대신 OwningAbility->ApplyDamageToSingleTarget(TargetCombatant) 직접 호출

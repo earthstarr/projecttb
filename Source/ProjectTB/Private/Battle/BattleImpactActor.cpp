@@ -8,6 +8,8 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Battle/BattleCombatant.h"
 #include "Abilities/TBGameplayAbility.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ABattleImpactActor::ABattleImpactActor()
 {
@@ -80,6 +82,21 @@ void ABattleImpactActor::BeginPlay()
 		GetWorldTimerManager().SetTimer(
 			ParryOpenTimer, this, &ABattleImpactActor::TriggerOpenParryTiming, ParryOpenTime, false);
 	}
+	
+	// 사운드
+	if (SpawnSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SpawnSound, GetActorLocation());
+	}
+	
+	if (FlyingLoopSound)
+	{
+		FlyingLoopAudioComponent = UGameplayStatics::SpawnSoundAttached(
+			FlyingLoopSound, RootSceneComponent,
+			NAME_None, FVector::ZeroVector, EAttachLocation::KeepRelativeOffset,
+			false, 1.0f, 1.0f, 0.0f, nullptr, nullptr, true);
+	}
+	
 }
 
 void ABattleImpactActor::TriggerImpact()
@@ -94,6 +111,18 @@ void ABattleImpactActor::TriggerImpact()
 		MeshComponent->SetVisibility(false);
 
 	PlayImpactEffect();
+	
+	// 사운드
+	if (FlyingLoopAudioComponent)
+	{
+		FlyingLoopAudioComponent->Stop();
+		FlyingLoopAudioComponent = nullptr;
+	}
+	
+	if (ImpactSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
+	}
 
 	// 개별 타겟 모드: OnImpact 대신 직접 단일 타겟에만 데미지 적용
 	if (bPerTargetMode && OwningAbility.IsValid() && TargetCombatant.IsValid())

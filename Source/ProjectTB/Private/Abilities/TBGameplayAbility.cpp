@@ -632,6 +632,24 @@ void UTBGameplayAbility::OnCutsceneCameraBlendFinished()
 			CutsceneNiagaraTimer, this, &UTBGameplayAbility::SpawnCutsceneNiagara, CutsceneNiagaraDelay, false);
 	}
 
+	// 컷씬 사운드 재생 타이머 설정 (카메라 블렌딩 완료 시점 기준)
+	if (CutsceneSound)
+	{
+		FTimerHandle CutsceneSoundTimer;
+		Avatar->GetWorldTimerManager().SetTimer(
+			CutsceneSoundTimer,
+			[this]()
+			{
+				if (CutsceneSound)
+				{
+					UGameplayStatics::PlaySound2D(this, CutsceneSound);
+				}
+			},
+			CutsceneSoundDelay,
+			false
+		);
+	}
+
 	// 컷씬 종료 타이머 설정 (카메라 블렌딩 완료 후부터 CutsceneDuration 만큼 유지)
 	Avatar->GetWorldTimerManager().SetTimer(
 		CutsceneTimer, this, &UTBGameplayAbility::OnCutsceneFinished, CutsceneDuration, false);
@@ -650,7 +668,7 @@ void UTBGameplayAbility::SpawnCutsceneNiagara()
 	const FRotator SpawnRotation = Avatar->GetActorRotation();
 
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		GetWorld(), CutsceneNiagaraEffect, SpawnLocation, SpawnRotation);
+		GetWorld(), CutsceneNiagaraEffect, SpawnLocation, SpawnRotation);	
 }
 
 void UTBGameplayAbility::OnCutsceneFinished()
