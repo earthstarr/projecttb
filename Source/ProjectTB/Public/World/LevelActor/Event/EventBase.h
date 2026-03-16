@@ -7,6 +7,8 @@
 #include "EventBase.generated.h"
 
 class AWorldPlayerController;
+class USceneComponent;
+class USphereComponent;
 class UUserWidget;
 class UPrimitiveComponent;
 
@@ -23,6 +25,15 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Event")
+	TObjectPtr<USceneComponent> Root;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Event")
+	TObjectPtr<USphereComponent> TriggerSphere;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Event", meta=(ClampMin="0.0"))
+	float TriggerRadius = 150.f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "UI")
 	TSubclassOf<UUserWidget> EventWidgetClass;

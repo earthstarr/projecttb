@@ -5,6 +5,8 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/SphereComponent.h"
 #include "UI/World/EventWidget.h"
 #include "World/WorldCharacterBase.h"
 #include "World/WorldPlayerController.h"
@@ -15,13 +17,29 @@ AEventBase::AEventBase()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	SetRootComponent(Root);
+
+	TriggerSphere = CreateDefaultSubobject<USphereComponent>(TEXT("TriggerSphere"));
+	TriggerSphere->SetupAttachment(Root);
+	TriggerSphere->InitSphereRadius(TriggerRadius);
+	TriggerSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	TriggerSphere->SetCollisionObjectType(ECC_WorldDynamic);
+	TriggerSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
+	TriggerSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	TriggerSphere->SetGenerateOverlapEvents(true);
 }
 
 // Called when the game starts or when spawned
 void AEventBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (TriggerSphere)
+	{
+		TriggerSphere->SetSphereRadius(TriggerRadius);
+		TriggerSphere->OnComponentBeginOverlap.AddUniqueDynamic(this, &AEventBase::OnAreaOverlap);
+	}
 }
 
 bool AEventBase::CanStartEvent() const
@@ -152,8 +170,13 @@ void AEventBase::FinishEvent()
 
 void AEventBase::DisableEventActor()
 {
-	SetActorEnableCollision(false);
 	SetActorTickEnabled(false);
+
+	if (TriggerSphere)
+	{
+		TriggerSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		TriggerSphere->SetGenerateOverlapEvents(false);
+	}
 
 	if (!bOneShot)
 	{
