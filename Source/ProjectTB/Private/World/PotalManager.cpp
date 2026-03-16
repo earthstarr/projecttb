@@ -102,6 +102,12 @@ void UPotalManager::OnFadeInFinished()
 	// 방 생성
 	RoomData = PendingRoomHandle.GetRow<FRoomData>(TEXT("RoomData"));
 
+	if (RoomData == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPotalManager::OnFadeInFinished 의 RoomData가 nullptr 입니다."));
+		return;
+	}
+	
 	bool bSuccess = false;
 	ULevelStreamingDynamic* StreamingLevel = ULevelStreamingDynamic::LoadLevelInstanceBySoftObjectPtr(
 		GetWorld(), RoomData->NextLevel, RoomData->StartPosition, RoomData->StartRotation, bSuccess);
