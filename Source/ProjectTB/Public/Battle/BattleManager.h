@@ -121,6 +121,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	EAbilityTargetType GetPendingTargetType() const { return PendingTargetType; }
 
+	// ─── 스태미나 GE ─────────────────────────────────────────────────────────
+	// 전투 시작 시 스태미나 0으로 초기화
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle|Stamina")
+	TSubclassOf<UGameplayEffect> GE_StaminaReset;
+
+	// 플레이어 턴 시작마다 스태미나 +20
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle|Stamina")
+	TSubclassOf<UGameplayEffect> GE_StaminaTurnRegen;
+
+	// 적에게 피격 시 스태미나 +5
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle|Stamina")
+	TSubclassOf<UGameplayEffect> GE_StaminaOnHit;
+
 	// ─── 테스트용 자동 시작 ───────────────────────────────────────────────────
 	// 레벨에 배치된 모든 Player/EnemyCharacter를 자동 감지해서 전투 시작
 	// GameInstance 방식 구현 후 false로 설정

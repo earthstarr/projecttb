@@ -312,6 +312,16 @@ void ABattleManager::StartBattle(
 		E->OnHealReceived.AddDynamic(this, &ABattleManager::OnCombatantHealed);
 	}
 
+	// 전투 시작 시 플레이어 스태미나 0 초기화
+	if (GE_StaminaReset)
+	{
+		for (ABattlePlayerCharacter* P : PlayerParty)
+		{
+			if (UAbilitySystemComponent* ASC = P->GetAbilitySystemComponent())
+				ASC->ApplyGameplayEffectToSelf(GE_StaminaReset->GetDefaultObject<UGameplayEffect>(), 1.f, ASC->MakeEffectContext());
+		}
+	}
+
 	// 아티펙트 효과 적용
 	ApplyArtifacts();
 
@@ -527,8 +537,16 @@ void ABattleManager::AdvanceTurn()
 		return;
 	}
 
-	if (Cast<ABattlePlayerCharacter>(Next))
+	if (ABattlePlayerCharacter* Player = Cast<ABattlePlayerCharacter>(Next))
+	{
+		// 플레이어 턴 시작 시 스태미나 +20
+		if (GE_StaminaTurnRegen)
+		{
+			if (UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
+				ASC->ApplyGameplayEffectToSelf(GE_StaminaTurnRegen->GetDefaultObject<UGameplayEffect>(), 1.f, ASC->MakeEffectContext());
+		}
 		StartPlayerTurn();
+	}
 	else if (Cast<ABattleEnemyCharacter>(Next))
 		StartEnemyTurn();
 }
@@ -1053,6 +1071,16 @@ void ABattleManager::OnCombatantDied(ABattleCombatant* Combatant)
 void ABattleManager::OnCombatantDamaged(ABattleCombatant* Combatant, float Damage, bool /*bIsCritical*/)
 {
 	OnAnyDamageDealt.Broadcast(Combatant, Damage);
+
+	// 피격 플레이어 스태미나 +5
+	if (GE_StaminaOnHit)
+	{
+		if (ABattlePlayerCharacter* Player = Cast<ABattlePlayerCharacter>(Combatant))
+		{
+			if (UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
+				ASC->ApplyGameplayEffectToSelf(GE_StaminaOnHit->GetDefaultObject<UGameplayEffect>(), 1.f, ASC->MakeEffectContext());
+		}
+	}
 }
 
 void ABattleManager::OnCombatantHealed(ABattleCombatant* Combatant, float Heal)
