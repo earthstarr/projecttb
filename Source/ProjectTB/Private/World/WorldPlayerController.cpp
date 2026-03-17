@@ -159,10 +159,12 @@ void AWorldPlayerController::SetInputModeUIOnly()
 void AWorldPlayerController::SetInputModeBattle()
 {
 	UE_LOG(LogTemp, Log, TEXT("AWorldPlayerController::SetInputModeBattle Enter"));
-
+	
+	
 	// 이동 차단
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn == nullptr) return;
+	if (ControlledPawn->IsHidden()) return;
 	
 	SetIgnoreMoveInput(true);
 	SetIgnoreLookInput(true);
@@ -186,10 +188,11 @@ void AWorldPlayerController::SetInputModeBattle()
 void AWorldPlayerController::SetInputModeWorld()
 {
 	UE_LOG(LogTemp, Log, TEXT("AWorldPlayerController::SetInputModeWorld Enter"));
-
+	
 	// 이동 활성화
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn == nullptr) return;
+	if (ControlledPawn->IsHidden() == false) return;
 	
 	SetIgnoreMoveInput(false);
 	SetIgnoreLookInput(false);
@@ -202,5 +205,6 @@ void AWorldPlayerController::SetInputModeWorld()
 	
 	// 카메라 활성화
 	SetViewTarget(ControlledPawn);
+	
 }
 

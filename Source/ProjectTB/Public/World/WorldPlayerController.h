@@ -35,4 +35,5 @@ private:
 
 	UPROPERTY(Meta = (AllowPrivateAccess = true))
 	TObjectPtr<UUserWidget> CurrentWidget;
+	
 };
