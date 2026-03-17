@@ -14,6 +14,7 @@ class ABattleEnemyCharacter;
 class UTBGameplayAbility;
 class ACameraActor;
 class ATBBattleHUD;
+class UAudioComponent;
 
 UENUM(BlueprintType)
 enum class EBattlePhase : uint8
@@ -133,6 +134,11 @@ public:
 	// 적에게 피격 시 스태미나 +5
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle|Stamina")
 	TSubclassOf<UGameplayEffect> GE_StaminaOnHit;
+
+	// ─── 주사위 사운드 ────────────────────────────────────────────────────────
+	// 주사위 롤링 중 재생되는 루프 사운드 (2초간)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle|Dice")
+	TObjectPtr<USoundBase> DiceRollingSound;
 
 	// ─── 테스트용 자동 시작 ───────────────────────────────────────────────────
 	// 레벨에 배치된 모든 Player/EnemyCharacter를 자동 감지해서 전투 시작
@@ -262,6 +268,10 @@ private:
 	FTimerHandle ParryCooldownTimer;
 	void ClearParryCooldown();
 	static constexpr float ParryCooldownDuration = 0.5f;
+
+	// 주사위 롤링 사운드 재생용 오디오 컴포넌트
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> DiceRollingAudioComponent;
 
 	// 카메라 상태
 	bool  bActionCameraActive       = false;

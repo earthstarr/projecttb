@@ -13,6 +13,7 @@
 #include "Data/LevelDataTypes.h"
 #include "UI/TBBattleHUD.h"
 #include "World/PotalManager.h"
+#include "Components/AudioComponent.h"
 #include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 
 ABattleManager::ABattleManager()
@@ -731,6 +732,12 @@ void ABattleManager::RollDiceAndWait()
 
 	SetPhase(EBattlePhase::DiceRolling);
 
+	// 주사위 롤링 사운드 재생 (2초간)
+	if (DiceRollingSound)
+	{
+		DiceRollingAudioComponent = UGameplayStatics::SpawnSound2D(this, DiceRollingSound);
+	}
+
 	// 0.1초 간격 애니메이션 타이머 시작
 	GetWorldTimerManager().SetTimer(
 		DiceAnimationTimer, this, &ABattleManager::DiceAnimationTick, 0.1f, true);
@@ -755,6 +762,13 @@ void ABattleManager::ExecuteActionAfterDice()
 {
 	// 애니메이션 타이머 정지
 	GetWorldTimerManager().ClearTimer(DiceAnimationTimer);
+
+	// 주사위 롤링 사운드 중단
+	if (DiceRollingAudioComponent)
+	{
+		DiceRollingAudioComponent->Stop();
+		DiceRollingAudioComponent = nullptr;
+	}
 
 	// 최종 결과 브로드캐스트
 	OnDiceRolled.Broadcast(PendingDiceFinalFace, PendingDiceMultiplier);

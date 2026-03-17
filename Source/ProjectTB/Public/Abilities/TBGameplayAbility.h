@@ -233,6 +233,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
 	float CutsceneNiagaraDelay = 0.5f;
 
+	// 컷씬 사운드
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	TObjectPtr<USoundBase> CutsceneSound;
+
+	// 컷씬 카메라 블렌딩 완료 후 사운드 재생까지의 딜레이 (초)
+	// CutsceneBlendInTime 이후 시점부터 계산됨
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Camera|Cutscene", meta=(EditCondition="bUseCutsceneCamera"))
+	float CutsceneSoundDelay = 0.0f;
+
 	// ─── 상태이상 부여 설정 ──────────────────────────────────────────────────
 	// 이 어빌리티가 타격 시 대상에게 부여할 상태이상 목록.
 	// Blueprint에서 편집: {StatusTag=Status.Burn, StacksToApply=2, ScalingCoeff=0.4}
