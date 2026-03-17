@@ -5,11 +5,16 @@
 
 #include "TBGameInstance.h"
 #include "Engine/LevelStreamingDynamic.h"
+#include "Engine/TargetPoint.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/TBBattleHUD.h"
 #include "World/WorldPlayerController.h"
+#include "World/DataStruct/PortalSpawnConfig.h"
+#include "World/LevelActor/AnchorSet/PortalSpawnAnchorSet.h"
+#include "World/LevelActor/Potal/PotalBase.h"
+
 
 void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 {
@@ -22,7 +27,16 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 		return;
 	}
 	
-	//한틱 다음에 실행
+	// 포탈 정보 캐시화
+	UTBGameInstance* GI = Cast<UTBGameInstance>(InWorld.GetGameInstance());
+	check(GI);
+
+	CachePotalConfig = GI->PortalSpawnConfig.LoadSynchronous();
+	if (ensureAlways(CachePotalConfig) == false)
+	{
+		return;
+	}
+	
 	
 	// 이동 비활성화
 	if (PC->GetCharacter() == nullptr)
@@ -34,7 +48,7 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 	{
 		PC->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_None);
 	}
-
+	
 	// Map_World로 이동.
 	FString Path = TEXT("/Game/Blueprints2/DataTable/DT_Room.DT_Room");
 	UDataTable* LoadedTable = Cast<UDataTable>(StaticLoadObject(UDataTable::StaticClass(), nullptr, *Path));
@@ -45,8 +59,8 @@ void UPotalManager::OnWorldBeginPlay(UWorld& InWorld)
 		return;
 	}
 	
-	// 이벤트 맵이 이동할 수 있는 맵 선별 및 캐시화
-	CacheEventRoomCandidates(LoadedTable);
+	// 맵이 이동할 수 있는 맵 선별 및 캐시화
+	CachePortalRoomCandidates(LoadedTable);
 	
 	// 적 정보에 대한 데이터 테이블
 	Path = TEXT("/Game/Blueprints2/DataTable/DT_EnemySetup.DT_EnemySetup");
@@ -79,7 +93,9 @@ void UPotalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHa
 	//페이드 인 기능. 이제는 안전하게 페이드 인 이후 방 로딩함.
 	//CamManager->StartCameraFade(0.f, 1.f, 0.5f, FLinearColor::Black, false, true);
 	//OnFadeInFinished(SelectedRoomHandle);
-	
+
+	CurrentPortalSpawnAnchorSet = nullptr;
+
 	//페이드 인 이후 방 로딩
 	PendingRoomHandle = SelectedRoomHandle;
 	GetWorld()->GetTimerManager().ClearTimer(FadeInTimerHandle);
@@ -88,7 +104,12 @@ void UPotalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHa
 
 void UPotalManager::OnReturnToWorldLevel(const FDataTableRowHandle& ReturnRoomData)
 {
-	//지금은 테스트로 지정한 방으로 복귀
+	// 돌아갈 맵이 없다면 월드 맵으로
+	if (ReturnRoomData.IsNull())
+	{
+		InitRoomLoad();
+		return;
+	}
 	OnLevelLoadStarted(ReturnRoomData);
 }
 
@@ -128,6 +149,16 @@ void UPotalManager::OnLevelShown()
 	UE_LOG(LogTemp, Log, TEXT("UPotalManager::OnLevelLoadFinished Enter"));
 
 	TeleportLevel();
+	
+	// 이동할 레벨이 배틀 맵이 아니라면 새로운 포탈 생성
+	if (RoomData->RoomType != ERoomType::Battle)
+	{
+		//포탈 생성 지점이 등록되어 있다면 포탈 생성
+		bPendingPortalGeneration = true;
+		bPortalGeneratedForCurrentRoom = false;
+		MakeNewPotal();
+	}
+	
 	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
 	{
 		if (RoomData)
@@ -319,16 +350,18 @@ bool UPotalManager::GetRandomEnemyGroup(EBattleType BattleType, FEnemyGroupData&
 	return true;
 }
 
-void UPotalManager::CacheEventRoomCandidates(UDataTable* RoomTable)
+void UPotalManager::CachePortalRoomCandidates(UDataTable* RoomTable)
 {
+	BattleRoomCandidates.Reset();
 	EventRoomCandidates.Reset();
+	ShopRoomCandidates.Reset();
 
 	if (RoomTable == nullptr)
 	{
 		return;
 	}
 
-	static const FString ContextString(TEXT("CacheRoomCandidates"));
+	static const FString ContextString(TEXT("CachePortalRoomCandidates"));
 
 	for (const FName& RowName : RoomTable->GetRowNames())
 	{
@@ -338,18 +371,440 @@ void UPotalManager::CacheEventRoomCandidates(UDataTable* RoomTable)
 			continue;
 		}
 
-		if (RoomRow->RoomType == ERoomType::Event
-			|| RoomRow->RoomType == ERoomType::Shop)
-		{
-			FDataTableRowHandle NewHandle;
-			NewHandle.DataTable = RoomTable;
-			NewHandle.RowName = RowName;
+		FDataTableRowHandle NewHandle;
+		NewHandle.DataTable = RoomTable;
+		NewHandle.RowName = RowName;
 
+		switch (RoomRow->RoomType)
+		{
+		case ERoomType::Battle:
+			BattleRoomCandidates.Add(NewHandle);
+			break;
+		case ERoomType::Event:
 			EventRoomCandidates.Add(NewHandle);
+			break;
+			
+			//이벤트 포탈은 상점도 갈 수 있도록 설계
+		case ERoomType::Shop:
+			ShopRoomCandidates.Add(NewHandle);
+			EventRoomCandidates.Add(NewHandle);
+			break;
+		default:
+			break;
 		}
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Cached EventRoomCandidates: %d"), EventRoomCandidates.Num());
+	UE_LOG(LogTemp, Log, TEXT("BattleRoomCandidates: %d"), BattleRoomCandidates.Num());
+	UE_LOG(LogTemp, Log, TEXT("EventRoomCandidates: %d"), EventRoomCandidates.Num());
+	UE_LOG(LogTemp, Log, TEXT("ShopRoomCandidates: %d"), ShopRoomCandidates.Num());
+}
+
+bool UPotalManager::GetRandomRoomHandleByPortalType(EEventRoomType PortalType, FDataTableRowHandle& OutHandle) const
+{
+	const TArray<FDataTableRowHandle>* Candidates = nullptr;
+
+	switch (PortalType)
+	{
+	case EEventRoomType::Battle:
+		Candidates = &BattleRoomCandidates;
+		break;
+	case EEventRoomType::Event:
+		Candidates = &EventRoomCandidates;
+		break;
+	case EEventRoomType::Shop:
+		Candidates = &ShopRoomCandidates;
+		break;
+	default:
+		return false;
+	}
+
+	if (Candidates == nullptr || Candidates->IsEmpty())
+	{
+		return false;
+	}
+
+	// 현재 층 수에 따라 다른 난이도 가져오기
+	return GetRoomHandleBasedOnPortalMovement(Candidates, OutHandle);
+}
+
+void UPotalManager::MakeNewPotal()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal Enter - CurrentLevelInstance=%s CachePotalConfig=%s"),
+		CurrentLevelInstance ? TEXT("Valid") : TEXT("Null"),
+		CachePotalConfig ? TEXT("Valid") : TEXT("Null"));
+
+	if (CurrentLevelInstance == nullptr || CachePotalConfig == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal EarlyReturn - CurrentLevelInstance or CachePotalConfig is null"));
+		return;
+	}
+
+	if (!bPendingPortalGeneration || bPortalGeneratedForCurrentRoom)
+	{
+		return;
+	}
+	
+	ULevel* LoadedLevel = CurrentLevelInstance->GetLoadedLevel();
+	if (LoadedLevel == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal EarlyReturn - LoadedLevel is null"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal LoadedLevel=%s Actors.Num=%d"),
+		*LoadedLevel->GetName(), LoadedLevel->Actors.Num());
+
+	// 로드된 맵에서 포탈이 스폰 될 수 있는 지점 확보
+	TArray<ATargetPoint*> SpawnPoints;
+	CollectPortalSpawnPoints(LoadedLevel, SpawnPoints);
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal SpawnPoints.Num=%d"), SpawnPoints.Num());
+
+	if (SpawnPoints.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal EarlyReturn - SpawnPoints is empty"));
+		return;
+	}
+
+	// 가능한 지점 안에서 최소 1개  ~ n 개 지점에 생성
+	const int32 PortalCount = FMath::RandRange(1, SpawnPoints.Num());
+	TArray<ATargetPoint*> AvailablePoints = SpawnPoints;
+
+	bool bShopPortalSpawned = false;
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal PortalCount=%d"), PortalCount);
+
+	int32 SpawnedPortalCount = 0;
+	
+	for (int32 Index = 0; Index < PortalCount && !AvailablePoints.IsEmpty(); ++Index)
+	{
+		// 가능한 지점에서 한 곳 뽑아서 스폰 포인트로 잡고 제거
+		const int32 PointIndex = FMath::RandRange(0, AvailablePoints.Num() - 1);
+		ATargetPoint* SpawnPoint = AvailablePoints[PointIndex];
+		AvailablePoints.RemoveAtSwap(PointIndex);
+
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal Loop=%d SelectedSpawnPoint=%s RemainingPoints=%d"),
+			Index, SpawnPoint ? *SpawnPoint->GetName() : TEXT("Null"), AvailablePoints.Num());
+
+		TArray<EEventRoomType> AvailablePortalTypes;
+
+		// 이번에 생성할 수 있는 포탈의 종류. 상점은 최대 1번만 뽑힐 수 있도록 가드 변수에 따라 제어됨.
+		if (CanSpawnPortalType(EEventRoomType::Battle))
+		{
+			AvailablePortalTypes.Add(EEventRoomType::Battle);
+		}
+
+		if (CanSpawnPortalType(EEventRoomType::Event))
+		{
+			AvailablePortalTypes.Add(EEventRoomType::Event);
+		}
+
+		if (!bShopPortalSpawned && CanSpawnPortalType(EEventRoomType::Shop))
+		{
+			AvailablePortalTypes.Add(EEventRoomType::Shop);
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal AvailablePortalTypes.Num=%d bShopPortalSpawned=%s"),
+			AvailablePortalTypes.Num(), bShopPortalSpawned ? TEXT("true") : TEXT("false"));
+		
+		if (AvailablePortalTypes.IsEmpty())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal Break - AvailablePortalTypes is empty"));
+			break;
+		}
+		
+		// AvailablePortalTypes
+		bool bSpawnedAtThisPoint = false;
+		
+		// 가능한 타입 넣고 생성 시도. 실패하면 다른 타입 넣고 재시도.
+		while (!AvailablePortalTypes.IsEmpty())
+		{
+			const int32 TypeIndex = FMath::RandRange(0, AvailablePortalTypes.Num() - 1);
+			const EEventRoomType ChosenPortalType = AvailablePortalTypes[TypeIndex];
+			AvailablePortalTypes.RemoveAtSwap(TypeIndex);
+
+			UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal TrySpawn - SpawnPoint=%s PortalType=%d RemainingTypeOptions=%d"),
+				SpawnPoint ? *SpawnPoint->GetName() : TEXT("Null"), static_cast<int32>(ChosenPortalType), AvailablePortalTypes.Num());
+
+			if (SpawnPortalAtPoint(SpawnPoint, LoadedLevel, ChosenPortalType))
+			{
+				if (ChosenPortalType == EEventRoomType::Shop)
+				{
+					bShopPortalSpawned = true;
+				}
+				
+				++SpawnedPortalCount;
+				bSpawnedAtThisPoint = true;
+				UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] MakeNewPotal SpawnSuccess - SpawnPoint=%s PortalType=%d"),
+					SpawnPoint ? *SpawnPoint->GetName() : TEXT("Null"), static_cast<int32>(ChosenPortalType));
+				break;
+			}
+		}
+
+		if (!bSpawnedAtThisPoint)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("UPotalManager::MakeNewPotal - Failed to spawn portal at selected point."));
+		}
+	}
+	
+	if (SpawnedPortalCount > 0)
+	{
+		bPortalGeneratedForCurrentRoom = true;
+		bPendingPortalGeneration = false;
+	}
+}
+
+void UPotalManager::CollectPortalSpawnPoints(ULevel* LoadedLevel, TArray<ATargetPoint*>& OutSpawnPoints) const
+{
+	OutSpawnPoints.Reset();
+
+	if (LoadedLevel == nullptr)
+	{
+		return;
+	}
+
+	APortalSpawnAnchorSet* AnchorSet = CurrentPortalSpawnAnchorSet.Get();
+	if (!IsValid(AnchorSet))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] CollectPortalSpawnPoints - CurrentPortalSpawnAnchorSet is invalid."));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] CollectPortalSpawnPoints - CurrentAnchorSet=%s LoadedLevel=%s"),
+		*AnchorSet->GetName(),
+		*LoadedLevel->GetName());
+
+	AnchorSet->GetValidPortalSpawnPoints(OutSpawnPoints);
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] CollectPortalSpawnPoints - AnchorSet=%s SpawnPoints=%d"),
+		*AnchorSet->GetName(), OutSpawnPoints.Num());
+}
+
+bool UPotalManager::SpawnPortalAtPoint(ATargetPoint* SpawnPoint, ULevel* LoadedLevel, EEventRoomType PortalType)
+{
+	if (SpawnPoint == nullptr || LoadedLevel == nullptr || CachePotalConfig == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] SpawnPortalAtPoint EarlyReturn - SpawnPoint=%s LoadedLevel=%s CachePotalConfig=%s"),
+			SpawnPoint ? TEXT("Valid") : TEXT("Null"),
+			LoadedLevel ? TEXT("Valid") : TEXT("Null"),
+			CachePotalConfig ? TEXT("Valid") : TEXT("Null"));
+		return false;
+	}
+	
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] SpawnPortalAtPoint EarlyReturn - World is null"));
+		return false;
+	}
+
+	FDataTableRowHandle SelectedHandle;
+	if (!GetRandomRoomHandleByPortalType(PortalType, SelectedHandle))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] SpawnPortalAtPoint EarlyReturn - Failed to get room handle for PortalType=%d"),
+			static_cast<int32>(PortalType));
+		return false;
+	}
+
+	TSoftClassPtr<APotalBase> PortalSoftClass;
+	switch (PortalType)
+	{
+	case EEventRoomType::Battle:
+		PortalSoftClass = CachePotalConfig->BattlePortalClass;
+		break;
+	case EEventRoomType::Event:
+		PortalSoftClass = CachePotalConfig->EventPortalClass;
+		break;
+	case EEventRoomType::Shop:
+		PortalSoftClass = CachePotalConfig->ShopPortalClass;
+		break;
+	default:
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] SpawnPortalAtPoint EarlyReturn - Unknown PortalType=%d"),
+			static_cast<int32>(PortalType));
+		return false;
+	}
+
+	TSubclassOf<APotalBase> PortalClass = PortalSoftClass.LoadSynchronous();
+	if (PortalClass == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] SpawnPortalAtPoint EarlyReturn - PortalClass load failed for PortalType=%d"),
+			static_cast<int32>(PortalType));
+		return false;
+	}
+	
+	
+	const FTransform SpawnTransform = SpawnPoint->GetActorTransform();
+	
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.OverrideLevel = LoadedLevel;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.bDeferConstruction = true;	// begin play 전에 PreInitializeComponents 이전에 값을 넣고 초기화를 시킬 예정
+
+	APotalBase* SpawnedPortal = World->SpawnActor<APotalBase>(PortalClass.Get(), SpawnTransform, SpawnParams);
+	
+
+	if (SpawnedPortal == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] SpawnPortalAtPoint EarlyReturn - SpawnActor failed for PortalType=%d SpawnPoint=%s"),
+			static_cast<int32>(PortalType), *SpawnPoint->GetName());
+		return false;
+	}
+
+	SpawnedPortal->InitializePortal(SelectedHandle);
+	SpawnedPortal->FinishSpawning(SpawnTransform);
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] SpawnPortalAtPoint Success - PortalType=%d SpawnPoint=%s RowName=%s"),
+		static_cast<int32>(PortalType), *SpawnPoint->GetName(), *SelectedHandle.RowName.ToString());
+	return true;
+}
+
+bool UPotalManager::GetRoomHandleBasedOnPortalMovement(const TArray<FDataTableRowHandle>* Candidates, FDataTableRowHandle& OutHandle) const
+{
+	TArray<FDataTableRowHandle> FilteredCandidates;
+	FilterCandidatesByPortalMoveCount(Candidates, FilteredCandidates);
+	
+	if (FilteredCandidates.IsEmpty())
+	{
+		int32 PortalMoveCount = 0;
+		if (const UTBGameInstance* GI = Cast<UTBGameInstance>(GetWorld()->GetGameInstance()))
+		{
+			PortalMoveCount = GI->GetPortalMoveCount();
+		}
+
+		UE_LOG(LogTemp, Warning,
+			TEXT("UPotalManager::GetRoomHandleBasedOnPortalMovement - No candidates at PortalMoveCount %d"),
+			PortalMoveCount);
+		return false;
+	}
+
+	const int32 RandomIndex = FMath::RandRange(0, FilteredCandidates.Num() - 1);
+	OutHandle = FilteredCandidates[RandomIndex];
+	return true;
+}
+
+bool UPotalManager::CanSpawnPortalType(EEventRoomType PortalType) const
+{
+	const TArray<FDataTableRowHandle>* Candidates = nullptr;
+
+	switch (PortalType)
+	{
+	case EEventRoomType::Battle:
+		Candidates = &BattleRoomCandidates;
+		break;
+	case EEventRoomType::Event:
+		Candidates = &EventRoomCandidates;
+		break;
+	case EEventRoomType::Shop:
+		Candidates = &ShopRoomCandidates;
+		break;
+	default:
+		return false;
+	}
+
+	TArray<FDataTableRowHandle> FilteredCandidates;
+	FilterCandidatesByPortalMoveCount(Candidates, FilteredCandidates);
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] CanSpawnPortalType PortalType=%d Candidates=%d Filtered=%d"),
+		static_cast<int32>(PortalType),
+		Candidates ? Candidates->Num() : 0,
+		FilteredCandidates.Num());
+
+	return !FilteredCandidates.IsEmpty();
+}
+
+void UPotalManager::FilterCandidatesByPortalMoveCount(const TArray<FDataTableRowHandle>* Candidates,
+	TArray<FDataTableRowHandle>& OutFilteredCandidates) const
+{
+	OutFilteredCandidates.Reset();
+
+	if (Candidates == nullptr || Candidates->IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] FilterCandidatesByPortalMoveCount EarlyReturn - Candidates is null or empty"));
+		return;
+	}
+
+	// 현재 층 수 (이동 하기 전에 포탈에 닿아서 1 증가된 상태)
+	int32 PortalMoveCount = 0;
+	if (const UTBGameInstance* GI = Cast<UTBGameInstance>(GetWorld()->GetGameInstance()))
+	{
+		PortalMoveCount = GI->GetPortalMoveCount();
+	}
+
+	OutFilteredCandidates.Reserve(Candidates->Num());	// 크기 미리 확보
+
+	static const FString ContextString(TEXT("FilterCandidatesByPortalMoveCount"));
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] FilterCandidatesByPortalMoveCount Start - PortalMoveCount=%d Candidates=%d"),
+		PortalMoveCount, Candidates->Num());
+
+	for (const FDataTableRowHandle& Candidate : *Candidates)
+	{
+		const FRoomData* RoomRow = Candidate.GetRow<FRoomData>(ContextString);
+		if (RoomRow == nullptr)
+		{
+			continue;
+		}
+
+		if (PortalMoveCount < RoomRow->MinPortalMoveCount)
+		{
+			continue;
+		}
+
+		if (RoomRow->MaxPortalMoveCount >= 0 && PortalMoveCount > RoomRow->MaxPortalMoveCount)
+		{
+			continue;
+		}
+
+		OutFilteredCandidates.Add(Candidate);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] FilterCandidatesByPortalMoveCount Result - Filtered=%d"),
+		OutFilteredCandidates.Num());
+}
+
+void UPotalManager::RegisterPortalSpawnAnchorSet(APortalSpawnAnchorSet* AnchorSet)
+{
+	if (AnchorSet == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] RegisterPortalSpawnAnchorSet - AnchorSet is null"));
+		return;
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] RegisterPortalSpawnAnchorSet - Name=%s Level=%s Pending=%s Generated=%s BeforeCount=%d"),
+		*AnchorSet->GetName(),
+		AnchorSet->GetLevel() ? *AnchorSet->GetLevel()->GetName() : TEXT("Null"),
+		bPendingPortalGeneration ? TEXT("true") : TEXT("false"),
+		bPortalGeneratedForCurrentRoom ? TEXT("true") : TEXT("false"),
+		RegisteredPortalSpawnAnchorSets.Num());
+
+	RegisteredPortalSpawnAnchorSets.AddUnique(AnchorSet);
+	CurrentPortalSpawnAnchorSet = AnchorSet;
+
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] RegisterPortalSpawnAnchorSet - AfterCount=%d"),
+		RegisteredPortalSpawnAnchorSets.Num());
+
+	if (bPendingPortalGeneration && !bPortalGeneratedForCurrentRoom)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] RegisterPortalSpawnAnchorSet - Retry MakeNewPotal"));
+		MakeNewPotal();
+	}
+}
+
+void UPotalManager::UnregisterPortalSpawnAnchorSet(APortalSpawnAnchorSet* AnchorSet)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] UnregisterPortalSpawnAnchorSet - Name=%s BeforeCount=%d"),
+		AnchorSet ? *AnchorSet->GetName() : TEXT("Null"),
+		RegisteredPortalSpawnAnchorSets.Num());
+	
+	RegisteredPortalSpawnAnchorSets.Remove(AnchorSet);
+	
+	if (CurrentPortalSpawnAnchorSet.Get() == AnchorSet)
+	{
+		CurrentPortalSpawnAnchorSet = nullptr;
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] UnregisterPortalSpawnAnchorSet - AfterCount=%d"),
+	RegisteredPortalSpawnAnchorSets.Num());
+	
 }
 
 void UPotalManager::SetBattleTransitionData(FBattleTransitionData& InBattleTransitionData)

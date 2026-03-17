@@ -7,7 +7,7 @@
 #include "World/PotalManager.h"
 
 
-ABattlePotal::ABattlePotal()
+ABattlePotal::ABattlePotal() : BattleType(EBattleType::Normal)
 {
 	
 }

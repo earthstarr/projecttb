@@ -45,6 +45,14 @@ public:
 	// 스폰 회전 값
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
 	FRotator StartRotation;
+	
+	// 최소 포탈 이동 횟수. 이 값 이상일 때만 후보에 포함
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
+	int32 MinPortalMoveCount = 0;
+
+	// 최대 포탈 이동 횟수. -1이면 상한 없음
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
+	int32 MaxPortalMoveCount = -1;
 };
 
 USTRUCT(BlueprintType)

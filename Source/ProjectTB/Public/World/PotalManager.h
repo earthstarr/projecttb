@@ -8,6 +8,9 @@
 #include "PotalManager.generated.h"
 
 
+class APortalSpawnAnchorSet;
+class ATargetPoint;
+class UPortalSpawnConfig;
 class AWorldPlayerController;
 class ULevelStreamingDynamic;
 
@@ -112,13 +115,64 @@ private:
 	
 	FDataTableRowHandle PendingRoomHandle;
 	
-	UPROPERTY()
-	TArray<FDataTableRowHandle> EventRoomCandidates;
-	
-	// 이벤트 방 목록 캐시화 (이벤트, 상점이 후보 대상)
-	void CacheEventRoomCandidates(UDataTable* RoomTable);
-	
 	// 적 정보 목록
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Battle Data", meta=(AllowPrivateAccess="true"))
 	TSoftObjectPtr<UDataTable> EnemyDataTable;
+	
+#pragma region MakePotal
+	// 새로운 포탈 생성
+	UPROPERTY()
+	UPortalSpawnConfig* CachePotalConfig;
+	
+	void MakeNewPotal();
+	
+	UPROPERTY()
+	TArray<FDataTableRowHandle> BattleRoomCandidates;
+
+	UPROPERTY()
+	TArray<FDataTableRowHandle> EventRoomCandidates;
+
+	UPROPERTY()
+	TArray<FDataTableRowHandle> ShopRoomCandidates;
+
+	// 방 종류별로 후보 방 정보 캐시화
+	void CachePortalRoomCandidates(UDataTable* RoomTable);
+	
+	// 방 종류에 따라 랜덤한 후보 방 가져오기
+	bool GetRandomRoomHandleByPortalType(EEventRoomType PortalType, FDataTableRowHandle& OutHandle) const;
+	
+	// 앵커에서 포탈이 생성될 수 있는 위치 가져오기
+	void CollectPortalSpawnPoints(ULevel* LoadedLevel, TArray<ATargetPoint*>& OutSpawnPoints) const;
+	
+	// 포탈 생성 및 랜덤 종류 부여
+	bool SpawnPortalAtPoint(ATargetPoint* SpawnPoint, ULevel* LoadedLevel, EEventRoomType PortalType);
+	
+	// 필터링 된 후보 중 하나 선택
+	bool GetRoomHandleBasedOnPortalMovement(const TArray<FDataTableRowHandle>* Candidates, FDataTableRowHandle& OutHandle) const;
+	
+	// 필터링 된 방이 실제로 생성 가능한지 확인
+	bool CanSpawnPortalType(EEventRoomType PortalType) const;
+	
+	// 현재 층 수 기준으로 후보 방 필터링
+	void FilterCandidatesByPortalMoveCount(const TArray<FDataTableRowHandle>* Candidates, TArray<FDataTableRowHandle>& OutFilteredCandidates) const;
+	
+	// 포탈이 생성될 수 있는 위치 관련
+public:
+	UFUNCTION()
+	void RegisterPortalSpawnAnchorSet(APortalSpawnAnchorSet* AnchorSet);
+
+	UFUNCTION()
+	void UnregisterPortalSpawnAnchorSet(APortalSpawnAnchorSet* AnchorSet);
+	
+private:
+	UPROPERTY()
+	TArray<TWeakObjectPtr<APortalSpawnAnchorSet>> RegisteredPortalSpawnAnchorSets;
+	
+	bool bPendingPortalGeneration = false;
+	bool bPortalGeneratedForCurrentRoom = false;
+	
+	UPROPERTY()
+	TWeakObjectPtr<APortalSpawnAnchorSet> CurrentPortalSpawnAnchorSet;
+	
+#pragma endregion
 };

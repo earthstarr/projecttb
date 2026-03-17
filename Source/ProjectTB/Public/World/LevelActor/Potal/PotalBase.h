@@ -16,6 +16,9 @@ public:
 	// Sets default values for this actor's properties
 	APotalBase();
 	
+	// 포탈 매니저에서 주는 핸들로 방 초기화
+	virtual void InitializePortal(const FDataTableRowHandle& InSelectedRoomHandle);
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -44,4 +47,7 @@ public:
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Room Data")
 	FDataTableRowHandle SelectedRoomHandle;
+	
+private:
+	bool bOverlapped = false;
 };

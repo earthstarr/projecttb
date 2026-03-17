@@ -7,6 +7,7 @@
 #include "Battle/TBDiceData.h"
 #include "TBGameInstance.generated.h"
 
+class UPortalSpawnConfig;
 class ABattleEnemyCharacter;
 class UDataTable;
 
@@ -174,7 +175,24 @@ public:
 	// <미보유 아티팩트 아이디 + 데이터 테이블> 구조체 배열 반환 함수
 	UFUNCTION(BlueprintCallable, Category="Artifact")
 	TArray<FArtifactEntry> GetUnownedArtifacts();
+#pragma endregion
 	
+#pragma region Portal
+private:
+	UPROPERTY(BlueprintReadWrite, Category="Portal", meta=(AllowPrivateAccess="true"))
+	int32 PortalMoveCount = 0;
 	
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Portal")
+	TSoftObjectPtr<UPortalSpawnConfig> PortalSpawnConfig;
+	
+	UFUNCTION(BlueprintCallable, Category="Portal")
+	void ResetPortalMoveCount() { PortalMoveCount = 0; }
+
+	UFUNCTION(BlueprintCallable, Category="Portal")
+	void IncreasePortalMoveCount() { ++PortalMoveCount; }
+
+	UFUNCTION(BlueprintCallable, Category="Portal")
+	int32 GetPortalMoveCount() const { return PortalMoveCount; }
 #pragma endregion
 };
