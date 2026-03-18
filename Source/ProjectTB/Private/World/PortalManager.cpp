@@ -150,13 +150,25 @@ void UPortalManager::OnLevelShown()
 
 	TeleportLevel();
 	
-	// 이동할 레벨이 배틀 맵이 아니라면 새로운 포탈 생성
-	if (RoomData->RoomType != ERoomType::Battle)
+	const int32 PortalMoveCount = GetCurrentPortalMoveCount();
+	
+	// Boss 방은 맵에 수동 배치한 포탈을 사용하므로 자동 생성하지 않는다.
+	if (RoomData->RoomType == ERoomType::Boss)
 	{
-		//포탈 생성 지점이 등록되어 있다면 포탈 생성
+	}
+	// 보스룸 앞이 비전투 방이면 보스 대기룸 입구 포탈 하나만 생성
+	else if (RoomData->RoomType != ERoomType::Battle && PortalMoveCount == 14)
+	{
 		bPendingPortalGeneration = true;
 		bPortalGeneratedForCurrentRoom = false;
-		MakeNewPortal();
+		MakeBossPreparationEntrancePortal();
+	}
+	// 3. 그 외 일반 월드/이벤트/상점 방이면: 기존 랜덤 포탈 생성
+	else if (RoomData->RoomType != ERoomType::Battle)
+	{
+		bPendingPortalGeneration = true;
+		bPortalGeneratedForCurrentRoom = false;
+		TryGeneratePortalForCurrentRoom();
 	}
 	
 	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
@@ -299,8 +311,10 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 	case ERoomType::Shop:
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
-		
 		break;
+	case ERoomType::Boss:
+		PC->SetInputModeWorld();
+		TBHUD->StartFadeIn();
 	default:
 		break;
 	}
@@ -355,7 +369,8 @@ void UPortalManager::CachePortalRoomCandidates(UDataTable* RoomTable)
 	BattleRoomCandidates.Reset();
 	EventRoomCandidates.Reset();
 	ShopRoomCandidates.Reset();
-
+	BossPreparationRoomHandle = FDataTableRowHandle();
+	
 	if (RoomTable == nullptr)
 	{
 		return;
@@ -389,6 +404,10 @@ void UPortalManager::CachePortalRoomCandidates(UDataTable* RoomTable)
 			ShopRoomCandidates.Add(NewHandle);
 			EventRoomCandidates.Add(NewHandle);
 			break;
+			
+		case ERoomType::Boss:
+			// Boss 타입은 랜덤 후보에는 넣지 않고, 강제 이동용으로만 보관
+			BossPreparationRoomHandle = NewHandle;
 		default:
 			break;
 		}
@@ -785,7 +804,7 @@ void UPortalManager::RegisterPortalSpawnAnchorSet(APortalSpawnAnchorSet* AnchorS
 	if (bPendingPortalGeneration && !bPortalGeneratedForCurrentRoom)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] RegisterPortalSpawnAnchorSet - Retry MakeNewPortal"));
-		MakeNewPortal();
+		TryGeneratePortalForCurrentRoom();
 	}
 }
 
@@ -805,6 +824,117 @@ void UPortalManager::UnregisterPortalSpawnAnchorSet(APortalSpawnAnchorSet* Ancho
 	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] UnregisterPortalSpawnAnchorSet - AfterCount=%d"),
 	RegisteredPortalSpawnAnchorSets.Num());
 	
+}
+
+void UPortalManager::TryGeneratePortalForCurrentRoom()
+{
+	if (RoomData == nullptr)
+	{
+		return;
+	}
+
+	const int32 PortalMoveCount = GetCurrentPortalMoveCount();
+
+	// Boss 방은 수동 배치한 포탈만 사용
+	if (RoomData->RoomType == ERoomType::Boss)
+	{
+		return;
+	}
+
+	// 14층 비전투 방이면 보스 대기룸 입구 포탈 하나만 생성
+	if (RoomData->RoomType != ERoomType::Battle && PortalMoveCount == 14)
+	{
+		MakeBossPreparationEntrancePortal();
+		return;
+	}
+
+	// 그 외 일반 월드/이벤트/상점 방은 기존 랜덤 포탈 생성
+	if (RoomData->RoomType != ERoomType::Battle)
+	{
+		MakeNewPortal();
+	}
+}
+
+bool UPortalManager::SpawnFixedPortalAtPoint(ATargetPoint* SpawnPoint, ULevel* LoadedLevel, 
+                                             const TSoftClassPtr<APortalBase>& PortalSoftClass, const FDataTableRowHandle& FixedHandle)
+{
+	// 목적지 handle, 포탈 클래스, 스폰 위치 확인
+	if (SpawnPoint == nullptr || LoadedLevel == nullptr || FixedHandle.IsNull() || PortalSoftClass.IsNull())
+	{
+		return false;
+	}
+
+	TSubclassOf<APortalBase> PortalClass = PortalSoftClass.LoadSynchronous();
+	if (PortalClass == nullptr)
+	{
+		return false;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.OverrideLevel = LoadedLevel;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.bDeferConstruction = true;
+
+	const FTransform SpawnTransform = SpawnPoint->GetActorTransform();
+
+	APortalBase* SpawnedPortal = GetWorld()->SpawnActor<APortalBase>(PortalClass.Get(), SpawnTransform, SpawnParams);
+	if (SpawnedPortal == nullptr)
+	{
+		return false;
+	}
+
+	SpawnedPortal->InitializePortal(FixedHandle);
+	SpawnedPortal->FinishSpawning(SpawnTransform);
+	return true;
+}
+
+
+void UPortalManager::MakeBossPreparationEntrancePortal()
+{
+	// 보스 대기룸 row와 전용 포탈 클래스가 있어야 한다.
+	if (BossPreparationRoomHandle.IsNull() || CachePortalConfig == nullptr)
+	{
+		return;
+	}
+
+	ULevel* LoadedLevel = CurrentLevelInstance ? CurrentLevelInstance->GetLoadedLevel() : nullptr;
+	if (LoadedLevel == nullptr)
+	{
+		return;
+	}
+
+	TArray<ATargetPoint*> SpawnPoints;
+	CollectPortalSpawnPoints(LoadedLevel, SpawnPoints);
+	if (SpawnPoints.IsEmpty())
+	{
+		return;
+	}
+
+	const int32 PointIndex = FMath::RandRange(0, SpawnPoints.Num() - 1);
+
+	// 14층 비전투 방에서는 BossPreparationPortal을 하나만 생성한다.
+	// PortalMoveCount를 유지한 채 보스 대기룸으로 이동시키는 용도. 전투를 치룬 방이랑의 격차를 만들지 않기 위한 장치
+	const bool bSpawned = SpawnFixedPortalAtPoint(
+		SpawnPoints[PointIndex],
+		LoadedLevel,
+		CachePortalConfig->BossPreparationPortalClass,
+		BossPreparationRoomHandle);
+
+	// 실제 생성에 성공했을 때만 완료 처리
+	if (bSpawned)
+	{
+		bPortalGeneratedForCurrentRoom = true;
+		bPendingPortalGeneration = false;
+	}
+}
+
+int32 UPortalManager::GetCurrentPortalMoveCount() const
+{
+	if (const UTBGameInstance* GI = Cast<UTBGameInstance>(GetWorld()->GetGameInstance()))
+	{
+		return GI->GetPortalMoveCount();
+	}
+	return 0;
 }
 
 void UPortalManager::SetBattleTransitionData(FBattleTransitionData& InBattleTransitionData)

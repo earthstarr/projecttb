@@ -21,4 +21,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Portal")
 	TSoftClassPtr<APortalBase> ShopPortalClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Portal")
+	TSoftClassPtr<APortalBase> BossPreparationPortalClass;
 };

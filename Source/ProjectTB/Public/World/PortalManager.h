@@ -13,6 +13,7 @@ class ATargetPoint;
 class UPortalSpawnConfig;
 class AWorldPlayerController;
 class ULevelStreamingDynamic;
+class APortalBase;
 
 struct FBattleTransitionData;
 struct FRoomData;
@@ -173,6 +174,31 @@ private:
 	
 	UPROPERTY()
 	TWeakObjectPtr<APortalSpawnAnchorSet> CurrentPortalSpawnAnchorSet;
+	
+#pragma endregion
+	
+#pragma region BossRoom
+public:
+	// 배틀 포탈에서 14층 진입 여부를 판단할 때 보스 대기방 handle을 꺼내 쓴다.
+	UFUNCTION()
+	FDataTableRowHandle GetBossPreparationRoomHandle() const { return BossPreparationRoomHandle; }
+	
+private:
+	// 보스 대기룸
+	FDataTableRowHandle BossPreparationRoomHandle;
+	
+	// 현재 방 상태에 맞춰 실제 생성할 포탈 종류를 결정
+	// 앵커가 늦게 등록됐을 때도 이 함수를 다시 호출하면 같은 규칙으로 재시도
+	void TryGeneratePortalForCurrentRoom();
+	
+	// 고정 목적지 포탈을 생성할 때, 포탈 종류 enum 대신 실제 사용할 포탈 클래스를 직접 받기
+	bool SpawnFixedPortalAtPoint(ATargetPoint* SpawnPoint, ULevel* LoadedLevel, const TSoftClassPtr<APortalBase>& PortalSoftClass, const FDataTableRowHandle& FixedHandle);
+
+	// 14층 비전투 방에서 보스 대기룸으로 가는 포탈 하나 생성
+	void MakeBossPreparationEntrancePortal();
+
+	// 현재 이동 횟수 조회 헬퍼
+	int32 GetCurrentPortalMoveCount() const;
 	
 #pragma endregion
 };

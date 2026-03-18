@@ -190,8 +190,20 @@ public:
 	void ResetPortalMoveCount() { PortalMoveCount = 0; }
 
 	UFUNCTION(BlueprintCallable, Category="Portal")
+	void SetPortalMoveCount(int32 NewCount)
+	{
+		PortalMoveCount = FMath::Max(NewCount, 0);
+	}
+	
+	UFUNCTION(BlueprintCallable, Category="Portal")
 	void IncreasePortalMoveCount() { ++PortalMoveCount; }
 
+	UFUNCTION(BlueprintCallable, Category="Portal")
+	void DecreasePortalMoveCount()
+	{
+		PortalMoveCount = FMath::Max(PortalMoveCount - 1, 0);
+	}
+	
 	UFUNCTION(BlueprintCallable, Category="Portal")
 	int32 GetPortalMoveCount() const { return PortalMoveCount; }
 #pragma endregion
