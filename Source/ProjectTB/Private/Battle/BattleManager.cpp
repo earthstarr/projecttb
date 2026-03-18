@@ -12,7 +12,7 @@
 #include "TBGameInstance.h"
 #include "Data/LevelDataTypes.h"
 #include "UI/TBBattleHUD.h"
-#include "World/PotalManager.h"
+#include "World/PortalManager.h"
 #include "Components/AudioComponent.h"
 #include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 

@@ -9,6 +9,7 @@
 #include "GameFramework/PawnMovementComponent.h"
 #include "UI/Artifact/OwnedArtifactListWidget.h"
 #include "UI/World/ShopWidget.h"
+#include "TBGameInstance.h"
 
 void AWorldPlayerController::BeginPlay()
 {
@@ -208,3 +209,28 @@ void AWorldPlayerController::SetInputModeWorld()
 	
 }
 
+void AWorldPlayerController::PortalSetCount(int32 NewCount)
+{
+	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		GI->SetPortalMoveCount(NewCount);
+		UE_LOG(LogTemp, Warning, TEXT("[PortalCheat] PortalMoveCount set to %d"), GI->GetPortalMoveCount());
+	}
+}
+
+void AWorldPlayerController::PortalAddCount(int32 Delta)
+{
+	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		GI->SetPortalMoveCount(GI->GetPortalMoveCount() + Delta);
+		UE_LOG(LogTemp, Warning, TEXT("[PortalCheat] PortalMoveCount changed to %d"), GI->GetPortalMoveCount());
+	}
+}
+
+void AWorldPlayerController::PortalPrintCount() const
+{
+	if (const UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalCheat] PortalMoveCount = %d"), GI->GetPortalMoveCount());
+	}
+}

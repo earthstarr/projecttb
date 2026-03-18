@@ -26,6 +26,17 @@ public:
 	void SetInputModeBattle();
 	void SetInputModeWorld();
 	
+	// 층 수 조절하는 콘솔 명령어
+public:
+	UFUNCTION(Exec)
+	void PortalSetCount(int32 NewCount);
+
+	UFUNCTION(Exec)
+	void PortalAddCount(int32 Delta);
+
+	UFUNCTION(Exec)
+	void PortalPrintCount() const;
+	
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI", Meta = (AllowPrivateAccess = true))
 	TSubclassOf<UOwnedArtifactListWidget> OwnedArtifactListWidgetClass;

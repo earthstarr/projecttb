@@ -23,7 +23,7 @@ struct FBattleTransitionData
 
 	// 전투 종료 후 복귀할 월드 데이터
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
-	FDataTableRowHandle ReturnRoomData;
+	FDataTableRowHandle PostBattleRoomData;
 };
 
 // 레벨업 델리게이트
@@ -190,8 +190,20 @@ public:
 	void ResetPortalMoveCount() { PortalMoveCount = 0; }
 
 	UFUNCTION(BlueprintCallable, Category="Portal")
+	void SetPortalMoveCount(int32 NewCount)
+	{
+		PortalMoveCount = FMath::Max(NewCount, 0);
+	}
+	
+	UFUNCTION(BlueprintCallable, Category="Portal")
 	void IncreasePortalMoveCount() { ++PortalMoveCount; }
 
+	UFUNCTION(BlueprintCallable, Category="Portal")
+	void DecreasePortalMoveCount()
+	{
+		PortalMoveCount = FMath::Max(PortalMoveCount - 1, 0);
+	}
+	
 	UFUNCTION(BlueprintCallable, Category="Portal")
 	int32 GetPortalMoveCount() const { return PortalMoveCount; }
 #pragma endregion
