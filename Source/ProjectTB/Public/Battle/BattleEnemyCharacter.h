@@ -223,4 +223,11 @@ private:
 
 	/** Phase 전환 시 Niagara 이펙트 활성화 (이전 이펙트 제거 후 새 이펙트 스폰) */
 	void ActivatePhaseEffect(int32 PhaseIndex);
+	
+	// 적 강화 관련
+#pragma region StrengthenEnemies
+private:
+	UFUNCTION()
+	void OnStatChangedHandler(ABattleCombatant* Combatant);
+#pragma endregion
 };

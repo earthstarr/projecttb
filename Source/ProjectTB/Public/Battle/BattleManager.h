@@ -369,4 +369,18 @@ private:
 	void ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifactData& ArtifactRow,ABattlePlayerCharacter* Target);
 
 #pragma endregion 
+	
+	// 적 강화 관련
+#pragma region StrengthenEnemies
+private:
+	// 강화 배율 (1회 이동은 기본값, 그 다음부터 10%씩 증가)
+	static constexpr float EnemyFloorBonusPerMove = 0.1f;
+	
+	// 현재 PortalMoveCount를 기준으로 이번 전투의 적 배율 계산
+	float CalculateEnemyFloorMultiplier() const;
+	
+	// 이미 스폰된 적들에게 완성 스탯 기준 배율 적용
+	void ApplyFloorScalingToEnemies(const TArray<ABattleEnemyCharacter*>& Enemies) const;
+
+#pragma endregion
 };

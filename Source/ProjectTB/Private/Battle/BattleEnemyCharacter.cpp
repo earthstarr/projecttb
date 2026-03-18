@@ -37,6 +37,9 @@ void ABattleEnemyCharacter::BeginPlay()
 
 	// 데미지 받을 때마다 체력바 갱신
 	OnDamageReceived.AddDynamic(this, &ABattleEnemyCharacter::OnDamageReceivedHandler);
+	
+	// 적 강화, 스탯 강화된 내용 갱신
+	OnStatChanged.AddDynamic(this, &ABattleEnemyCharacter::OnStatChangedHandler);
 }
 
 void ABattleEnemyCharacter::OnDamageReceivedHandler(ABattleCombatant* /*Combatant*/, float /*Damage*/, bool /*bIsCritical*/)
@@ -292,4 +295,11 @@ void ABattleEnemyCharacter::ActivatePhaseEffect(int32 PhaseIndex)
 			ActivePhaseNiagaraComponent->Activate(true);
 		}
 	}
+}
+
+
+// ─── 적 스펙 강화 ─────────────────────────────────────────────────────────────
+void ABattleEnemyCharacter::OnStatChangedHandler(ABattleCombatant* /*Combatant*/)
+{
+	RefreshHealthBar();
 }

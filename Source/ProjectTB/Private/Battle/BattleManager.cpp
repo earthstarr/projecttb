@@ -132,8 +132,11 @@ void ABattleManager::AutoStartBattle()
 			Players.Num(), Enemies.Num());
 		return;
 	}
-
-	UE_LOG(LogTemp, Display, TEXT("BattleManager: AutoStartBattle → Player %d명, Enemy %d명"), Players.Num(), Enemies.Num());
+	
+	// 적 강화 (디버그용 플레이)
+	ApplyFloorScalingToEnemies(Enemies);
+	UE_LOG(LogTemp, Display, TEXT("BattleManager: AutoStartBattle → Player %d명, Enemy %d명"),Players.Num(), Enemies.Num());
+	
 	StartBattle(Players, Enemies);
 }
 
@@ -253,6 +256,9 @@ void ABattleManager::SpawnAndStartBattle()
 		return;
 	}
 
+	// 적의 기본 GE(StartingEffects)가 BeginPlay에서 먼저 적용된 뒤,
+	// 여기서 층수 배율을 최종 스탯 기준으로 한 번 더 얹어준다.
+	ApplyFloorScalingToEnemies(Enemies);
 	UE_LOG(LogTemp, Display, TEXT("BattleManager: SpawnAndStartBattle → Player %d명, Enemy %d명"), Players.Num(), Enemies.Num());
 	
 	StartBattle(Players, Enemies);
@@ -1449,4 +1455,45 @@ void ABattleManager::ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifa
 
 	// 아티팩트의 GE와 Tag를 캐릭터에게 전달
 	Target->RegisterArtifactEffectHandle(Handle, ArtifactTraits);
+}
+
+float ABattleManager::CalculateEnemyFloorMultiplier() const
+{
+	const UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI)
+	{
+		return 1.0f;
+	}
+
+	const int32 PortalMoveCount = GI->GetPortalMoveCount();
+
+	// 포탈로 이동시 PortalMoveCount는 이미 1 증가됨. 첫 전투부터 증가되지 않도록 1 감소
+	const float BonusStepCount = static_cast<float>(PortalMoveCount) - 1.f;
+	return 1.0f + (BonusStepCount * EnemyFloorBonusPerMove);
+}
+
+void ABattleManager::ApplyFloorScalingToEnemies(const TArray<ABattleEnemyCharacter*>& Enemies) const
+{
+	const float Multiplier = CalculateEnemyFloorMultiplier();
+
+	// 배율이 1.0이면 아무 것도 하지 않음
+	if (FMath::IsNearlyEqual(Multiplier, 1.0f))
+	{
+		return;
+	}
+
+	for (ABattleEnemyCharacter* Enemy : Enemies)
+	{
+		if (!IsValid(Enemy) || Enemy->IsDead())
+		{
+			continue;
+		}
+
+		// StartingEffects까지 적용된 "최종 스탯" 기준으로 후처리 강화
+		Enemy->ApplyEnemyFloorMultiplier(Multiplier);
+
+		UE_LOG(LogTemp, Log,
+			TEXT("BattleManager: ApplyFloorScalingToEnemies - Enemy=%s Multiplier=%.2f"),
+			*Enemy->GetName(), Multiplier);
+	}
 }
