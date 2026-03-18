@@ -480,6 +480,7 @@ void ABattleCombatant::RegisterArtifactEffectHandle(FActiveGameplayEffectHandle 
 	AppliedArtifactEffects.Add(Entry);
 }
 
+
 void ABattleCombatant::ApplyStatusTickDamage(float Damage)
 {
 	if (!AbilitySystemComponent || Damage <= 0.f) return;
@@ -588,7 +589,65 @@ void ABattleCombatant::ConsumeActionGauge()
 		ActionGauge = 0.f;
 }
 
+// ─── 적 스펙 강화 ─────────────────────────────────────────────────────────────
+void ABattleCombatant::ApplyEnemyFloorMultiplier(float Multiplier)
+{
+	// 약화는 고려하지 않음
+	if (!AttributeSet || Multiplier <= 1.0f)
+	{
+		return;
+	}
 
+	// StartingEffects 적용이 끝난 뒤의 값을 변경
+	const float OldMaxHP = AttributeSet->GetMaxHP();
+	const float OldHP = AttributeSet->GetHP();
+
+	const float OldMaxMP = AttributeSet->GetMaxMP();
+	const float OldMP = AttributeSet->GetMP();
+
+	const float OldMaxStamina = AttributeSet->GetMaxStamina();
+	const float OldStamina = AttributeSet->GetStamina();
+
+	const float OldPhysicalAttack = AttributeSet->GetPhysicalAttack();
+	const float OldMagicAttack = AttributeSet->GetMagicAttack();
+	const float OldPhysicalDefense = AttributeSet->GetPhysicalDefense();
+	const float OldMagicDefense = AttributeSet->GetMagicDefense();
+	const float OldCriticalMultiplier = AttributeSet->GetCriticalMultiplier();
+
+	// Max와 Current를 같이 올려서 비율을 유지한다.
+	// 예: HP가 80/100이면 1.2배 후 96/120이 되도록 처리.
+	const float NewMaxHP = OldMaxHP * Multiplier;
+	const float NewHP = FMath::Min(OldHP * Multiplier, NewMaxHP);
+
+	const float NewMaxMP = OldMaxMP * Multiplier;
+	const float NewMP = FMath::Min(OldMP * Multiplier, NewMaxMP);
+
+	const float NewMaxStamina = OldMaxStamina * Multiplier;
+	const float NewStamina = FMath::Min(OldStamina * Multiplier, NewMaxStamina);
+
+	AttributeSet->SetMaxHP(NewMaxHP);
+	AttributeSet->SetHP(NewHP);
+
+	AttributeSet->SetMaxMP(NewMaxMP);
+	AttributeSet->SetMP(NewMP);
+
+	AttributeSet->SetMaxStamina(NewMaxStamina);
+	AttributeSet->SetStamina(NewStamina);
+
+	// 전투 스탯 강화
+	AttributeSet->SetPhysicalAttack(FMath::Max(0.0f, OldPhysicalAttack * Multiplier));
+	AttributeSet->SetMagicAttack(FMath::Max(0.0f, OldMagicAttack * Multiplier));
+	AttributeSet->SetPhysicalDefense(FMath::Max(0.0f, OldPhysicalDefense * Multiplier));
+	AttributeSet->SetMagicDefense(FMath::Max(0.0f, OldMagicDefense * Multiplier));
+
+	// CriticalChance는 제외, CriticalMultiplier는 포함
+	AttributeSet->SetCriticalMultiplier(FMath::Max(1.0f, OldCriticalMultiplier * Multiplier));
+
+	// Speed도 제외
+
+	// 체력바 / 상태 UI 갱신용 브로드캐스트
+	OnStatChangedInternal();
+}
 
 
 

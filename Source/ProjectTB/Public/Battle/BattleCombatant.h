@@ -278,10 +278,19 @@ private:
 	// ActiveStatusEffects → GAS Loose Tag 동기화
 	void SyncStatusTags();
 	
-	// 보유 아티팩트
+	// 보유 아티팩트 관련
+#pragma region Artifacts
 public:
 	void RegisterArtifactEffectHandle(FActiveGameplayEffectHandle Handle, const FGameplayTagContainer& Traits);
 	
 private:
 	TArray<FAppliedArtifactEffect> AppliedArtifactEffects;
+#pragma endregion
+	
+	// 적 강화 관련
+#pragma region StrengthenEnemies
+public:
+	// GE로 가져온 최종 스탯 적용 이후 배율만큼 추가 상승
+	void ApplyEnemyFloorMultiplier(float Multiplier);
+#pragma endregion
 };
