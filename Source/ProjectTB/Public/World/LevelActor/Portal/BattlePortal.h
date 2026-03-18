@@ -5,25 +5,25 @@
 #include "CoreMinimal.h"
 #include "TBGameInstance.h"
 #include "World/DataStruct/RoomDataStruct.h"
-#include "World/LevelActor/Potal/PotalBase.h"
-#include "BattlePotal.generated.h"
+#include "World/LevelActor/Portal/PortalBase.h"
+#include "BattlePortal.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PROJECTTB_API ABattlePotal : public APotalBase
+class PROJECTTB_API ABattlePortal : public APortalBase
 {
 	GENERATED_BODY()
 	
 public:
-	ABattlePotal();
+	ABattlePortal();
 	virtual void BeginPlay();
 	
 	EBattleType BattleType;
 	
 protected:
-	virtual void PotalActivate() override;
+	virtual void PortalActivate() override;
 	void CleanRoom() override;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")

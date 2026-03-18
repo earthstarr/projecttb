@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "World/LevelActor/Potal/PotalBase.h"
-#include "ShopPotal.generated.h"
+#include "World/LevelActor/Portal/PortalBase.h"
+#include "ShopPortal.generated.h"
 
 
 
@@ -12,7 +12,7 @@
  * 
  */
 UCLASS()
-class PROJECTTB_API AShopPotal : public APotalBase
+class PROJECTTB_API AShopPortal : public APortalBase
 {
 	GENERATED_BODY()
 	

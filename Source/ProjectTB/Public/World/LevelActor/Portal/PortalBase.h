@@ -4,17 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "PotalBase.generated.h"
+#include "PortalBase.generated.h"
 class UBoxComponent;
 
 UCLASS()
-class PROJECTTB_API APotalBase : public AActor
+class PROJECTTB_API APortalBase : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
-	APotalBase();
+	APortalBase();
 	
 	// 포탈 매니저에서 주는 핸들로 방 초기화
 	virtual void InitializePortal(const FDataTableRowHandle& InSelectedRoomHandle);
@@ -27,11 +27,11 @@ protected:
 	virtual void SetNextRoom() {};
 	
 #pragma region Components
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Potal")
-	UStaticMeshComponent* PotalMesh;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Portal")
+	UStaticMeshComponent* PortalMesh;
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Potal")
-	UBoxComponent* PotalBoxCollision;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Portal")
+	UBoxComponent* PortalBoxCollision;
 #pragma endregion
 	
 	UFUNCTION()
@@ -41,7 +41,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	virtual void PotalActivate();
+	virtual void PortalActivate();
 	virtual void CleanRoom();
 	
 	

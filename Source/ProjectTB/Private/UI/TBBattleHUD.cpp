@@ -10,7 +10,7 @@
 #include "Battle/BattlePlayerCharacter.h"
 #include "Abilities/TBGameplayAbility.h"
 #include "Kismet/GameplayStatics.h"
-#include "World/PotalManager.h"
+#include "World/PortalManager.h"
 
 ATBBattleHUD::ATBBattleHUD() {}
 
@@ -45,13 +45,13 @@ void ATBBattleHUD::ExitBattleMode()
 	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
 	if (GI == nullptr)
 	{
-		UE_LOG(LogTemp, Error, TEXT("UPotalManager::SetBattleTransitionData GI is Nullptr"));
+		UE_LOG(LogTemp, Error, TEXT("UPortalManager::SetBattleTransitionData GI is Nullptr"));
 		return;
 	}
 	
 	// 포탈 매니저에게 월드 맵으로 이동 요청
-	UPotalManager* PotalManager = GetWorld()->GetSubsystem<UPotalManager>();
-	PotalManager->OnReturnToWorldLevel(GI->BattleTransitionData.ReturnRoomData);
+	UPortalManager* PortalManager = GetWorld()->GetSubsystem<UPortalManager>();
+	PortalManager->OnReturnToWorldLevel(GI->BattleTransitionData.PostBattleRoomData);
 
 	// 게임 인스턴스에서 BattleTransitionData 정보 초기화
 	GI->BattleTransitionData = FBattleTransitionData();

@@ -23,7 +23,7 @@ struct FBattleTransitionData
 
 	// 전투 종료 후 복귀할 월드 데이터
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
-	FDataTableRowHandle ReturnRoomData;
+	FDataTableRowHandle PostBattleRoomData;
 };
 
 // 레벨업 델리게이트

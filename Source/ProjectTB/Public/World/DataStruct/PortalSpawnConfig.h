@@ -5,7 +5,7 @@
 #include "Engine/DataAsset.h"
 #include "PortalSpawnConfig.generated.h"
 
-class APotalBase;
+class APortalBase;
 
 UCLASS(BlueprintType)
 class PROJECTTB_API UPortalSpawnConfig : public UPrimaryDataAsset
@@ -14,11 +14,11 @@ class PROJECTTB_API UPortalSpawnConfig : public UPrimaryDataAsset
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Portal")
-	TSoftClassPtr<APotalBase> BattlePortalClass;
+	TSoftClassPtr<APortalBase> BattlePortalClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Portal")
-	TSoftClassPtr<APotalBase> EventPortalClass;
+	TSoftClassPtr<APortalBase> EventPortalClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Portal")
-	TSoftClassPtr<APotalBase> ShopPortalClass;
+	TSoftClassPtr<APortalBase> ShopPortalClass;
 };

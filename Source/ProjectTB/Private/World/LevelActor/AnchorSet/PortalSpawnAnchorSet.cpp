@@ -4,7 +4,7 @@
 #include "World/LevelActor/AnchorSet/PortalSpawnAnchorSet.h"
 
 #include "Engine/TargetPoint.h"
-#include "World/PotalManager.h"
+#include "World/PortalManager.h"
 
 // Called when the game starts or when spawned
 void APortalSpawnAnchorSet::BeginPlay()
@@ -15,14 +15,14 @@ void APortalSpawnAnchorSet::BeginPlay()
 		*GetName(),
 		GetLevel() ? *GetLevel()->GetName() : TEXT("Null"));
 	
-	if (UPotalManager* PotalManager = GetWorld()->GetSubsystem<UPotalManager>())
+	if (UPortalManager* PortalManager = GetWorld()->GetSubsystem<UPortalManager>())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] AnchorSet BeginPlay - RegisterPortalSpawnAnchorSet"));
-		PotalManager->RegisterPortalSpawnAnchorSet(this);
+		PortalManager->RegisterPortalSpawnAnchorSet(this);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] AnchorSet BeginPlay - PotalManager is null"));
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] AnchorSet BeginPlay - PortalManager is null"));
 	}
 }
 
@@ -33,14 +33,14 @@ void APortalSpawnAnchorSet::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	if (UWorld* World = GetWorld())
 	{
-		if (UPotalManager* PotalManager = World->GetSubsystem<UPotalManager>())
+		if (UPortalManager* PortalManager = World->GetSubsystem<UPortalManager>())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] AnchorSet EndPlay - UnregisterPortalSpawnAnchorSet"));
-			PotalManager->UnregisterPortalSpawnAnchorSet(this);
+			PortalManager->UnregisterPortalSpawnAnchorSet(this);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] AnchorSet EndPlay - PotalManager is null"));
+			UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] AnchorSet EndPlay - PortalManager is null"));
 		}
 	}
 	else

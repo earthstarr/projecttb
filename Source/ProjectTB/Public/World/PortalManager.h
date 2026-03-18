@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "DataStruct/RoomDataStruct.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "PotalManager.generated.h"
+#include "PortalManager.generated.h"
 
 
 class APortalSpawnAnchorSet;
@@ -32,7 +32,7 @@ enum class EEventRoomType : uint8
 };
 
 UCLASS()
-class PROJECTTB_API UPotalManager : public UWorldSubsystem
+class PROJECTTB_API UPortalManager : public UWorldSubsystem
 {
 	GENERATED_BODY()
 	
@@ -46,7 +46,7 @@ public:
 	void OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHandle);
 	
 	UFUNCTION()
-	void OnReturnToWorldLevel(const FDataTableRowHandle& ReturnRoomData);
+	void OnReturnToWorldLevel(const FDataTableRowHandle& PostBattleRoomData);
 	
 	UFUNCTION()
 	void OnLevelLoadFinished();
@@ -119,12 +119,12 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Battle Data", meta=(AllowPrivateAccess="true"))
 	TSoftObjectPtr<UDataTable> EnemyDataTable;
 	
-#pragma region MakePotal
+#pragma region MakePortal
 	// 새로운 포탈 생성
 	UPROPERTY()
-	UPortalSpawnConfig* CachePotalConfig;
+	UPortalSpawnConfig* CachePortalConfig;
 	
-	void MakeNewPotal();
+	void MakeNewPortal();
 	
 	UPROPERTY()
 	TArray<FDataTableRowHandle> BattleRoomCandidates;

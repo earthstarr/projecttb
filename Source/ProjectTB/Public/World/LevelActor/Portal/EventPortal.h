@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "World/LevelActor/Potal/PotalBase.h"
-#include "EventPotal.generated.h"
+#include "World/LevelActor/Portal/PortalBase.h"
+#include "EventPortal.generated.h"
 
 /**
  * 
@@ -13,7 +13,7 @@
 
 
 UCLASS()
-class PROJECTTB_API AEventPotal : public APotalBase
+class PROJECTTB_API AEventPortal : public APortalBase
 {
 	GENERATED_BODY()
 
@@ -21,6 +21,6 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
-	virtual void PotalActivate() override;
+	virtual void PortalActivate() override;
 	void CleanRoom() override;
 };
