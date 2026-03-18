@@ -84,9 +84,25 @@ void ATBBattleHUD::StartFadeIn(float Duration) const
 
 void ATBBattleHUD::SetBattleManager(ABattleManager* NewBattleManager)
 {
+	if (!NewBattleManager)
+	{
+		return;
+	}
+
+	// 재탐색 이후 배틀 매니저 등록과 배틀 매니저의 등록이 중복되면 하나만 받도록 설정. 작업 환경이 다르기 때문에 양쪽 로직 살리는 쪽으로 설계
+	if (BattleManager == NewBattleManager)
+	{
+		return;
+	}
+
+	// 배틀 매니저가 다른걸로 교체된다면 기존 매니저 제거. 현재 로직 흐름상 사용될 일은 없지만 남겨둠.
+	if (BattleManager)
+	{
+		UnBindToBattleManager();
+	}
+
 	BattleManager = NewBattleManager;
 	BindToBattleManager();
-	//StartFadeIn();
 }
 
 void ATBBattleHUD::CreateBattleWidgets()

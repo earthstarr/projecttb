@@ -251,7 +251,7 @@ void UPortalManager::TryBattleManagerSearch()
 		{
 			UE_LOG(LogTemp, Log, TEXT("UPortalManager::TryBattleManagerSearch - BattleManager found"));
 			// TBBattleHUD에 찾은 배틀 매니저를 넘겨줌.
-			//TBHUD->SetBattleManager(BattleManager);
+			TBHUD->SetBattleManager(BattleManager);
 			StopBattleManagerSearch();
 			return;
 		}
