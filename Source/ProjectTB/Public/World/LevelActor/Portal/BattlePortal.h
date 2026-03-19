@@ -8,6 +8,8 @@
 #include "World/LevelActor/Portal/PortalBase.h"
 #include "BattlePortal.generated.h"
 
+class UNiagaraComponent;
+class UNiagaraSystem;
 /**
  * 
  */
@@ -21,6 +23,9 @@ public:
 	virtual void BeginPlay();
 	
 	EBattleType BattleType;
+
+	UFUNCTION(BlueprintCallable, Category="Portal VFX")
+	void ApplyPortalNiagaraByTheme(const EThemeType Theme);
 	
 protected:
 	virtual void PortalActivate() override;
@@ -31,4 +36,14 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
 	FBattleTransitionData BattleTransitionData;
+	
+	// 방 테마에 따른 포탈 나이아가라
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Portal VFX")
+	TObjectPtr<UNiagaraComponent> PortalNiagaraComponent;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Portal VFX")
+	TMap<EThemeType, TSoftObjectPtr<UNiagaraSystem>> ThemeNiagaraMap;
+	
+
+	
 };

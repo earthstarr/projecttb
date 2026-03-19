@@ -157,7 +157,7 @@ public:
 
 	// 적 간 간격 (Y축 기준)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")
-	float EnemySpacing = 200.f;
+	float EnemySpacing = 400.f;
 
 	// 적이 바라볼 방향 (스폰 시 적용)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn")

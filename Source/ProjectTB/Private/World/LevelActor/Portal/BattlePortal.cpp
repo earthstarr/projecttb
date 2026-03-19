@@ -3,6 +3,8 @@
 
 #include "World/LevelActor/Portal/BattlePortal.h"
 
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "World/PortalManager.h"
 
@@ -16,6 +18,16 @@ void ABattlePortal::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	const FRoomData* RoomData = SelectedRoomHandle.GetRow<FRoomData>(TEXT("BattlePortal"));
+	if (RoomData)
+	{
+		EThemeType Theme = RoomData->ThemeType;
+
+		// 여기서 Theme에 따라 나이아가라 선택.
+		ApplyPortalNiagaraByTheme(Theme);
+	}
+	
+	
 	if (EnemyGroupData.EnemyClasses.Num() == 0)
 	{
 		UPortalManager* PortalManager = GetWorld()->GetSubsystem<UPortalManager>();
@@ -26,6 +38,31 @@ void ABattlePortal::BeginPlay()
 			BattleTransitionData.EnemyClasses = EnemyGroupData.EnemyClasses;
 		}
 	}
+}
+
+void ABattlePortal::ApplyPortalNiagaraByTheme(const EThemeType Theme)
+{
+	if (!PortalNiagaraComponent)
+	{
+		return;
+	}
+
+	UNiagaraSystem* SelectedSystem = nullptr;
+
+	
+	if (const TSoftObjectPtr<UNiagaraSystem>* FoundSystem = ThemeNiagaraMap.Find(Theme))
+	{
+		SelectedSystem = FoundSystem->LoadSynchronous();
+	}
+
+	if (!SelectedSystem)
+	{
+		return;
+	}
+
+	PortalNiagaraComponent->Deactivate();
+	PortalNiagaraComponent->SetAsset(SelectedSystem);
+	PortalNiagaraComponent->Activate(true);
 }
 
 void ABattlePortal::PortalActivate()
