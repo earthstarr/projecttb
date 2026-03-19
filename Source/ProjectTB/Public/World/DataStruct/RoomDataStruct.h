@@ -15,6 +15,15 @@ enum class EBattleType : uint8
 };
 
 UENUM(BlueprintType)
+enum class EThemeType : uint8
+{
+	None,
+	Earth,
+	Water,
+	Lightning,
+};
+
+UENUM(BlueprintType)
 enum class ERoomType : uint8
 {
 	Test,
@@ -34,6 +43,10 @@ public:
 	// 방 종류 (전투, 상점, 이벤트)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
 	ERoomType RoomType;
+	
+	// 방 테마 (지금은 전투인 경우 지구, 물, 번개 테마)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
+	EThemeType ThemeType = EThemeType::None;
 	
 	// 이동할 레벨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
