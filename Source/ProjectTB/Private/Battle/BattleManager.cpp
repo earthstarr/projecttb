@@ -438,7 +438,7 @@ TArray<ABattleCombatant*> ABattleManager::SimulateUpcomingTurns(int32 Count) con
 
 	for (ABattleCombatant* P : PlayerParty)
 	{
-		if (IsValid(P) && !P->IsDead())
+		if (P && IsValid(P) && !P->IsDead())
 		{
 			AllLiving.Add(P);
 			SimGauges.Add(P, P->ActionGauge);
@@ -446,7 +446,7 @@ TArray<ABattleCombatant*> ABattleManager::SimulateUpcomingTurns(int32 Count) con
 	}
 	for (ABattleCombatant* E : EnemyParty)
 	{
-		if (IsValid(E) && !E->IsDead())
+		if (E && IsValid(E) && !E->IsDead())
 		{
 			AllLiving.Add(E);
 			SimGauges.Add(E, E->ActionGauge);
