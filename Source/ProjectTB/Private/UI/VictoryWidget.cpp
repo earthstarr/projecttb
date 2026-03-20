@@ -83,8 +83,10 @@ void UVictoryWidget::OnConfirm_Implementation()
 		UGameplayStatics::SetGamePaused(World, false);
 		UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
 	}
+	
+	OwningHUD->ReturnToWorld();
 
-	if (bHasLevelUp)
+	/*if (bHasLevelUp)
 	{
 		// 레벨업 위젯 표시
 		OwningHUD->ShowLevelUpWidget(LevelUpData);
@@ -93,7 +95,7 @@ void UVictoryWidget::OnConfirm_Implementation()
 	{
 		// 월드 복귀
 		OwningHUD->ReturnToWorld();
-	}
+	}*/
 
 	// 이 위젯 숨기기
 	RemoveFromParent();
