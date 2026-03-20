@@ -90,7 +90,21 @@ FDiceModifier ABattlePlayerCharacter::GetCurrentDiceModifier() const
 
 void ABattlePlayerCharacter::HandleDeath()
 {
-	// 플레이어는 Destroy 안함, Hidden + Collision Off만
-	SetActorHiddenInGame(true);
-	SetActorEnableCollision(false);
+	// 플레이어는 DeadMontage 재생 후 Hidden 처리
+	if (DeadMontage)
+	{
+		float MontageDuration = DeadMontage->GetPlayLength();
+		FTimerHandle HideTimer;
+		GetWorldTimerManager().SetTimer(HideTimer, [this]()
+		{
+			SetActorHiddenInGame(true);
+			SetActorEnableCollision(false);
+		}, MontageDuration, false);
+	}
+	else
+	{
+		// 몽타주 없으면 즉시 Hidden
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
+	}
 }

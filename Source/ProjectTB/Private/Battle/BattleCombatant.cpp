@@ -203,6 +203,12 @@ void ABattleCombatant::SetDefending(bool bDefending)
 	else
 		AbilitySystemComponent->RemoveLooseGameplayTag(TAG_Combatant_State_Defending);
 
+	// StatusIconComponent Visibility 설정
+	if (StatusIconComponent && bDefending)
+	{
+		StatusIconComponent->SetVisibility(true);
+	}
+
     // 아이콘 UI 갱신 트리거 (방어 아이콘 표시/해제)
 	OnStatusEffectsChanged.Broadcast(this);
 }
@@ -234,7 +240,7 @@ void ABattleCombatant::HandleDeath()
 {
 	// 기본: 0.5초 후 Destroy (적 기본 동작)
 	FTimerHandle DestroyTimer;
-	GetWorldTimerManager().SetTimer(DestroyTimer, this, &ABattleCombatant::DestroyAfterDeath, 0.5f, false);
+	GetWorldTimerManager().SetTimer(DestroyTimer, this, &ABattleCombatant::DestroyAfterDeath, 1.f, false);
 }
 
 void ABattleCombatant::DestroyAfterDeath()
