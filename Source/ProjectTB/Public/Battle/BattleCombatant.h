@@ -127,6 +127,10 @@ public:
 	void OnStatChangedInternal();
 	bool TryConsumeResurrectionStack();	// 부활 아티팩트 효과 사용 시도
 
+	// 사망 처리 (상속 클래스에서 오버라이드)
+	virtual void HandleDeath();
+	void DestroyAfterDeath();
+
 	// ─── 데미지 숫자 위젯 ────────────────────────────────────────────────────
 	// Blueprint에서 WBP_DamageNumber 클래스를 지정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
@@ -173,6 +177,14 @@ public:
 	// 패링 이펙트 스폰 위치 오프셋 (캐릭터 기준)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
 	FVector ParryEffectOffset = FVector(50.f, 0.f, 80.f);
+
+	// 피격 몽타주 (Blueprint에서 설정)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	TObjectPtr<UAnimMontage> HitMontage;
+
+	// 사망 몽타주 (Blueprint에서 설정)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	TObjectPtr<UAnimMontage> DeadMontage;
 
 	// ─── 상태이상 ──────────────────────────────────────────────────────────────
 	// 새 상태이상 인스턴스 추가 (어빌리티에서 호출)
@@ -257,7 +269,6 @@ protected:
 
 private:
 	bool bAbilitySystemInitialized = false;
-	void DestroyAfterDeath();
 	void HandleGameplayEffectApplied(UAbilitySystemComponent* Target, const FGameplayEffectSpec& Spec, FActiveGameplayEffectHandle Handle);
 
 	// 다중 데미지 숫자 스택 시스템
