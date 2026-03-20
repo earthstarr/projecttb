@@ -68,7 +68,7 @@ void UPortalManager::OnWorldBeginPlay(UWorld& InWorld)
 	
 	// InitRoomHandle 구조체 채우기
 	InitRoomHandle.DataTable = LoadedTable;
-	InitRoomHandle.RowName = FName("Map_World");
+	InitRoomHandle.RowName = FName("Map_Hub");
 	InitRoomLoad();
 }
 
