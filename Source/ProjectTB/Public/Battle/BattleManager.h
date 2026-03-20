@@ -354,6 +354,7 @@ private:
 	TArray<FCharacterExpData> CachedBeforeExpData;
 	TArray<FCharacterExpData> CachedAfterExpData;
 	TArray<FLevelUpDisplayData> CachedLevelUpData;
+	int32 CachedRewardMoney;
 	void ShowVictoryWidgetDelayed();
 
 	// 아티팩트 관련

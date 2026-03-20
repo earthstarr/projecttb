@@ -397,7 +397,8 @@ void ATBBattleHUD::HandleDiceRolled(int32 FaceValue, float Multiplier)
 
 void ATBBattleHUD::ShowVictoryWidget(const TArray<FCharacterExpData>& BeforeExpData,
                                       const TArray<FCharacterExpData>& AfterExpData,
-                                      const TArray<FLevelUpDisplayData>& LevelUpData)
+                                      const TArray<FLevelUpDisplayData>& LevelUpData,
+                                      int32 RewardMoney)
 {
 	APlayerController* PC = GetOwningPlayerController();
 	if (!PC || !VictoryWidgetClass) return;
@@ -406,7 +407,7 @@ void ATBBattleHUD::ShowVictoryWidget(const TArray<FCharacterExpData>& BeforeExpD
 	if (VictoryWidget)
 	{
 		VictoryWidget->OwningHUD = this;
-		VictoryWidget->Initialize(BeforeExpData, AfterExpData, LevelUpData);
+		VictoryWidget->Initialize(BeforeExpData, AfterExpData, LevelUpData, RewardMoney);
 		VictoryWidget->AddToViewport(10);
 	}
 }

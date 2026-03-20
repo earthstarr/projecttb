@@ -87,7 +87,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Victory")
 	void ShowVictoryWidget(const TArray<FCharacterExpData>& BeforeExpData,
 	                       const TArray<FCharacterExpData>& AfterExpData,
-	                       const TArray<FLevelUpDisplayData>& LevelUpData);
+	                       const TArray<FLevelUpDisplayData>& LevelUpData,
+	                       int32 RewardMoney);
 
 	/** 레벨업 위젯 표시 */
 	UFUNCTION(BlueprintCallable, Category="Victory")
@@ -100,13 +101,14 @@ public:
 	// BattleManager 참조
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	void SetBattleManager(ABattleManager* NewBattleManager);
-	
+
 	UPROPERTY(BlueprintReadOnly, Category="Battle")
 	TObjectPtr<ABattleManager> BattleManager;
 
+	void RemoveBattleWidgets();
+
 protected:
 	void CreateBattleWidgets();
-	void RemoveBattleWidgets();
 	void BindToBattleManager();
 	void UnBindToBattleManager();
 
