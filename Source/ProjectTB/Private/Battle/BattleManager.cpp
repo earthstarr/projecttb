@@ -1217,8 +1217,20 @@ void ABattleManager::HandleBattleVictory()
 	// 시간 감속 시작 (0.1배속)
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
 
+	// 배틀 위젯 제거 (Victory 위젯만 남김)
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
+		{
+			HUD->RemoveBattleWidgets();
+		}
+	}
+
 	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
 	if (!GI) return;
+	
+	const int32 RewardMoney = 300 + GI->GetPortalMoveCount() * 30;
+	GI->AddMoney(RewardMoney);
 
 	// ─── 경험치 분배 전 데이터 저장 ─────────────────────────────────────────────
 	TArray<FCharacterExpData> BeforeExpData;
@@ -1312,6 +1324,7 @@ void ABattleManager::HandleBattleVictory()
 	CachedBeforeExpData = BeforeExpData;
 	CachedAfterExpData = AfterExpData;
 	CachedLevelUpData = LevelUpData;
+	CachedRewardMoney = RewardMoney;
 
 	GetWorldTimerManager().SetTimer(
 		VictoryWidgetTimer,
@@ -1331,7 +1344,7 @@ void ABattleManager::ShowVictoryWidgetDelayed()
 
 		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
 		{
-			HUD->ShowVictoryWidget(CachedBeforeExpData, CachedAfterExpData, CachedLevelUpData);
+			HUD->ShowVictoryWidget(CachedBeforeExpData, CachedAfterExpData, CachedLevelUpData, CachedRewardMoney);
 		}
 	}
 }

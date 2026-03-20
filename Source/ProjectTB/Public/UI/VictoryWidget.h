@@ -25,7 +25,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Victory")
 	void Initialize(const TArray<FCharacterExpData>& InBeforeExpData,
 	                const TArray<FCharacterExpData>& InAfterExpData,
-	                const TArray<FLevelUpDisplayData>& InLevelUpData);
+	                const TArray<FLevelUpDisplayData>& InLevelUpData,
+	                int32 InRewardMoney);
 
 	// ─── 데이터 (Blueprint에서 바인딩) ─────────────────────────────────────────
 
@@ -56,6 +57,10 @@ public:
 	/** 레벨업 발생 여부 */
 	UPROPERTY(BlueprintReadOnly, Category="Victory")
 	bool bHasLevelUp = false;
+
+	/** 획득 골드 */
+	UPROPERTY(BlueprintReadOnly, Category="Victory")
+	int32 RewardMoney = 0;
 
 	// ─── HUD 참조 ─────────────────────────────────────────────────────────────
 

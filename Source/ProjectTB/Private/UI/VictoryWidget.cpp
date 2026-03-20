@@ -11,32 +11,29 @@ void UVictoryWidget::NativeConstruct()
 
 void UVictoryWidget::Initialize(const TArray<FCharacterExpData>& InBeforeExpData,
                                  const TArray<FCharacterExpData>& InAfterExpData,
-                                 const TArray<FLevelUpDisplayData>& InLevelUpData)
+                                 const TArray<FLevelUpDisplayData>& InLevelUpData,
+                                 int32 InRewardMoney)
 {
 	BeforeExpData  = InBeforeExpData;
 	AfterExpData   = InAfterExpData;
 	LevelUpData    = InLevelUpData;
+	RewardMoney    = InRewardMoney;
 	bHasLevelUp    = LevelUpData.Num() > 0;
 	bShowingAfter  = false;
 	bInputEnabled  = false;
 
-	// 초기 표시: 획득 전 상태
+	// 초기 표시: 획득 전 상태 + GainedExp만 AfterExpData에서 가져오기
 	CurrentExpData = BeforeExpData;
+	for (int32 i = 0; i < CurrentExpData.Num() && i < AfterExpData.Num(); ++i)
+	{
+		CurrentExpData[i].GainedExp = AfterExpData[i].GainedExp;
+	}
 
 	// 초기 UI 갱신
 	RefreshUI();
 
-	// 1초 후 입력 활성화
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().SetTimer(
-			InputEnableTimerHandle,
-			this,
-			&UVictoryWidget::EnableInput,
-			1.0f,
-			false
-		);
-	}
+	// 즉시 입력 활성화
+	EnableInput();
 }
 
 void UVictoryWidget::EnableInput()
