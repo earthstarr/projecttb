@@ -1214,6 +1214,9 @@ void ABattleManager::SetActionCameraWorldPosition(const FVector& WorldLocation, 
 
 void ABattleManager::HandleBattleVictory()
 {
+	// 시간 감속 시작 (0.1배속)
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
+
 	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
 	if (!GI) return;
 
@@ -1305,7 +1308,7 @@ void ABattleManager::HandleBattleVictory()
 	// 파티 스탯 저장
 	SavePartyStats();
 
-	// 데이터 캐싱 후 3초 딜레이로 위젯 표시
+	// 데이터 캐싱 후 대기
 	CachedBeforeExpData = BeforeExpData;
 	CachedAfterExpData = AfterExpData;
 	CachedLevelUpData = LevelUpData;
@@ -1314,15 +1317,18 @@ void ABattleManager::HandleBattleVictory()
 		VictoryWidgetTimer,
 		this,
 		&ABattleManager::ShowVictoryWidgetDelayed,
-		3.0f,
+		0.3f,  // 0.1배속에서 게임 시간 0.3초 = 실제 시간 3초
 		false
 	);
 }
 
 void ABattleManager::ShowVictoryWidgetDelayed()
 {
+	// 게임 일시정지 (UI 입력은 계속 동작)
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 	{
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+
 		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
 		{
 			HUD->ShowVictoryWidget(CachedBeforeExpData, CachedAfterExpData, CachedLevelUpData);

@@ -1,6 +1,7 @@
 ﻿#include "UI/VictoryWidget.h"
 #include "UI/TBBattleHUD.h"
 #include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
 
 void UVictoryWidget::NativeConstruct()
 {
@@ -78,6 +79,13 @@ void UVictoryWidget::OnConfirm_Implementation()
 
 	// 두 번째 엔터: 다음 단계로
 	if (!OwningHUD) return;
+
+	// 일시정지 해제 및 시간 정상화
+	if (UWorld* World = GetWorld())
+	{
+		UGameplayStatics::SetGamePaused(World, false);
+		UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
+	}
 
 	if (bHasLevelUp)
 	{
