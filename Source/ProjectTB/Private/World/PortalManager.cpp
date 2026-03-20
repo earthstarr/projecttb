@@ -98,6 +98,8 @@ void UPortalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomH
 
 	//페이드 인 이후 방 로딩
 	PendingRoomHandle = SelectedRoomHandle;
+	bPendingPlayerTeleport = false;
+	bPendingRoomActivation = false;
 	GetWorld()->GetTimerManager().ClearTimer(FadeInTimerHandle);
 	GetWorld()->GetTimerManager().SetTimer(FadeInTimerHandle, this, &UPortalManager::OnFadeInFinished, 0.5f, false);
 }
@@ -148,6 +150,8 @@ void UPortalManager::OnLevelShown()
 {
 	UE_LOG(LogTemp, Log, TEXT("UPortalManager::OnLevelLoadFinished Enter"));
 
+	CommitLevelInstanceChange();
+	bPendingRoomActivation = true;
 	TeleportLevel();
 	
 	const int32 PortalMoveCount = GetCurrentPortalMoveCount();
@@ -170,45 +174,69 @@ void UPortalManager::OnLevelShown()
 		bPortalGeneratedForCurrentRoom = false;
 		TryGeneratePortalForCurrentRoom();
 	}
-	
-	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda([this]()
-	{
-		if (RoomData)
-		{
-			UE_LOG(LogTemp, Log, TEXT("UPortalManager::OnLevelLoadFinished Debug RoomType: %d"),
-			       static_cast<int32>(RoomData->RoomType));
-			ActivateHUDMode(RoomData->RoomType);
-		}
-	}));
+
+	TryActivateRoomMode();
 }
 
 void UPortalManager::TeleportLevel()
 {
 	UE_LOG(LogTemp, Log, TEXT("UPortalManager::TeleportLevel Enter"));
-		
-	//월드 캐릭터가 직접 이동
-	if (PC)
+
+	if (RoomData == nullptr)
 	{
-		APawn* PlayerPawn = PC->GetPawn();
-		
-		if (PlayerPawn)
-		{
-			// 데이터 테이블에 써져 있는 위치 값으로 순간이동
-			PlayerPawn->SetActorLocationAndRotation( RoomData->StartPosition, RoomData->StartRotation);
-			PC->SetControlRotation(FRotator(0,0,0));
-			UE_LOG(LogTemp, Log, TEXT("텔레포트 완료"));
-			PC->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-			
-			// 이전 맵 언로드
-			if (CurrentLevelInstance != nullptr)
-			{
-				CurrentLevelInstance->SetIsRequestingUnloadAndRemoval(true);
-				UE_LOG(LogTemp, Log, TEXT("이전 레벨 언로드 요청됨"));
-			}
-			CurrentLevelInstance = NextLevelInstance;
-			NextLevelInstance = nullptr;
-		}
+		UE_LOG(LogTemp, Warning, TEXT("UPortalManager::TeleportLevel - RoomData is null"));
+		return;
 	}
+
+	//월드 캐릭터가 직접 이동
+	if (PC == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPortalManager::TeleportLevel - PC is null"));
+		return;
+	}
+
+	APawn* PlayerPawn = PC->GetPawn();
+	if (PlayerPawn == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPortalManager::TeleportLevel - PlayerPawn is null"));
+		return;
+	}
+
+	FVector SpawnLocation = RoomData->StartPosition;
+	FRotator SpawnRotation = RoomData->StartRotation;
+
+	if (!TryGetAnchorPlayerSpawnTransform(SpawnLocation, SpawnRotation))
+	{
+		if (ShouldWaitForAnchorPlayerSpawn())
+		{
+			bPendingPlayerTeleport = true;
+			UE_LOG(LogTemp, Warning, TEXT("UPortalManager::TeleportLevel - Anchor player spawn is not ready. Teleport deferred. Row=%s RoomType=%d"),
+				*PendingRoomHandle.RowName.ToString(),
+				static_cast<int32>(RoomData->RoomType));
+			return;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("UPortalManager::TeleportLevel - Anchor player spawn is not available. Fallback StartPosition=%s"),
+			*SpawnLocation.ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("UPortalManager::TeleportLevel - Anchor player spawn found. Location=%s"),
+			*SpawnLocation.ToString());
+	}
+
+	PlayerPawn->SetActorLocationAndRotation(SpawnLocation, SpawnRotation);
+	PC->SetControlRotation(FRotator(0,0,0));
+	UE_LOG(LogTemp, Log, TEXT("텔레포트 완료"));
+
+	if (ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerPawn))
+	{
+		PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
+
+	bPendingPlayerTeleport = false;
+	UnloadPendingLevelInstance();
+	TryActivateRoomMode();
 }
 
 void UPortalManager::StartBattleManagerSearch()
@@ -599,6 +627,105 @@ void UPortalManager::CollectPortalSpawnPoints(ULevel* LoadedLevel, TArray<ATarge
 		*AnchorSet->GetName(), OutSpawnPoints.Num());
 }
 
+bool UPortalManager::ShouldWaitForAnchorPlayerSpawn() const
+{
+	if (RoomData == nullptr)
+	{
+		return false;
+	}
+
+	return RoomData->RoomType != ERoomType::Test;
+}
+
+bool UPortalManager::TryGetAnchorPlayerSpawnTransform(FVector& OutLocation, FRotator& OutRotation) const
+{
+	APortalSpawnAnchorSet* AnchorSet = CurrentPortalSpawnAnchorSet.Get();
+	if (!IsValid(AnchorSet))
+	{
+		return false;
+	}
+
+	ATargetPoint* PlayerSpawnPoint = AnchorSet->GetPlayerSpawnPoint();
+	if (!IsValid(PlayerSpawnPoint))
+	{
+		return false;
+	}
+
+	OutLocation = PlayerSpawnPoint->GetActorLocation();
+	OutRotation = PlayerSpawnPoint->GetActorRotation();
+	return true;
+}
+
+void UPortalManager::CommitLevelInstanceChange()
+{
+	if (NextLevelInstance == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPortalManager::CommitLevelInstanceChange - NextLevelInstance is null"));
+		return;
+	}
+
+	PendingUnloadLevelInstance = CurrentLevelInstance;
+	CurrentLevelInstance = NextLevelInstance;
+	NextLevelInstance = nullptr;
+
+	UE_LOG(LogTemp, Log, TEXT("UPortalManager::CommitLevelInstanceChange - Current=%s PendingUnload=%s"),
+		CurrentLevelInstance ? *CurrentLevelInstance->GetName() : TEXT("Null"),
+		PendingUnloadLevelInstance ? *PendingUnloadLevelInstance->GetName() : TEXT("Null"));
+}
+
+void UPortalManager::UnloadPendingLevelInstance()
+{
+	if (PendingUnloadLevelInstance == nullptr)
+	{
+		return;
+	}
+
+	PendingUnloadLevelInstance->SetIsRequestingUnloadAndRemoval(true);
+	UE_LOG(LogTemp, Log, TEXT("이전 레벨 언로드 요청됨"));
+	PendingUnloadLevelInstance = nullptr;
+}
+
+void UPortalManager::TryTeleportDeferredPlayer()
+{
+	if (!bPendingPlayerTeleport)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("UPortalManager::TryTeleportDeferredPlayer - Retry deferred teleport"));
+	TeleportLevel();
+}
+
+void UPortalManager::TryActivateRoomMode()
+{
+	if (!bPendingRoomActivation)
+	{
+		return;
+	}
+
+	if (bPendingPlayerTeleport)
+	{
+		UE_LOG(LogTemp, Log, TEXT("UPortalManager::TryActivateRoomMode - Waiting for deferred teleport"));
+		return;
+	}
+
+	if (RoomData == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UPortalManager::TryActivateRoomMode - RoomData is null"));
+		return;
+	}
+
+	const ERoomType PendingRoomType = RoomData->RoomType;
+	bPendingRoomActivation = false;
+
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, PendingRoomType]()
+	{
+		UE_LOG(LogTemp, Log, TEXT("UPortalManager::OnLevelLoadFinished Debug RoomType: %d"),
+			static_cast<int32>(PendingRoomType));
+		ActivateHUDMode(PendingRoomType);
+	}));
+}
+
 bool UPortalManager::SpawnPortalAtPoint(ATargetPoint* SpawnPoint, ULevel* LoadedLevel, EEventRoomType PortalType)
 {
 	if (SpawnPoint == nullptr || LoadedLevel == nullptr || CachePortalConfig == nullptr)
@@ -805,6 +932,12 @@ void UPortalManager::RegisterPortalSpawnAnchorSet(APortalSpawnAnchorSet* AnchorS
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] RegisterPortalSpawnAnchorSet - Retry MakeNewPortal"));
 		TryGeneratePortalForCurrentRoom();
+	}
+
+	if (bPendingPlayerTeleport)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] RegisterPortalSpawnAnchorSet - Retry deferred player teleport"));
+		TryTeleportDeferredPlayer();
 	}
 }
 
