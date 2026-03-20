@@ -218,9 +218,21 @@ void ABattleCombatant::OnDeathInternal()
 {
 	AbilitySystemComponent->AddLooseGameplayTag(TAG_Combatant_State_Dead);
 	AbilitySystemComponent->CancelAllAbilities();
-	OnDeath.Broadcast(this);	
+	OnDeath.Broadcast(this);
 
-    // 0.5초 후 Actor 제거
+	// DeadMontage 재생
+	if (DeadMontage)
+	{
+		PlayAnimMontage(DeadMontage);
+	}
+
+	// 상속 클래스에서 사망 처리 (플레이어: Hidden, 적: Destroy)
+	HandleDeath();
+}
+
+void ABattleCombatant::HandleDeath()
+{
+	// 기본: 0.5초 후 Destroy (적 기본 동작)
 	FTimerHandle DestroyTimer;
 	GetWorldTimerManager().SetTimer(DestroyTimer, this, &ABattleCombatant::DestroyAfterDeath, 0.5f, false);
 }
@@ -234,6 +246,16 @@ void ABattleCombatant::OnDamageReceivedInternal(float Damage, bool bIsCritical)
 {
 	OnDamageReceived.Broadcast(this, Damage, bIsCritical);
 	SpawnDamageNumber(Damage, false, bIsCritical);
+
+	// 패링 성공 시 HitMontage 재생 안함 (패링 몽타주가 이미 재생 중)
+	if (AbilitySystemComponent && AbilitySystemComponent->HasMatchingGameplayTag(TAG_Combatant_State_ParrySuccess))
+		return;
+
+	// HitMontage 재생
+	if (HitMontage)
+	{
+		PlayAnimMontage(HitMontage);
+	}
 }
 
 void ABattleCombatant::OnStatChangedInternal()

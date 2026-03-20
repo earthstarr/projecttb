@@ -46,9 +46,11 @@ public:
 
 	virtual void OnTurnBegin_Implementation() override;
 	virtual void OnTurnEnd_Implementation() override;
-	
-	
-	UFUNCTION(BlueprintCallable, Category="Attributes") 
+
+	// 사망 처리 오버라이드: Destroy 대신 Hidden + Collision Off
+	virtual void HandleDeath() override;
+
+	UFUNCTION(BlueprintCallable, Category="Attributes")
 	FDiceModifier GetCurrentDiceModifier() const;
-	
+
 };

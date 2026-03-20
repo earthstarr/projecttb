@@ -87,3 +87,10 @@ FDiceModifier ABattlePlayerCharacter::GetCurrentDiceModifier() const
 
 	return Result;
 }
+
+void ABattlePlayerCharacter::HandleDeath()
+{
+	// 플레이어는 Destroy 안함, Hidden + Collision Off만
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
+}
