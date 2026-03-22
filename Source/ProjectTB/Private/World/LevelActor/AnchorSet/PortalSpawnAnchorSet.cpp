@@ -75,3 +75,8 @@ void APortalSpawnAnchorSet::GetValidPortalSpawnPoints(TArray<ATargetPoint*>& Out
 	UE_LOG(LogTemp, Warning, TEXT("[PortalDebug] AnchorSet GetValidPortalSpawnPoints - Result=%d"),
 		OutPoints.Num());
 }
+
+ATargetPoint* APortalSpawnAnchorSet::GetPlayerSpawnPoint() const
+{
+	return PlayerSpawnPoint.Get();
+}
