@@ -64,6 +64,13 @@ void ABattleCombatant::BeginPlay()
 	}
 }
 
+void ABattleCombatant::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// 추가: 레벨 전환 시 데미지 숫자 위젯을 먼저 정리해 늦은 콜백이 죽은 Combatant를 건드리지 않게 한다.
+	CleanupDamageNumbers();
+	Super::EndPlay(EndPlayReason);
+}
+
 void ABattleCombatant::InitAbilitySystem()
 {
 	if (bAbilitySystemInitialized || !AbilitySystemComponent) return;
@@ -351,13 +358,21 @@ void ABattleCombatant::SpawnDamageNumber(float Value, bool bIsHeal, bool bIsCrit
     // Viewport에 추가
 	NewWidget->AddToViewport(100);
 
-    // 수명 타이머 시작
+	// 수명 타이머 시작
 	NewWidget->StartLifespan(1.5f);
 
-    // 완료 델리게이트 바인딩
-	NewWidget->OnFinished.BindLambda([this, NewWidget]()
+	// 변경: 기존 [this, NewWidget] raw 캡처는 전투 종료 후 파괴된 Combatant를 다시 참조할 수 있어 제거했다.
+	// 추가: 약한 참조로 바꿔 Combatant나 위젯이 이미 정리됐으면 콜백을 조용히 무시한다.
+	TWeakObjectPtr<ABattleCombatant> WeakThis(this);
+	TWeakObjectPtr<UDamageNumberWidget> WeakWidget(NewWidget);
+	NewWidget->OnFinished.BindLambda([WeakThis, WeakWidget]()
 	{
-		OnDamageNumberRemoved(NewWidget);
+		if (!WeakThis.IsValid())
+		{
+			return;
+		}
+
+		WeakThis->OnDamageNumberRemoved(WeakWidget.Get());
 	});
 
 	ActiveDamageNumbers.Add(NewWidget);
@@ -365,7 +380,29 @@ void ABattleCombatant::SpawnDamageNumber(float Value, bool bIsHeal, bool bIsCrit
 
 void ABattleCombatant::OnDamageNumberRemoved(UDamageNumberWidget* Widget)
 {
+	if (Widget == nullptr)
+	{
+		return;
+	}
+
 	ActiveDamageNumbers.Remove(Widget);
+}
+
+void ABattleCombatant::CleanupDamageNumbers()
+{
+	// 추가: 위젯 스스로 사라지기만 기다리던 기존 흐름 대신, 전환 시점에 델리게이트와 뷰포트를 즉시 정리한다.
+	for (UDamageNumberWidget* Widget : ActiveDamageNumbers)
+	{
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+
+		Widget->OnFinished.Unbind();
+		Widget->RemoveFromParent();
+	}
+
+	ActiveDamageNumbers.Reset();
 }
 
 void ABattleCombatant::ShowTargetIndicator()

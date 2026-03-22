@@ -37,6 +37,8 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	// 추가: 위젯이 제거될 때 남아 있는 수명 타이머를 같이 정리
+	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))

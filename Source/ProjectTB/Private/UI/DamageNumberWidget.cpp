@@ -9,6 +9,17 @@ void UDamageNumberWidget::NativeConstruct()
 	SetRenderTranslation(FVector2D::ZeroVector);
 }
 
+void UDamageNumberWidget::NativeDestruct()
+{
+	if (UWorld* World = GetWorld())
+	{
+		// 추가: Parent에서 제거된 뒤에도 남아 있을 수 있는 lifespan 타이머를 여기서 끊는다.
+		World->GetTimerManager().ClearTimer(LifespanTimer);
+	}
+
+	Super::NativeDestruct();
+}
+
 void UDamageNumberWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
