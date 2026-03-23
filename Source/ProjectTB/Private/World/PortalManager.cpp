@@ -82,6 +82,14 @@ void UPortalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomH
 {
 	if (SelectedRoomHandle.IsNull()) { UE_LOG(LogTemp, Warning, TEXT("UPortalManager 클래스. OnLevelLoadStarted 함수의 SelectedRoomHandle이 없습니다.")); return;}
 	if (PC == nullptr) { UE_LOG(LogTemp, Warning, TEXT("UPortalManager 클래스. OnLevelLoadStarted 함수의 PC가 없습니다.")); return; }
+
+	if (APawn* PlayerPawn = PC->GetPawn())
+	{
+		if (UMovementComponent* MoveComp = PlayerPawn->GetMovementComponent())
+		{
+			MoveComp->StopMovementImmediately();
+		}
+	}
 	
 	UE_LOG(LogTemp, Log, TEXT("UPortalManager::OnLevelLoadStarted Debug RowName: %s"), *SelectedRoomHandle.RowName.ToString());
 	CamManager = PC->PlayerCameraManager;
@@ -89,10 +97,6 @@ void UPortalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomH
 	// 시작 투명도, 끝 투명도, 페이드 시간, 페이드 색상, 오디오 페이드 여부, 페이드 이후 상태 유지 여부
 	CamManager->StartCameraFade(0.f, 1.f, 0.5f, FLinearColor::Black, false, true);
 	TransitionStartTime = GetWorld()->GetTimeSeconds();
-	
-	//페이드 인 기능. 이제는 안전하게 페이드 인 이후 방 로딩함.
-	//CamManager->StartCameraFade(0.f, 1.f, 0.5f, FLinearColor::Black, false, true);
-	//OnFadeInFinished(SelectedRoomHandle);
 
 	CurrentPortalSpawnAnchorSet = nullptr;
 

@@ -193,10 +193,12 @@ void AWorldPlayerController::SetInputModeWorld()
 	// 이동 활성화
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn == nullptr) return;
-	if (ControlledPawn->IsHidden() == false) return;
 	
 	SetIgnoreMoveInput(false);
 	SetIgnoreLookInput(false);
+	
+	// 엑터가 보이지 않는다면 활성화
+	if (ControlledPawn->IsHidden() == false) return;
 	
 	//		MoveComp->SetMovementMode(MOVE_Walking); // 이동 모드는 TeleportLevel에서 켜줌.
 
