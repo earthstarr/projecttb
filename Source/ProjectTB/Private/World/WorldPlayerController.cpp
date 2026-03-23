@@ -209,6 +209,45 @@ void AWorldPlayerController::SetInputModeWorld()
 	
 }
 
+void AWorldPlayerController::ToggleWorldUIMode()
+{
+	// UI 모드 진입
+	if (bWorldUIMode == false)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+		// 포커스를 줄 메인 UI가 있으면 지정
+		// 예: OwnedArtifactListWidget->TakeWidget()
+
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+		SetIgnoreMoveInput(true);
+		SetIgnoreLookInput(true);
+
+		if (const APawn* WorldPawn = GetPawn())
+		{
+			if (UMovementComponent* MoveComp = WorldPawn->GetMovementComponent())
+			{
+				MoveComp->StopMovementImmediately();
+			}
+		}
+
+		bWorldUIMode = true;
+	}
+	// UI 모드 해제
+	else
+	{
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+		SetIgnoreMoveInput(false);
+		SetIgnoreLookInput(false);
+		bWorldUIMode = false;
+	}
+	
+}
+
 void AWorldPlayerController::PortalSetCount(int32 NewCount)
 {
 	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
