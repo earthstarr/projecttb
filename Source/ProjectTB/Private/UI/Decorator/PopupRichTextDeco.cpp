@@ -40,7 +40,7 @@ void UPopupRichTextDeco::OpenPopup(URichTextBlock* OwnerRichText, const FString&
 	
 	if (PopupWidget)
 	{
-		PopupWidget->AddToViewport();
+		PopupWidget->AddToViewport(1000);
 		//텍스트 내용 결정
 		PopupWidget->SetPopupText(PopupID);
 		
