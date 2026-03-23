@@ -18,6 +18,8 @@ class PROJECTTB_API UPurchaseStepsWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	virtual void NativePreConstruct() override;
+
 	UFUNCTION(BlueprintCallable, Category="Shop")
 	void InitializeDetailWidget(const FArtifactEntry& InArtifactEntry, USalesProductWidget* InOwningSalesProductWidget);
 	
@@ -52,9 +54,14 @@ protected:
 
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<URichTextBlock> DescriptionText;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Shop|Layout", meta=(ClampMin="0.0"))
+	float DescriptionWrapTextAt = 0.0f;
 	
 	
 private:
+	void ApplyDescriptionTextLayout();
+
 	UPROPERTY(BlueprintReadOnly, Category="Shop", meta=(AllowPrivateAccess="true"))
 	FArtifactEntry ArtifactEntry;
 
