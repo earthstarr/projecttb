@@ -1353,6 +1353,22 @@ void ABattleManager::HandleBattleDefeat()
 {
 	// 패배 시에도 현재 스탯은 저장 (부활 처리는 필드 복귀 시)
 	SavePartyStats();
+
+	// 패배 위젯 표시
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (PC)
+	{
+		ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD());
+		if (HUD)
+		{
+			// 3초 딜레이 후 패배 위젯 표시
+			FTimerHandle DefeatWidgetTimer;
+			GetWorldTimerManager().SetTimer(DefeatWidgetTimer, [HUD]()
+			{
+				HUD->ShowDefeatWidget();
+			}, 3.0f, false);
+		}
+	}
 }
 
 void ABattleManager::SavePartyStats()

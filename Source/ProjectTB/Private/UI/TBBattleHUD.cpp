@@ -441,10 +441,70 @@ void ATBBattleHUD::ShowMainMenu()
 		MainMenuWidget = CreateWidget<UUserWidget>(PC, MainMenuWidgetClass);
 	}
 
-	if (MainMenuWidget && !MainMenuWidget->IsInViewport())
+	if (MainMenuWidget)
 	{
-		MainMenuWidget->AddToViewport();
+		if (!MainMenuWidget->IsInViewport())
+		{
+			MainMenuWidget->AddToViewport();
+		}
+		MainMenuWidget->SetVisibility(ESlateVisibility::Visible);
 	}
 
 	StartFadeIn();
+}
+
+void ATBBattleHUD::ShowDefeatWidget()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !DefeatWidgetClass) return;
+
+	// 배틀 위젯 제거 (입력 차단 방지)
+	RemoveBattleWidgets();
+
+	if (!DefeatWidget)
+	{
+		DefeatWidget = CreateWidget<UUserWidget>(PC, DefeatWidgetClass);
+	}
+
+	if (DefeatWidget && !DefeatWidget->IsInViewport())
+	{
+		DefeatWidget->AddToViewport(100);  // 높은 ZOrder로 최상위 표시
+	}
+
+	// UI 입력 모드로 전환
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(DefeatWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	PC->SetInputMode(InputMode);
+	PC->bShowMouseCursor = true;
+
+	// 클릭/호버 이벤트 활성화
+	PC->bEnableClickEvents = true;
+	PC->bEnableMouseOverEvents = true;
+}
+
+void ATBBattleHUD::ReturnToMainMenu()
+{
+	// 패배 위젯 제거
+	if (DefeatWidget)
+	{
+		if (DefeatWidget->IsInViewport())
+		{
+			DefeatWidget->RemoveFromParent();
+		}
+		DefeatWidget = nullptr;
+	}
+
+	// 페이드 아웃
+	StartFadeOut(0.5f);
+
+	// 0.5초 후 GameInstance의 ReturnToMainMenu 호출
+	FTimerHandle ReturnTimer;
+	GetWorldTimerManager().SetTimer(ReturnTimer, [this]()
+	{
+		if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))
+		{
+			GI->ReturnToMainMenu();
+		}
+	}, 0.5f, false);
 }
