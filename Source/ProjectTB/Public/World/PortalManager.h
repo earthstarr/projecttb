@@ -45,6 +45,9 @@ public:
 	
 	UFUNCTION()
 	void OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomHandle);
+
+	UFUNCTION()
+	void OnPortalTravelStarted(const FDataTableRowHandle& SelectedRoomHandle);
 	
 	UFUNCTION()
 	void OnReturnToWorldLevel(const FDataTableRowHandle& PostBattleRoomData);
@@ -94,6 +97,8 @@ public:
 	bool GetRandomEnemyGroup(EBattleType BattleType, FEnemyGroupData& OutData);
 
 private:
+	void RecoverPartyHpMpOnPortalTravel();
+
 	// 페이드 인, 아웃
 	UPROPERTY()
 	APlayerCameraManager* CamManager;
