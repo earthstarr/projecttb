@@ -34,6 +34,5 @@ void UPopupWidget::SetPopupText(const FString& PopupID)
 {
 	CurrentPopupID = PopupID;
 	
-	//텍스트 로우 핸들에서 PopupText 찾기
-	
+	ApplyPopupText();
 }

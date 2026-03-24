@@ -9,6 +9,13 @@
 #include "Components/TextBlock.h"
 #include "UI/World/SalesProductWidget.h"
 
+void UPurchaseStepsWidget::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+
+	ApplyDescriptionTextLayout();
+}
+
 void UPurchaseStepsWidget::InitializeDetailWidget(const FArtifactEntry& InArtifactEntry, USalesProductWidget* InOwningSalesProductWidget)
 {
 	ArtifactEntry = InArtifactEntry;
@@ -26,6 +33,7 @@ void UPurchaseStepsWidget::InitializeDetailWidget(const FArtifactEntry& InArtifa
 
 	if (DescriptionText)
 	{
+		ApplyDescriptionTextLayout();
 		DescriptionText->SetText(ArtifactEntry.ArtifactData.Description);
 	}
 
@@ -76,4 +84,15 @@ bool UPurchaseStepsWidget::TryPurchaseProduct()
 void UPurchaseStepsWidget::CloseDetailWidget()
 {
 	RemoveFromParent();
+}
+
+void UPurchaseStepsWidget::ApplyDescriptionTextLayout()
+{
+	if (DescriptionText == nullptr)
+	{
+		return;
+	}
+
+	DescriptionText->SetAutoWrapText(true);
+	DescriptionText->SetWrapTextAt(DescriptionWrapTextAt);
 }

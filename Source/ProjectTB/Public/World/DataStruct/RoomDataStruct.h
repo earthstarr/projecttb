@@ -42,7 +42,7 @@ struct FRoomData : public FTableRowBase
 public:
 	// 방 종류 (전투, 상점, 이벤트)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
-	ERoomType RoomType;
+	ERoomType RoomType = ERoomType::Test;
 	
 	// 방 테마 (지금은 전투인 경우 지구, 물, 번개 테마)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
@@ -54,11 +54,11 @@ public:
 	
 	// 스폰 위치
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
-	FVector StartPosition;
+	FVector StartPosition = FVector::ZeroVector;
 	
 	// 스폰 회전 값
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
-	FRotator StartRotation;
+	FRotator StartRotation = FRotator::ZeroRotator;
 	
 	// 최소 포탈 이동 횟수. 이 값 이상일 때만 후보에 포함
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
@@ -75,8 +75,16 @@ struct FEnemyGroupData : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
-	EBattleType BattleType;
+	EBattleType BattleType = EBattleType::Normal;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Battle")
 	TArray<TSoftClassPtr<ABattleEnemyCharacter>> EnemyClasses;
+	
+	// 최소 포탈 이동 횟수. 이 값 이상일 때만 후보에 포함
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
+	int32 MinPortalMoveCount = 0;
+
+	// 최대 포탈 이동 횟수. -1이면 상한 없음
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
+	int32 MaxPortalMoveCount = -1;
 };

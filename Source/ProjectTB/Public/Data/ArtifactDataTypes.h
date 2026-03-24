@@ -46,7 +46,7 @@ struct FArtifactStatModifier
 	TEnumAsByte<EGameplayModOp::Type> ModifierOp = EGameplayModOp::Additive;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Value;
+	float Value = 0.f;
 };
 
 // ─── 아티팩트 데이터 테이블의 행 ────────────────────────────────

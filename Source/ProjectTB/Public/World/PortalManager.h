@@ -113,6 +113,9 @@ private:
 	
 	UPROPERTY()
 	ULevelStreamingDynamic* NextLevelInstance;
+
+	UPROPERTY()
+	ULevelStreamingDynamic* PendingUnloadLevelInstance;
 	
 	FDataTableRowHandle PendingRoomHandle;
 	
@@ -171,9 +174,18 @@ private:
 	
 	bool bPendingPortalGeneration = false;
 	bool bPortalGeneratedForCurrentRoom = false;
+	bool bPendingPlayerTeleport = false;
+	bool bPendingRoomActivation = false;
 	
 	UPROPERTY()
 	TWeakObjectPtr<APortalSpawnAnchorSet> CurrentPortalSpawnAnchorSet;
+
+	bool ShouldWaitForAnchorPlayerSpawn() const;
+	bool TryGetAnchorPlayerSpawnTransform(FVector& OutLocation, FRotator& OutRotation) const;
+	void CommitLevelInstanceChange();
+	void UnloadPendingLevelInstance();
+	void TryTeleportDeferredPlayer();
+	void TryActivateRoomMode();
 	
 #pragma endregion
 	

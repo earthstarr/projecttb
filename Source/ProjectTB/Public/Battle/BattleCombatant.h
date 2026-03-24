@@ -247,6 +247,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	// 추가: 레벨 전환/소멸 시 남아 있는 데미지 숫자 위젯을 먼저 정리하는 훅
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void InitAbilitySystem();
 	void GrantStartingAbilities();
@@ -274,6 +276,8 @@ private:
 	// 다중 데미지 숫자 스택 시스템
 	void SpawnDamageNumber(float Value, bool bIsHeal, bool bIsCritical = false);
 	void OnDamageNumberRemoved(UDamageNumberWidget* Widget);
+	// 추가: 전투 종료 후 Combatant보다 늦게 살아남은 위젯/델리게이트를 한 번에 정리
+	void CleanupDamageNumbers();
 
 	// 현재 표시 중인 데미지 위젯 목록
 	UPROPERTY()
