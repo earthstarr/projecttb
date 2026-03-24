@@ -138,22 +138,24 @@ void AWorldPlayerController::SetInputModeGameOnly()
 
 void AWorldPlayerController::SetInputModeUIOnly()
 {
-	//마우스 입력
+	// Input Mode를 UI Only로 변경
+	FInputModeUIOnly InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+
 	bShowMouseCursor = true;
-	
-	//기존 캐릭터의 이동은 중지, 추가 입력 제한
+
+	// 캐릭터 이동 중지
 	APawn* PlayerPawn = GetPawn();
-	if (PlayerPawn == nullptr)
+	if (PlayerPawn)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AWorldPlayerController ShowWidget함수 Pawn이 없습니다."));
-		return;
-	}
-	UMovementComponent* AMovementComponent = PlayerPawn->GetMovementComponent();
-	if (AMovementComponent != nullptr)
-	{
-		AMovementComponent->StopMovementImmediately();
+		UMovementComponent* MoveComp = PlayerPawn->GetMovementComponent();
+		if (MoveComp)
+		{
+			MoveComp->StopMovementImmediately();
+			MoveComp->Velocity = FVector::ZeroVector;
+		}
 		SetIgnoreMoveInput(true);
-		PlayerPawn->GetMovementComponent()->Velocity = FVector::ZeroVector;
 	}
 }
 
@@ -189,26 +191,31 @@ void AWorldPlayerController::SetInputModeBattle()
 void AWorldPlayerController::SetInputModeWorld()
 {
 	UE_LOG(LogTemp, Log, TEXT("AWorldPlayerController::SetInputModeWorld Enter"));
-	
+
+	// Input Mode를 Game Only로 변경
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+
 	// 이동 활성화
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn == nullptr) return;
-	
+
 	SetIgnoreMoveInput(false);
 	SetIgnoreLookInput(false);
-	
+
 	// 엑터가 보이지 않는다면 활성화
 	if (ControlledPawn->IsHidden() == false) return;
-	
+
 	//		MoveComp->SetMovementMode(MOVE_Walking); // 이동 모드는 TeleportLevel에서 켜줌.
 
 	// 액터 활성화
-	ControlledPawn->SetActorHiddenInGame(false);    
+	ControlledPawn->SetActorHiddenInGame(false);
 	ControlledPawn->SetActorEnableCollision(true);
-	
+
 	// 카메라 활성화
 	SetViewTarget(ControlledPawn);
-	
+
 }
 
 void AWorldPlayerController::ToggleWorldUIMode()

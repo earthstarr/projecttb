@@ -68,7 +68,7 @@ void UPortalManager::OnWorldBeginPlay(UWorld& InWorld)
 	
 	// InitRoomHandle 구조체 채우기
 	InitRoomHandle.DataTable = LoadedTable;
-	InitRoomHandle.RowName = FName("Map_Hub");
+	InitRoomHandle.RowName = FName("Map_MainMenu");
 	InitRoomLoad();
 }
 
@@ -113,7 +113,11 @@ void UPortalManager::OnReturnToWorldLevel(const FDataTableRowHandle& PostBattleR
 	// 돌아갈 맵이 없다면 월드 맵으로
 	if (PostBattleRoomData.IsNull())
 	{
-		InitRoomLoad();
+		FDataTableRowHandle HubRoomHandle;
+		HubRoomHandle.DataTable = InitRoomHandle.DataTable; // 같은 DataTable 사용
+		HubRoomHandle.RowName = FName("Map_Hub"); // 데이터테이블의 Row 이름
+
+		OnLevelLoadStarted(HubRoomHandle);
 		return;
 	}
 	OnLevelLoadStarted(PostBattleRoomData);
@@ -328,6 +332,10 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		TBHUD->EnterBattleMode();
 		PC->SetInputModeBattle();
 		StartBattleManagerSearch();
+		break;
+	case ERoomType::MainMenu:
+		PC->SetInputModeUIOnly();
+		TBHUD->ShowMainMenu();
 		break;
 	case ERoomType::World:
 		PC->SetInputModeWorld();

@@ -31,9 +31,12 @@ public:
 	// ─── 전투 배틀 위젯 ─────────────────────────────────────────────────────
 	UFUNCTION(BlueprintCallable, Category="Widgets")
 	void EnterBattleMode();
-	
+
 	UFUNCTION(BlueprintCallable, Category="Widgets")
 	void ExitBattleMode();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void ShowMainMenu();
 	
 	
 	
@@ -65,6 +68,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<ULevelUpWidget> LevelUpWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UUserWidget> MainMenuWidgetClass;
+
 	// ─── 생성된 위젯 참조 ────────────────────────────────────────────────────
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UTurnOrderWidget> TurnOrderWidget;
@@ -80,6 +86,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<ULevelUpWidget> LevelUpWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UUserWidget> MainMenuWidget;
 
 	// ─── Victory/LevelUp 함수 ────────────────────────────────────────────────
 

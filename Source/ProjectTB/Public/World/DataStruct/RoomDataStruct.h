@@ -31,7 +31,8 @@ enum class ERoomType : uint8
 	World,
 	Event,
 	Shop,
-	Boss
+	Boss,
+	MainMenu
 };
 
 USTRUCT(BlueprintType)
