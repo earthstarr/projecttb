@@ -2,6 +2,16 @@
 #include "AbilitySystemGlobals.h"
 #include "Engine/DataTable.h"
 #include "Math/NumericLimits.h"
+#include "TBSaveSettings.h"
+#include "Sound/SoundMix.h"
+#include "Sound/SoundClass.h"
+#include "GameFramework/GameUserSettings.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Engine/Engine.h"
+#include "World/PortalManager.h"
+
+static const FString SettingsSlotName = TEXT("TBSettings");
 
 void UTBGameInstance::Init()
 {
@@ -15,6 +25,9 @@ void UTBGameInstance::Init()
 	{
 		PartyData = DefaultParty;
 	}
+
+	// 설정 로드 및 적용
+	LoadAndApplySettings();
 }
 
 // ─── 파티 관리 ─────────────────────────────────────────────────────────────────
@@ -248,4 +261,317 @@ TArray<FArtifactEntry> UTBGameInstance::GetUnownedArtifacts()
 
 	// 보유중이지 않은 아티팩트 데이터와 아이디 구조체 배열 반환
 	return Result;
+}
+
+// ─── 게임 시작 ──────────────────────────────────────────────────────────────────
+
+void UTBGameInstance::StartNewGame()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTBGameInstance::StartNewGame() - World is null"));
+		return;
+	}
+
+	UPortalManager* PM = World->GetSubsystem<UPortalManager>();
+	if (!PM)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTBGameInstance::StartNewGame() - PortalManager subsystem not found"));
+		return;
+	}
+
+	// LV_Soul_Cave_HubMap으로 이동할 RoomHandle 생성
+	FDataTableRowHandle HubRoomHandle;
+	HubRoomHandle.DataTable = PM->InitRoomHandle.DataTable; // 같은 DataTable 사용
+	HubRoomHandle.RowName = FName("Map_Hub"); // 데이터테이블의 Row 이름
+
+	PM->OnLevelLoadStarted(HubRoomHandle);
+}
+
+void UTBGameInstance::QuitGame()
+{
+	UKismetSystemLibrary::QuitGame(GetWorld(), nullptr, EQuitPreference::Quit, false);
+}
+
+// ─── 설정 시스템 ────────────────────────────────────────────────────────────────
+
+// ===== 설정 저장/로드 =====
+
+void UTBGameInstance::SaveSettings()
+{
+	if (CachedSettings)
+	{
+		UGameplayStatics::SaveGameToSlot(CachedSettings, SettingsSlotName, 0);
+	}
+}
+
+void UTBGameInstance::LoadAndApplySettings()
+{
+	if (UGameplayStatics::DoesSaveGameExist(SettingsSlotName, 0))
+	{
+		CachedSettings = Cast<UTBSaveSettings>(UGameplayStatics::LoadGameFromSlot(SettingsSlotName, 0));
+	}
+
+	if (!CachedSettings)
+	{
+		CachedSettings = Cast<UTBSaveSettings>(UGameplayStatics::CreateSaveGameObject(UTBSaveSettings::StaticClass()));
+	}
+
+	// Audio 볼륨 적용
+	if (MasterSoundMix)
+	{
+		UGameplayStatics::PushSoundMixModifier(GetWorld(), MasterSoundMix);
+		ApplyAudioVolume(MasterSoundClass, CachedSettings->MasterVolume);
+		ApplyAudioVolume(MusicSoundClass, CachedSettings->MusicVolume);
+		ApplyAudioVolume(SFXSoundClass, CachedSettings->SFXVolume);
+	}
+
+	// Brightness 적용
+	if (GEngine)
+	{
+		float Gamma = FMath::GetMappedRangeValueClamped(
+			FVector2D(0.0f, 100.0f), FVector2D(1.5f, 3.0f), CachedSettings->Brightness);
+		GEngine->DisplayGamma = Gamma;
+	}
+}
+
+// ===== Audio 설정 =====
+
+void UTBGameInstance::ApplyAudioVolume(USoundClass* SoundClass, float Volume)
+{
+	if (!MasterSoundMix || !SoundClass) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	UGameplayStatics::SetSoundMixClassOverride(World, MasterSoundMix, SoundClass,
+		FMath::Clamp(Volume, 0.0f, 1.0f), 1.0f, 0.0f, true);
+}
+
+void UTBGameInstance::SetMasterVolume(float Volume)
+{
+	if (!CachedSettings) return;
+	CachedSettings->MasterVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
+	ApplyAudioVolume(MasterSoundClass, CachedSettings->MasterVolume);
+	SaveSettings();
+}
+
+float UTBGameInstance::GetMasterVolume() const
+{
+	return CachedSettings ? CachedSettings->MasterVolume : 1.0f;
+}
+
+void UTBGameInstance::SetMusicVolume(float Volume)
+{
+	if (!CachedSettings) return;
+	CachedSettings->MusicVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
+	ApplyAudioVolume(MusicSoundClass, CachedSettings->MusicVolume);
+	SaveSettings();
+}
+
+float UTBGameInstance::GetMusicVolume() const
+{
+	return CachedSettings ? CachedSettings->MusicVolume : 1.0f;
+}
+
+void UTBGameInstance::SetSFXVolume(float Volume)
+{
+	if (!CachedSettings) return;
+	CachedSettings->SFXVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
+	ApplyAudioVolume(SFXSoundClass, CachedSettings->SFXVolume);
+	SaveSettings();
+}
+
+float UTBGameInstance::GetSFXVolume() const
+{
+	return CachedSettings ? CachedSettings->SFXVolume : 1.0f;
+}
+
+// ===== Video 설정 =====
+
+void UTBGameInstance::SetWindowMode(int32 Mode)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (!Settings) return;
+
+	EWindowMode::Type WinMode;
+	switch (Mode)
+	{
+	case 0: WinMode = EWindowMode::Fullscreen; break;
+	case 1: WinMode = EWindowMode::WindowedFullscreen; break;
+	case 2: WinMode = EWindowMode::Windowed; break;
+	default: WinMode = EWindowMode::WindowedFullscreen; break;
+	}
+
+	Settings->SetFullscreenMode(WinMode);
+
+	// Fullscreen 모드는 데스크탑 해상도와 일치해야 정상 작동
+	if (WinMode == EWindowMode::Fullscreen)
+	{
+		Settings->SetScreenResolution(Settings->GetDesktopResolution());
+	}
+}
+
+int32 UTBGameInstance::GetWindowMode() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (!Settings) return 1;
+
+	switch (Settings->GetFullscreenMode())
+	{
+	case EWindowMode::Fullscreen: return 0;
+	case EWindowMode::WindowedFullscreen: return 1;
+	case EWindowMode::Windowed: return 2;
+	default: return 1;
+	}
+}
+
+TArray<FIntPoint> UTBGameInstance::GetSupportedResolutions() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	FIntPoint DesktopRes = Settings ? Settings->GetDesktopResolution() : FIntPoint(1920, 1080);
+
+	// 고정 해상도 목록 (16:9, 큰 순서)
+	const TArray<FIntPoint> AllResolutions = {
+		FIntPoint(3840, 2160),
+		FIntPoint(2560, 1440),
+		FIntPoint(1920, 1080),
+		FIntPoint(1600, 900),
+		FIntPoint(1280, 720)
+	};
+
+	TArray<FIntPoint> Resolutions;
+	for (const FIntPoint& Res : AllResolutions)
+	{
+		if (Res.X <= DesktopRes.X && Res.Y <= DesktopRes.Y)
+		{
+			Resolutions.Add(Res);
+		}
+	}
+
+	return Resolutions;
+}
+
+void UTBGameInstance::SetResolution(FIntPoint Resolution)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (!Settings) return;
+
+	Settings->SetScreenResolution(Resolution);
+}
+
+FIntPoint UTBGameInstance::GetCurrentResolution() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (!Settings) return FIntPoint(1920, 1080);
+
+	return Settings->GetScreenResolution();
+}
+
+FString UTBGameInstance::FormatResolution(FIntPoint Resolution)
+{
+	return FString::Printf(TEXT("%d x %d"), Resolution.X, Resolution.Y);
+}
+
+void UTBGameInstance::SetBrightness(float Value)
+{
+	if (!CachedSettings) return;
+	CachedSettings->Brightness = FMath::Clamp(Value, 0.0f, 100.0f);
+
+	if (GEngine)
+	{
+		float Gamma = FMath::GetMappedRangeValueClamped(
+			FVector2D(0.0f, 100.0f), FVector2D(1.5f, 3.0f), CachedSettings->Brightness);
+		GEngine->DisplayGamma = Gamma;
+	}
+
+	SaveSettings();
+}
+
+float UTBGameInstance::GetBrightness() const
+{
+	return CachedSettings ? CachedSettings->Brightness : 50.0f;
+}
+
+void UTBGameInstance::SetOverallQuality(int32 Level)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (!Settings) return;
+	Settings->SetOverallScalabilityLevel(Level);
+}
+
+int32 UTBGameInstance::GetOverallQuality() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	return Settings ? Settings->GetOverallScalabilityLevel() : 3;
+}
+
+void UTBGameInstance::SetShadowQuality(int32 Level)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (Settings) Settings->SetShadowQuality(Level);
+}
+
+int32 UTBGameInstance::GetShadowQuality() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	return Settings ? Settings->GetShadowQuality() : 3;
+}
+
+void UTBGameInstance::SetAntiAliasingQuality(int32 Level)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (Settings) Settings->SetAntiAliasingQuality(Level);
+}
+
+int32 UTBGameInstance::GetAntiAliasingQuality() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	return Settings ? Settings->GetAntiAliasingQuality() : 3;
+}
+
+void UTBGameInstance::SetTextureQuality(int32 Level)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (Settings) Settings->SetTextureQuality(Level);
+}
+
+int32 UTBGameInstance::GetTextureQuality() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	return Settings ? Settings->GetTextureQuality() : 3;
+}
+
+void UTBGameInstance::SetViewDistanceQuality(int32 Level)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (Settings) Settings->SetViewDistanceQuality(Level);
+}
+
+int32 UTBGameInstance::GetViewDistanceQuality() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	return Settings ? Settings->GetViewDistanceQuality() : 3;
+}
+
+void UTBGameInstance::SetEffectsQuality(int32 Level)
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (Settings) Settings->SetVisualEffectQuality(Level);
+}
+
+int32 UTBGameInstance::GetEffectsQuality() const
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	return Settings ? Settings->GetVisualEffectQuality() : 3;
+}
+
+void UTBGameInstance::ApplyVideoSettings()
+{
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	if (!Settings) return;
+
+	Settings->ApplySettings(false);
+	Settings->SaveSettings();
 }

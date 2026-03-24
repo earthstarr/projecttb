@@ -10,6 +10,9 @@
 class UPortalSpawnConfig;
 class ABattleEnemyCharacter;
 class UDataTable;
+class USoundMix;
+class USoundClass;
+class UTBSaveSettings;
 
 /** 레벨 간 전투 전환 데이터 */
 USTRUCT(BlueprintType)
@@ -207,4 +210,126 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Portal")
 	int32 GetPortalMoveCount() const { return PortalMoveCount; }
 #pragma endregion
+
+	// ─── 게임 시작 ────────────────────────────────────────────────────────────
+
+	/** 새 게임 시작 (메인 메뉴에서 호출) */
+	UFUNCTION(BlueprintCallable, Category="Game")
+	void StartNewGame();
+
+	/** 게임 종료 (메인 메뉴에서 호출) */
+	UFUNCTION(BlueprintCallable, Category="Game")
+	void QuitGame();
+
+	// ─── 설정 시스템 ──────────────────────────────────────────────────────────
+
+	// --- Audio 설정 ---
+	UFUNCTION(BlueprintCallable, Category = "Settings|Audio")
+	void SetMasterVolume(float Volume);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Audio")
+	float GetMasterVolume() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Audio")
+	void SetMusicVolume(float Volume);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Audio")
+	float GetMusicVolume() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Audio")
+	void SetSFXVolume(float Volume);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Audio")
+	float GetSFXVolume() const;
+
+	// --- Video 설정 ---
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetWindowMode(int32 Mode);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	int32 GetWindowMode() const;
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	TArray<FIntPoint> GetSupportedResolutions() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetResolution(FIntPoint Resolution);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	FIntPoint GetCurrentResolution() const;
+
+	// "1920 x 1080" 형식으로 반환
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	static FString FormatResolution(FIntPoint Resolution);
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetBrightness(float Value);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	float GetBrightness() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetOverallQuality(int32 Level);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	int32 GetOverallQuality() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetShadowQuality(int32 Level);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	int32 GetShadowQuality() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetAntiAliasingQuality(int32 Level);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	int32 GetAntiAliasingQuality() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetTextureQuality(int32 Level);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	int32 GetTextureQuality() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetViewDistanceQuality(int32 Level);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	int32 GetViewDistanceQuality() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void SetEffectsQuality(int32 Level);
+
+	UFUNCTION(BlueprintPure, Category = "Settings|Video")
+	int32 GetEffectsQuality() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Settings|Video")
+	void ApplyVideoSettings();
+
+	// --- 저장/로드 ---
+	UFUNCTION(BlueprintCallable, Category = "Settings")
+	void SaveSettings();
+
+	UFUNCTION(BlueprintCallable, Category = "Settings")
+	void LoadAndApplySettings();
+
+	UPROPERTY(BlueprintReadOnly, Category = "Settings")
+	UTBSaveSettings* CachedSettings;
+
+protected:
+	// === 설정용 에셋 (에디터에서 할당) ===
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	USoundMix* MasterSoundMix;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	USoundClass* MasterSoundClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	USoundClass* MusicSoundClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	USoundClass* SFXSoundClass;
+
+	void ApplyAudioVolume(USoundClass* SoundClass, float Volume);
 };

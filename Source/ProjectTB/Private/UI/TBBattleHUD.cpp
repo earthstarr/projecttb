@@ -430,3 +430,21 @@ void ATBBattleHUD::ReturnToWorld()
 {
 	ExitBattleMode();
 }
+
+void ATBBattleHUD::ShowMainMenu()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !MainMenuWidgetClass) return;
+
+	if (!MainMenuWidget)
+	{
+		MainMenuWidget = CreateWidget<UUserWidget>(PC, MainMenuWidgetClass);
+	}
+
+	if (MainMenuWidget && !MainMenuWidget->IsInViewport())
+	{
+		MainMenuWidget->AddToViewport();
+	}
+
+	StartFadeIn();
+}
