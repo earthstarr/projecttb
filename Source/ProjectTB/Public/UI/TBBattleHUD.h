@@ -117,6 +117,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Defeat")
 	void ShowDefeatWidget();
 
+	/** 메인 메뉴로 복귀 */
+	UFUNCTION(BlueprintCallable, Category="Defeat")
+	void ReturnToMainMenu();
+
 	// BattleManager 참조
 	UFUNCTION(BlueprintCallable, Category="Battle")
 	void SetBattleManager(ABattleManager* NewBattleManager);

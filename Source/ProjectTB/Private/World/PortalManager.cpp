@@ -9,6 +9,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Blueprint/UserWidget.h"
 #include "UI/TBBattleHUD.h"
 #include "World/WorldPlayerController.h"
 #include "World/DataStruct/PortalSpawnConfig.h"
@@ -334,6 +335,12 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		StartBattleManagerSearch();
 		break;
 	case ERoomType::MainMenu:
+		// 패배 위젯이 남아있으면 제거
+		if (TBHUD->DefeatWidget && TBHUD->DefeatWidget->IsInViewport())
+		{
+			TBHUD->DefeatWidget->RemoveFromParent();
+			TBHUD->DefeatWidget = nullptr;
+		}
 		PC->SetInputModeUIOnly();
 		TBHUD->ShowMainMenu();
 		break;
