@@ -557,8 +557,8 @@ void UPortalManager::MakeNewPortal()
 		return;
 	}
 
-	// 가능한 지점 안에서 최소 1개  ~ n 개 지점에 생성
-	const int32 PortalCount = FMath::RandRange(1, SpawnPoints.Num());
+	// 가능한 지점 안에서 최소 2개  ~ n 개 지점에 생성
+	const int32 PortalCount = FMath::RandRange(2, SpawnPoints.Num());
 	TArray<ATargetPoint*> AvailablePoints = SpawnPoints;
 
 	bool bShopPortalSpawned = false;
