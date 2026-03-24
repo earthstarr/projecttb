@@ -23,4 +23,8 @@ public:
 	// Brightness (UGameUserSettings에 없어서 별도 저장)
 	UPROPERTY(BlueprintReadWrite, Category = "Video")
 	float Brightness = 50.0f;
+
+	// 메인 메뉴 카메라 애니메이션 토글
+	UPROPERTY(BlueprintReadWrite, Category = "Game")
+	bool bUseAlternateCameraAnimation = false;
 };

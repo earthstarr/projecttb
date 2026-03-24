@@ -221,6 +221,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Game")
 	void QuitGame();
 
+	/** 메인 메뉴 카메라 애니메이션 토글 (매번 번갈아가며 실행) */
+	UPROPERTY(BlueprintReadWrite, Category="Game")
+	bool bUseAlternateCameraAnimation = false;
+
 	// ─── 설정 시스템 ──────────────────────────────────────────────────────────
 
 	// --- Audio 설정 ---

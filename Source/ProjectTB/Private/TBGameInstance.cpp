@@ -302,6 +302,9 @@ void UTBGameInstance::SaveSettings()
 {
 	if (CachedSettings)
 	{
+		// GameInstance의 현재 값을 SaveSettings에 동기화
+		CachedSettings->bUseAlternateCameraAnimation = bUseAlternateCameraAnimation;
+
 		UGameplayStatics::SaveGameToSlot(CachedSettings, SettingsSlotName, 0);
 	}
 }
@@ -334,6 +337,9 @@ void UTBGameInstance::LoadAndApplySettings()
 			FVector2D(0.0f, 100.0f), FVector2D(1.5f, 3.0f), CachedSettings->Brightness);
 		GEngine->DisplayGamma = Gamma;
 	}
+
+	// 카메라 애니메이션 토글 적용
+	bUseAlternateCameraAnimation = CachedSettings->bUseAlternateCameraAnimation;
 }
 
 // ===== Audio 설정 =====
