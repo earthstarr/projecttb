@@ -10,6 +10,7 @@
 #include "UI/Artifact/OwnedArtifactListWidget.h"
 #include "UI/World/ShopWidget.h"
 #include "TBGameInstance.h"
+#include "UI/LevelUpWidget.h"
 
 void AWorldPlayerController::BeginPlay()
 {
@@ -255,6 +256,77 @@ void AWorldPlayerController::ToggleWorldUIMode()
 		bWorldUIMode = false;
 	}
 	
+}
+
+void AWorldPlayerController::TogglePartyStatus()
+{
+	// 다른 전용 UI(상점/이벤트 등)가 열려 있으면 상태창은 열지 않음
+	if (CurrentWidget && CurrentWidget != PartyStatusWidget)
+	{
+		return;
+	}
+
+	if (PartyStatusWidgetClass == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AWorldPlayerController::TogglePartyStatus - PartyStatusWidgetClass is nullptr"));
+		return;
+	}
+
+	if (PartyStatusWidget == nullptr)
+	{
+		PartyStatusWidget = CreateWidget<ULevelUpWidget>(this, PartyStatusWidgetClass);
+		if (PartyStatusWidget == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("AWorldPlayerController::TogglePartyStatus - Failed to create PartyStatusWidget"));
+			return;
+		}
+	}
+
+	const bool bIsOpen = PartyStatusWidget->IsInViewport();
+
+	// 열기
+	if (!bIsOpen)
+	{
+		PartyStatusWidget->AddToViewport(50);
+		PartyStatusWidget->RefreshFromGameState();
+
+		CurrentWidget = PartyStatusWidget;
+
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+
+		bShowMouseCursor = true;
+		SetIgnoreMoveInput(true);
+		SetIgnoreLookInput(true);
+
+		if (APawn* PlayerPawn = GetPawn())
+		{
+			if (UMovementComponent* MoveComp = PlayerPawn->GetMovementComponent())
+			{
+				MoveComp->StopMovementImmediately();
+				MoveComp->Velocity = FVector::ZeroVector;
+			}
+		}
+
+		return;
+	}
+
+	// 닫기
+	PartyStatusWidget->RemoveFromParent();
+
+	if (CurrentWidget == PartyStatusWidget)
+	{
+		CurrentWidget = nullptr;
+	}
+
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+
+	bShowMouseCursor = false;
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
 }
 
 void AWorldPlayerController::PortalSetCount(int32 NewCount)

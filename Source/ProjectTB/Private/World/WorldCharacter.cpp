@@ -118,6 +118,11 @@ void AWorldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		{
 			EIC->BindAction(ToggleWorldUIAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleToggleWorldUI);
 		}
+		
+		if (TogglePartyStatus)
+		{
+			EIC->BindAction(TogglePartyStatus, ETriggerEvent::Started,   this, &AWorldCharacter::HandleTogglePartyStatus);
+		}
 	}
 }
 
@@ -179,5 +184,13 @@ void AWorldCharacter::HandleToggleWorldUI()
 	if (AWorldPlayerController* PC = Cast<AWorldPlayerController>(GetController()))
 	{
 		PC->ToggleWorldUIMode();
+	}
+}
+
+void AWorldCharacter::HandleTogglePartyStatus()
+{
+	if (AWorldPlayerController* PC = Cast<AWorldPlayerController>(GetController()))
+	{
+		PC->TogglePartyStatus();
 	}
 }

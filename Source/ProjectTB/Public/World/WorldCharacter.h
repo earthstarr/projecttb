@@ -53,6 +53,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> ToggleWorldUIAction;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> TogglePartyStatus;
+	
+	
 	// ─── 입력 핸들러 ─────────────────────────────────────────────────────────
 	void HandleMove(const FInputActionValue& Value);
 	void HandleLook(const FInputActionValue& Value);
@@ -60,6 +64,7 @@ protected:
 	void HandleFreeLookEnd();
 	void HandleRunToggle();
 	void HandleToggleWorldUI();
+	void HandleTogglePartyStatus();
 	
 	// ─── 카메라 ──────────────────────────────────────────────────────────────
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
