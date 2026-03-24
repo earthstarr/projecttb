@@ -204,6 +204,9 @@ void AWorldPlayerController::SetInputModeWorld()
 
 	SetIgnoreMoveInput(false);
 	SetIgnoreLookInput(false);
+	
+	// 카메라 활성화
+	SetViewTarget(ControlledPawn);
 
 	// 엑터가 보이지 않는다면 활성화
 	if (ControlledPawn->IsHidden() == false) return;
@@ -212,10 +215,7 @@ void AWorldPlayerController::SetInputModeWorld()
 
 	// 액터 활성화
 	ControlledPawn->SetActorHiddenInGame(false);
-	ControlledPawn->SetActorEnableCollision(true);
-
-	// 카메라 활성화
-	SetViewTarget(ControlledPawn);
+	ControlledPawn->SetActorEnableCollision(true);	
 
 }
 
