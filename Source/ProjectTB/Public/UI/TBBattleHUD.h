@@ -71,6 +71,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> MainMenuWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UUserWidget> DefeatWidgetClass;
+
 	// ─── 생성된 위젯 참조 ────────────────────────────────────────────────────
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UTurnOrderWidget> TurnOrderWidget;
@@ -90,6 +93,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UUserWidget> MainMenuWidget;
 
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UUserWidget> DefeatWidget;
+
 	// ─── Victory/LevelUp 함수 ────────────────────────────────────────────────
 
 	/** 승리 위젯 표시 */
@@ -106,6 +112,14 @@ public:
 	/** 월드로 복귀 */
 	UFUNCTION(BlueprintCallable, Category="Victory")
 	void ReturnToWorld();
+
+	/** 패배 위젯 표시 */
+	UFUNCTION(BlueprintCallable, Category="Defeat")
+	void ShowDefeatWidget();
+
+	/** 메인 메뉴로 복귀 */
+	UFUNCTION(BlueprintCallable, Category="Defeat")
+	void ReturnToMainMenu();
 
 	// BattleManager 참조
 	UFUNCTION(BlueprintCallable, Category="Battle")

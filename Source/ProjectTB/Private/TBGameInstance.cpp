@@ -294,6 +294,57 @@ void UTBGameInstance::QuitGame()
 	UKismetSystemLibrary::QuitGame(GetWorld(), nullptr, EQuitPreference::Quit, false);
 }
 
+void UTBGameInstance::ResetGameData()
+{
+	// 파티 데이터를 DefaultParty로 초기화
+	if (DefaultParty.Num() > 0)
+	{
+		PartyData = DefaultParty;
+	}
+
+	// 골드 초기화
+	CurrentMoney = 0;
+
+	// 포탈 이동 횟수 초기화
+	PortalMoveCount = 0;
+
+	// 주사위 초기화
+	OwnedDice.Empty();
+
+	// 아티팩트 초기화
+	PartyArtifactData.EquippedArtifact.Empty();
+	OnOwnedArtifactsChanged.Broadcast();
+
+	UE_LOG(LogTemp, Log, TEXT("UTBGameInstance::ResetGameData - All game data reset to default"));
+}
+
+void UTBGameInstance::ReturnToMainMenu()
+{
+	// 게임 데이터 초기화
+	ResetGameData();
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTBGameInstance::ReturnToMainMenu() - World is null"));
+		return;
+	}
+
+	UPortalManager* PM = World->GetSubsystem<UPortalManager>();
+	if (!PM)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTBGameInstance::ReturnToMainMenu() - PortalManager subsystem not found"));
+		return;
+	}
+
+	// Map_MainMenu로 이동
+	FDataTableRowHandle MainMenuHandle;
+	MainMenuHandle.DataTable = PM->InitRoomHandle.DataTable;
+	MainMenuHandle.RowName = FName("Map_MainMenu");
+
+	PM->OnLevelLoadStarted(MainMenuHandle);
+}
+
 // ─── 설정 시스템 ────────────────────────────────────────────────────────────────
 
 // ===== 설정 저장/로드 =====

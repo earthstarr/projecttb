@@ -202,16 +202,16 @@ void AWorldPlayerController::SetInputModeWorld()
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn == nullptr) return;
 
-	SetIgnoreMoveInput(false);
-	SetIgnoreLookInput(false);
+	ResetIgnoreMoveInput();
+	ResetIgnoreLookInput();
 	
 	// 카메라 활성화
 	SetViewTarget(ControlledPawn);
 
 	// 엑터가 보이지 않는다면 활성화
-	if (ControlledPawn->IsHidden() == false) return;
+	//if (ControlledPawn->IsHidden() == false) return;
 
-	//		MoveComp->SetMovementMode(MOVE_Walking); // 이동 모드는 TeleportLevel에서 켜줌.
+	// MoveComp->SetMovementMode(MOVE_Walking); // 이동 모드는 TeleportLevel에서 켜줌.
 
 	// 액터 활성화
 	ControlledPawn->SetActorHiddenInGame(false);
