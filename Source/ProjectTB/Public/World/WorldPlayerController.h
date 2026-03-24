@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "WorldPlayerController.generated.h"
 
+class ULevelUpWidget;
 /**
  * 
  */
@@ -26,6 +27,7 @@ public:
 	void SetInputModeBattle();
 	void SetInputModeWorld();
 	void ToggleWorldUIMode();
+	void TogglePartyStatus();
 	
 	// 층 수 조절하는 콘솔 명령어
 public:
@@ -45,6 +47,12 @@ private:
 	UPROPERTY(Meta = (AllowPrivateAccess = true))
 	TObjectPtr<UOwnedArtifactListWidget> OwnedArtifactListWidget;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI", Meta=(AllowPrivateAccess=true))
+	TSubclassOf<ULevelUpWidget> PartyStatusWidgetClass;
+
+	UPROPERTY(Meta=(AllowPrivateAccess=true))
+	TObjectPtr<ULevelUpWidget> PartyStatusWidget;
+	
 	UPROPERTY(Meta = (AllowPrivateAccess = true))
 	TObjectPtr<UUserWidget> CurrentWidget;
 	
