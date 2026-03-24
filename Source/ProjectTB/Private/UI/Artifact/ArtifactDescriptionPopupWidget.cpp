@@ -9,9 +9,18 @@
 #include "Components/RichTextBlock.h"
 #include "Components/TextBlock.h"
 
+void UArtifactDescriptionPopupWidget::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+
+	ApplyDescriptionTextLayout();
+}
+
 void UArtifactDescriptionPopupWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	ApplyDescriptionTextLayout();
 
 	if (BackgroundCloseButton)
 	{
@@ -30,6 +39,7 @@ void UArtifactDescriptionPopupWidget::InitializePopup(const FArtifactEntry& InAr
 
 	if (DescriptionText)
 	{
+		ApplyDescriptionTextLayout();
 		DescriptionText->SetText(ArtifactEntry.ArtifactData.Description);
 	}
 
@@ -39,6 +49,17 @@ void UArtifactDescriptionPopupWidget::InitializePopup(const FArtifactEntry& InAr
 void UArtifactDescriptionPopupWidget::HandleBackgroundCloseClicked()
 {
 	RemoveFromParent();
+}
+
+void UArtifactDescriptionPopupWidget::ApplyDescriptionTextLayout()
+{
+	if (DescriptionText == nullptr)
+	{
+		return;
+	}
+
+	DescriptionText->SetAutoWrapText(true);
+	DescriptionText->SetWrapTextAt(DescriptionWrapTextAt);
 }
 
 void UArtifactDescriptionPopupWidget::PositionPopup(const FVector2D& ClickPosition)

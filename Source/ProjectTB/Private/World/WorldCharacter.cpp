@@ -5,6 +5,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "World/WorldPlayerController.h"
 
 AWorldCharacter::AWorldCharacter()
 {
@@ -112,6 +113,11 @@ void AWorldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		{
 			EIC->BindAction(RunAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleRunToggle);
 		}
+		
+		if (ToggleWorldUIAction)
+		{
+			EIC->BindAction(ToggleWorldUIAction, ETriggerEvent::Started,   this, &AWorldCharacter::HandleToggleWorldUI);
+		}
 	}
 }
 
@@ -166,4 +172,12 @@ void AWorldCharacter::HandleRunToggle()
 {
 	//달리기 토글
 	bRunning == true ? bRunning = false : bRunning = true;
+}
+
+void AWorldCharacter::HandleToggleWorldUI()
+{
+	if (AWorldPlayerController* PC = Cast<AWorldPlayerController>(GetController()))
+	{
+		PC->ToggleWorldUIMode();
+	}
 }

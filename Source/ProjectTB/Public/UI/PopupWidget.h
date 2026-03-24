@@ -26,7 +26,10 @@ public:
 	virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
 	
 	void SetPopupText(const FString& PopupID);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Popup")
+	void ApplyPopupText();
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category="Popup")
 	FString CurrentPopupID;
 };

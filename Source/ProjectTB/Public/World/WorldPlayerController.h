@@ -25,6 +25,7 @@ public:
 	void SetInputModeUIOnly();
 	void SetInputModeBattle();
 	void SetInputModeWorld();
+	void ToggleWorldUIMode();
 	
 	// 층 수 조절하는 콘솔 명령어
 public:
@@ -46,5 +47,8 @@ private:
 
 	UPROPERTY(Meta = (AllowPrivateAccess = true))
 	TObjectPtr<UUserWidget> CurrentWidget;
+	
+	UPROPERTY(Meta = (AllowPrivateAccess = true))
+	bool bWorldUIMode = false;
 	
 };
