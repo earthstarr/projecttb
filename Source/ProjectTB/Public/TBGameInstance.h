@@ -221,6 +221,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Game")
 	void QuitGame();
 
+	/** 게임 데이터 초기화 후 메인 메뉴로 복귀 (패배 시 호출) */
+	UFUNCTION(BlueprintCallable, Category="Game")
+	void ReturnToMainMenu();
+
+	/** 게임 데이터 초기화 (레벨, 경험치, 골드, 아티팩트 등) */
+	UFUNCTION(BlueprintCallable, Category="Game")
+	void ResetGameData();
+
 	/** 메인 메뉴 카메라 애니메이션 토글 (매번 번갈아가며 실행) */
 	UPROPERTY(BlueprintReadWrite, Category="Game")
 	bool bUseAlternateCameraAnimation = false;

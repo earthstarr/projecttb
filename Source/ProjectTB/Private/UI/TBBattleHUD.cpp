@@ -448,3 +448,26 @@ void ATBBattleHUD::ShowMainMenu()
 
 	StartFadeIn();
 }
+
+void ATBBattleHUD::ShowDefeatWidget()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !DefeatWidgetClass) return;
+
+	if (!DefeatWidget)
+	{
+		DefeatWidget = CreateWidget<UUserWidget>(PC, DefeatWidgetClass);
+	}
+
+	if (DefeatWidget && !DefeatWidget->IsInViewport())
+	{
+		DefeatWidget->AddToViewport();
+	}
+
+	// UI 입력 모드로 전환
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(DefeatWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	PC->SetInputMode(InputMode);
+	PC->bShowMouseCursor = true;
+}
