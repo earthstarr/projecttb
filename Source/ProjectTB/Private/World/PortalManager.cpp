@@ -155,6 +155,19 @@ void UPortalManager::RecoverPartyHpMpOnPortalTravel()
 
 void UPortalManager::OnReturnToWorldLevel(const FDataTableRowHandle& PostBattleRoomData)
 {
+	// 전투 종료 후 복귀 시 사망한 캐릭터 HP 1로 부활
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetWorld()->GetGameInstance());
+	if (GI)
+	{
+		for (FPartyMemberData& Member : GI->PartyData)
+		{
+			if (Member.CurrentHP <= 0.f)
+			{
+				Member.CurrentHP = 1.f;
+			}
+		}
+	}
+
 	// 돌아갈 맵이 없다면 월드 맵으로
 	if (PostBattleRoomData.IsNull())
 	{
