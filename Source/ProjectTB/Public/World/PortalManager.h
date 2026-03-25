@@ -60,6 +60,9 @@ public:
 	
 	UFUNCTION()
 	void OnLevelShown();
+
+	UFUNCTION()
+	void OnPendingLevelHidden();
 	
 	UFUNCTION()
 	void TeleportLevel();
@@ -181,6 +184,7 @@ private:
 	bool bPortalGeneratedForCurrentRoom = false;
 	bool bPendingPlayerTeleport = false;
 	bool bPendingRoomActivation = false;
+	bool bWaitingForPreviousLevelHidden = false;
 	
 	UPROPERTY()
 	TWeakObjectPtr<APortalSpawnAnchorSet> CurrentPortalSpawnAnchorSet;

@@ -105,6 +105,7 @@ void UPortalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomH
 	PendingRoomHandle = SelectedRoomHandle;
 	bPendingPlayerTeleport = false;
 	bPendingRoomActivation = false;
+	bWaitingForPreviousLevelHidden = false;
 	GetWorld()->GetTimerManager().ClearTimer(FadeInTimerHandle);
 	GetWorld()->GetTimerManager().SetTimer(FadeInTimerHandle, this, &UPortalManager::OnFadeInFinished, 0.5f, false);
 }
@@ -241,6 +242,20 @@ void UPortalManager::OnLevelShown()
 		TryGeneratePortalForCurrentRoom();
 	}
 
+	TryActivateRoomMode();
+}
+
+void UPortalManager::OnPendingLevelHidden()
+{
+	if (PendingUnloadLevelInstance != nullptr)
+	{
+		PendingUnloadLevelInstance->OnLevelHidden.RemoveDynamic(this, &UPortalManager::OnPendingLevelHidden);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("UPortalManager::OnPendingLevelHidden - Previous level is no longer visible"));
+
+	PendingUnloadLevelInstance = nullptr;
+	bWaitingForPreviousLevelHidden = false;
 	TryActivateRoomMode();
 }
 
@@ -794,9 +809,11 @@ void UPortalManager::UnloadPendingLevelInstance()
 		return;
 	}
 
+	PendingUnloadLevelInstance->OnLevelHidden.RemoveDynamic(this, &UPortalManager::OnPendingLevelHidden);
+	PendingUnloadLevelInstance->OnLevelHidden.AddDynamic(this, &UPortalManager::OnPendingLevelHidden);
+	bWaitingForPreviousLevelHidden = true;
 	PendingUnloadLevelInstance->SetIsRequestingUnloadAndRemoval(true);
 	UE_LOG(LogTemp, Log, TEXT("이전 레벨 언로드 요청됨"));
-	PendingUnloadLevelInstance = nullptr;
 }
 
 void UPortalManager::TryTeleportDeferredPlayer()
@@ -820,6 +837,12 @@ void UPortalManager::TryActivateRoomMode()
 	if (bPendingPlayerTeleport)
 	{
 		UE_LOG(LogTemp, Log, TEXT("UPortalManager::TryActivateRoomMode - Waiting for deferred teleport"));
+		return;
+	}
+
+	if (bWaitingForPreviousLevelHidden)
+	{
+		UE_LOG(LogTemp, Log, TEXT("UPortalManager::TryActivateRoomMode - Waiting for previous level hidden"));
 		return;
 	}
 
