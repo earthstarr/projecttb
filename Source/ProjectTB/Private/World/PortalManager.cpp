@@ -148,8 +148,8 @@ void UPortalManager::RecoverPartyHpMpOnPortalTravel()
 			? MaxMP
 			: FMath::Clamp(Member.CurrentMP, 0.f, MaxMP);
 
-		Member.CurrentHP = FMath::Clamp(CurrentHP + MaxHP * 0.1f, 0.f, MaxHP);
-		Member.CurrentMP = FMath::Clamp(CurrentMP + MaxMP * 0.1f, 0.f, MaxMP);
+		Member.CurrentHP = FMath::Clamp(CurrentHP + MaxHP * 0.2f, 0.f, MaxHP);
+		Member.CurrentMP = FMath::Clamp(CurrentMP + MaxMP * 0.2f, 0.f, MaxMP);
 	}
 }
 

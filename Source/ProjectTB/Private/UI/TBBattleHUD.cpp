@@ -483,6 +483,36 @@ void ATBBattleHUD::ShowDefeatWidget()
 	PC->bEnableMouseOverEvents = true;
 }
 
+void ATBBattleHUD::ShowFinalVictoryWidget()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !FinalVictoryWidgetClass) return;
+
+	// 배틀 위젯 제거
+	RemoveBattleWidgets();
+
+	if (!FinalVictoryWidget)
+	{
+		FinalVictoryWidget = CreateWidget<UUserWidget>(PC, FinalVictoryWidgetClass);
+	}
+
+	if (FinalVictoryWidget && !FinalVictoryWidget->IsInViewport())
+	{
+		FinalVictoryWidget->AddToViewport(100);  // 높은 ZOrder로 최상위 표시
+	}
+
+	// UI 입력 모드로 전환
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(FinalVictoryWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	PC->SetInputMode(InputMode);
+	PC->bShowMouseCursor = true;
+
+	// 클릭/호버 이벤트 활성화
+	PC->bEnableClickEvents = true;
+	PC->bEnableMouseOverEvents = true;
+}
+
 void ATBBattleHUD::ReturnToMainMenu()
 {
 	// 패배 위젯 제거
