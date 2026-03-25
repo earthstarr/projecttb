@@ -109,50 +109,6 @@ void UPortalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomH
 	GetWorld()->GetTimerManager().SetTimer(FadeInTimerHandle, this, &UPortalManager::OnFadeInFinished, 0.5f, false);
 }
 
-void UPortalManager::OnPortalTravelStarted(const FDataTableRowHandle& SelectedRoomHandle)
-{
-	RecoverPartyHpMpOnPortalTravel();
-	OnLevelLoadStarted(SelectedRoomHandle);
-}
-
-void UPortalManager::RecoverPartyHpMpOnPortalTravel()
-{
-	UWorld* World = GetWorld();
-	if (World == nullptr)
-	{
-		return;
-	}
-
-	UTBGameInstance* GI = Cast<UTBGameInstance>(World->GetGameInstance());
-	if (GI == nullptr || GI->PartyData.IsEmpty())
-	{
-		return;
-	}
-
-	for (FPartyMemberData& Member : GI->PartyData)
-	{
-		FCharacterLevelStats LevelStats;
-		if (!GI->GetLevelStats(Member.CharacterId, Member.Level, LevelStats))
-		{
-			continue;
-		}
-
-		const float MaxHP = LevelStats.MaxHP;
-		const float MaxMP = LevelStats.MaxMP;
-
-		const float CurrentHP = (Member.CurrentHP < 0.f)
-			? MaxHP
-			: FMath::Clamp(Member.CurrentHP, 0.f, MaxHP);
-
-		const float CurrentMP = (Member.CurrentMP < 0.f)
-			? MaxMP
-			: FMath::Clamp(Member.CurrentMP, 0.f, MaxMP);
-
-		Member.CurrentHP = FMath::Clamp(CurrentHP + MaxHP * 0.1f, 0.f, MaxHP);
-		Member.CurrentMP = FMath::Clamp(CurrentMP + MaxMP * 0.1f, 0.f, MaxMP);
-	}
-}
-
 void UPortalManager::OnReturnToWorldLevel(const FDataTableRowHandle& PostBattleRoomData)
 {
 	// 돌아갈 맵이 없다면 월드 맵으로
@@ -522,10 +478,10 @@ void UPortalManager::CachePortalRoomCandidates(UDataTable* RoomTable)
 			EventRoomCandidates.Add(NewHandle);
 			break;
 			
-			//이벤트 포탈은 상점도 갈 수 있도록 설계 했으나 취소
+			//이벤트 포탈은 상점도 갈 수 있도록 설계
 		case ERoomType::Shop:
 			ShopRoomCandidates.Add(NewHandle);
-			//EventRoomCandidates.Add(NewHandle);
+			EventRoomCandidates.Add(NewHandle);
 			break;
 			
 		case ERoomType::Boss:
@@ -608,8 +564,8 @@ void UPortalManager::MakeNewPortal()
 		return;
 	}
 
-	// 가능한 지점 안에서 최소 2개  ~ n 개 지점에 생성
-	const int32 PortalCount = FMath::RandRange(2, SpawnPoints.Num());
+	// 가능한 지점 안에서 최소 1개  ~ n 개 지점에 생성
+	const int32 PortalCount = FMath::RandRange(1, SpawnPoints.Num());
 	TArray<ATargetPoint*> AvailablePoints = SpawnPoints;
 
 	bool bShopPortalSpawned = false;
