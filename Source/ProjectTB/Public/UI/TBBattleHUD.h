@@ -74,6 +74,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> DefeatWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UUserWidget> FinalVictoryWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UUserWidget> FinalVictorySecondWidgetClass;
+
 	// ─── 생성된 위젯 참조 ────────────────────────────────────────────────────
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UTurnOrderWidget> TurnOrderWidget;
@@ -96,6 +102,12 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UUserWidget> DefeatWidget;
 
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UUserWidget> FinalVictoryWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UUserWidget> FinalVictorySecondWidget;
+
 	// ─── Victory/LevelUp 함수 ────────────────────────────────────────────────
 
 	/** 승리 위젯 표시 */
@@ -116,6 +128,14 @@ public:
 	/** 패배 위젯 표시 */
 	UFUNCTION(BlueprintCallable, Category="Defeat")
 	void ShowDefeatWidget();
+
+	/** 최종 승리 위젯 표시 */
+	UFUNCTION(BlueprintCallable, Category="Victory")
+	void ShowFinalVictoryWidget();
+
+	/** 최종 승리 2단계 위젯 표시 (크레딧 등) */
+	UFUNCTION(BlueprintCallable, Category="Victory")
+	void ShowFinalVictorySecondWidget();
 
 	/** 메인 메뉴로 복귀 */
 	UFUNCTION(BlueprintCallable, Category="Defeat")
