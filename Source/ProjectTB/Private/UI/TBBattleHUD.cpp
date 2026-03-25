@@ -64,7 +64,7 @@ void ATBBattleHUD::StartFadeOut(float Duration) const
 	{
 		if (APlayerCameraManager* PlayerCameraManager = PC->PlayerCameraManager)
 		{
-		// 시작 투명도, 끝 투명도, 페이드 시간, 페이드 색상, 오디오 페이드 여부, 페이드 이후 상태 유지 여부
+			// 시작 투명도, 끝 투명도, 페이드 시간, 페이드 색상, 오디오 페이드 여부, 페이드 이후 상태 유지 여부
 			PlayerCameraManager->StartCameraFade(0.f, 1.f, Duration, FLinearColor::Black, false, true);
 		}
 	}
@@ -585,5 +585,5 @@ void ATBBattleHUD::ReturnToMainMenu()
 		{
 			GI->ReturnToMainMenu();
 		}
-	}, 0.5f, false);
+	}, 1.0f, false);
 }
