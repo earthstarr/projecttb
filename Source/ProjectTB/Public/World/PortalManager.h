@@ -220,6 +220,6 @@ private:
 
 	// 현재 이동 횟수 조회 헬퍼
 	int32 GetCurrentPortalMoveCount() const;
-	
+
 #pragma endregion
 };

@@ -5,6 +5,7 @@
 #include "TBSaveSettings.h"
 #include "Sound/SoundMix.h"
 #include "Sound/SoundClass.h"
+#include "Components/AudioComponent.h"
 #include "GameFramework/GameUserSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -631,4 +632,59 @@ void UTBGameInstance::ApplyVideoSettings()
 
 	Settings->ApplySettings(false);
 	Settings->SaveSettings();
+}
+
+// ─── BGM 관리 ────────────────────────────────────────────────────────────
+
+void UTBGameInstance::PlayBGM(USoundBase* BGMSound, float VolumeMultiplier, float FadeInDuration)
+{
+	if (!BGMSound) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	// 기존 BGM 정지
+	if (BGMAudioComponent && BGMAudioComponent->IsPlaying())
+	{
+		BGMAudioComponent->FadeOut(FadeInDuration, 0.0f);
+	}
+
+	// SpawnSound2D로 새 BGM 생성 (자동으로 World에 등록됨)
+	BGMAudioComponent = UGameplayStatics::SpawnSound2D(
+		World,
+		BGMSound,
+		VolumeMultiplier,
+		1.0f,  // Pitch
+		0.0f,  // StartTime
+		nullptr,  // ConcurrencySettings
+		true,  // bPersistAcrossLevelTransition - 레벨 전환 시에도 유지
+		false  // bAutoDestroy
+	);
+
+	if (!BGMAudioComponent) return;
+
+	// 페이드인
+	if (FadeInDuration > 0.0f)
+	{
+		BGMAudioComponent->FadeIn(FadeInDuration, VolumeMultiplier);
+	}
+}
+
+void UTBGameInstance::StopBGM(float FadeOutDuration)
+{
+	if (!BGMAudioComponent || !BGMAudioComponent->IsPlaying()) return;
+
+	if (FadeOutDuration > 0.0f)
+	{
+		BGMAudioComponent->FadeOut(FadeOutDuration, 0.0f);
+	}
+	else
+	{
+		BGMAudioComponent->Stop();
+	}
+}
+
+bool UTBGameInstance::IsBGMPlaying() const
+{
+	return BGMAudioComponent && BGMAudioComponent->IsPlaying();
 }
