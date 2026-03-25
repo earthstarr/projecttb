@@ -91,6 +91,7 @@ void UOwnedArtifactListWidget::RefreshOwnedArtifacts()
 void UOwnedArtifactListWidget::HandleOwnedArtifactsChanged()
 {
 	RefreshOwnedArtifacts();
+	ArtifactScrollBox->ScrollToEnd();
 }
 
 void UOwnedArtifactListWidget::MoveToViewportPosition(FVector2D Position)
@@ -102,7 +103,7 @@ void UOwnedArtifactListWidget::MoveToViewportPosition(FVector2D Position)
 void UOwnedArtifactListWidget::RestoreFieldLayout()
 {
 	SetRenderScale(FVector2D(1.f, 1.f));
-	MoveToViewportPosition(FVector2D::ZeroVector);
+	MoveToViewportPosition(FVector2D(30.f, 0.f));
 }
 
 void UOwnedArtifactListWidget::MoveToWidgetAnchor(UWidget* AnchorWidget)
