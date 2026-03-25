@@ -513,8 +513,47 @@ void ATBBattleHUD::ShowFinalVictoryWidget()
 	PC->bEnableMouseOverEvents = true;
 }
 
+void ATBBattleHUD::ShowFinalVictorySecondWidget()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !FinalVictorySecondWidgetClass) return;
+
+	// 첫 번째 최종 승리 위젯 제거
+	if (FinalVictoryWidget && FinalVictoryWidget->IsInViewport())
+	{
+		FinalVictoryWidget->RemoveFromParent();
+	}
+
+	if (!FinalVictorySecondWidget)
+	{
+		FinalVictorySecondWidget = CreateWidget<UUserWidget>(PC, FinalVictorySecondWidgetClass);
+	}
+
+	if (FinalVictorySecondWidget && !FinalVictorySecondWidget->IsInViewport())
+	{
+		FinalVictorySecondWidget->AddToViewport(100);  // 높은 ZOrder로 최상위 표시
+	}
+
+	// UI 입력 모드로 전환
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(FinalVictorySecondWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	PC->SetInputMode(InputMode);
+	PC->bShowMouseCursor = true;
+
+	// 클릭/호버 이벤트 활성화
+	PC->bEnableClickEvents = true;
+	PC->bEnableMouseOverEvents = true;
+}
+
 void ATBBattleHUD::ReturnToMainMenu()
 {
+	// 게임 일시정지 해제
+	UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+	// 시간 감속 해제 (정상 속도로 복원)
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+
 	// 패배 위젯 제거
 	if (DefeatWidget)
 	{
@@ -523,6 +562,16 @@ void ATBBattleHUD::ReturnToMainMenu()
 			DefeatWidget->RemoveFromParent();
 		}
 		DefeatWidget = nullptr;
+	}
+
+	// 최종 승리 위젯들도 제거
+	if (FinalVictoryWidget && FinalVictoryWidget->IsInViewport())
+	{
+		FinalVictoryWidget->RemoveFromParent();
+	}
+	if (FinalVictorySecondWidget && FinalVictorySecondWidget->IsInViewport())
+	{
+		FinalVictorySecondWidget->RemoveFromParent();
 	}
 
 	// 페이드 아웃
