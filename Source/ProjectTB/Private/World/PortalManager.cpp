@@ -148,13 +148,26 @@ void UPortalManager::RecoverPartyHpMpOnPortalTravel()
 			? MaxMP
 			: FMath::Clamp(Member.CurrentMP, 0.f, MaxMP);
 
-		Member.CurrentHP = FMath::Clamp(CurrentHP + MaxHP * 0.1f, 0.f, MaxHP);
-		Member.CurrentMP = FMath::Clamp(CurrentMP + MaxMP * 0.1f, 0.f, MaxMP);
+		Member.CurrentHP = FMath::Clamp(CurrentHP + MaxHP * 0.2f, 0.f, MaxHP);
+		Member.CurrentMP = FMath::Clamp(CurrentMP + MaxMP * 0.2f, 0.f, MaxMP);
 	}
 }
 
 void UPortalManager::OnReturnToWorldLevel(const FDataTableRowHandle& PostBattleRoomData)
 {
+	// 전투 종료 후 복귀 시 사망한 캐릭터 HP 1로 부활
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetWorld()->GetGameInstance());
+	if (GI)
+	{
+		for (FPartyMemberData& Member : GI->PartyData)
+		{
+			if (Member.CurrentHP <= 0.f)
+			{
+				Member.CurrentHP = 1.f;
+			}
+		}
+	}
+
 	// 돌아갈 맵이 없다면 월드 맵으로
 	if (PostBattleRoomData.IsNull())
 	{

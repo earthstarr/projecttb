@@ -1343,7 +1343,16 @@ void ABattleManager::ShowVictoryWidgetDelayed()
 
 		if (ATBBattleHUD* HUD = Cast<ATBBattleHUD>(PC->GetHUD()))
 		{
-			HUD->ShowVictoryWidget(CachedBeforeExpData, CachedAfterExpData, CachedLevelUpData, CachedRewardMoney);
+			// 포탈 카운트가 15면 최종 보스 승리 → 최종 승리 위젯 표시
+			UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+			if (GI && GI->GetPortalMoveCount() == 15)
+			{
+				HUD->ShowFinalVictoryWidget();
+			}
+			else
+			{
+				HUD->ShowVictoryWidget(CachedBeforeExpData, CachedAfterExpData, CachedLevelUpData, CachedRewardMoney);
+			}
 		}
 	}
 }
