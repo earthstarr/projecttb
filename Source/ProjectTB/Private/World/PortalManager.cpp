@@ -426,7 +426,6 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 			if (GI && GI->BossBGM)
 				GI->PlayBGM(GI->BossBGM, 0.7f, 1.5f);
 		}
-
 		break;
 	case ERoomType::MainMenu:
 		TBHUD->RemovePortalFloorWidget();
