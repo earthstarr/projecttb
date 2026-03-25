@@ -122,8 +122,8 @@ void ATBBattleHUD::CreateBattleWidgets()
 
 	UE_LOG(LogTemp, Warning, TEXT("TBBattleHUD::CreateWidgets - TurnOrderWidgetClass: %s"),
 		TurnOrderWidgetClass ? *TurnOrderWidgetClass->GetName() : TEXT("NULL"));
-
-	if (TurnOrderWidgetClass)
+	
+	if (!TurnOrderWidget && TurnOrderWidgetClass)
 	{
 		TurnOrderWidget = CreateWidget<UTurnOrderWidget>(PC, TurnOrderWidgetClass);
 		UE_LOG(LogTemp, Warning, TEXT("TBBattleHUD::CreateWidgets - TurnOrderWidget created: %s"),
@@ -134,7 +134,8 @@ void ATBBattleHUD::CreateBattleWidgets()
 	{
 		UE_LOG(LogTemp, Error, TEXT("TBBattleHUD::CreateWidgets - TurnOrderWidgetClass is NOT set!"));
 	}
-	if (BattleMenuWidgetClass)
+	
+	if (!BattleMenuWidget && BattleMenuWidgetClass)
 	{
 		BattleMenuWidget = CreateWidget<UBattleMenuWidget>(PC, BattleMenuWidgetClass);
 		if (BattleMenuWidget)
@@ -143,7 +144,8 @@ void ATBBattleHUD::CreateBattleWidgets()
 			BattleMenuWidget->AddToViewport(1);
 		}
 	}
-	if (CharacterStatusWidgetClass)
+	
+	if (!CharacterStatusWidget && CharacterStatusWidgetClass)
 	{
 		CharacterStatusWidget = CreateWidget<UCharacterStatusWidget>(PC, CharacterStatusWidgetClass);
 		if (CharacterStatusWidget)
@@ -180,6 +182,12 @@ void ATBBattleHUD::BindToBattleManager()
 	UE_LOG(LogTemp, Log, TEXT("ATBBattleHUD::BindToBattleManager Enter"));
 
 	if (!BattleManager) return;
+
+	// 위젯이 아직 생성되지 않았으면 먼저 생성
+	if (!CharacterStatusWidget || !TurnOrderWidget || !BattleMenuWidget)
+	{
+		CreateBattleWidgets();
+	}
 
 	// CreateWidgets()는 BattleManager 탐색 전에 실행되므로 여기서 주입
 	if (BattleMenuWidget)
