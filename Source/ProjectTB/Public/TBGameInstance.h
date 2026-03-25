@@ -337,6 +337,32 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Settings")
 	UTBSaveSettings* CachedSettings;
 
+	// ─── BGM 관리 ────────────────────────────────────────────────────────────
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|BGM")
+	TObjectPtr<USoundBase> MainMenuBGM;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|BGM")
+	TObjectPtr<USoundBase> WorldMapBGM;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|BGM")
+	TObjectPtr<USoundBase> BattleBGM;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|BGM")
+	TObjectPtr<USoundBase> BossBGM;
+
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> BGMAudioComponent;
+
+	UFUNCTION(BlueprintCallable, Category="Audio")
+	void PlayBGM(USoundBase* BGMSound, float VolumeMultiplier = 1.0f, float FadeInDuration = 0.0f);
+
+	UFUNCTION(BlueprintCallable, Category="Audio")
+	void StopBGM(float FadeOutDuration = 0.0f);
+
+	UFUNCTION(BlueprintPure, Category="Audio")
+	bool IsBGMPlaying() const;
+
 protected:
 	// === 설정용 에셋 (에디터에서 할당) ===
 	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
