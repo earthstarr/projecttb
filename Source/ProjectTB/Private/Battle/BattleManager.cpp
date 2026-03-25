@@ -176,6 +176,9 @@ void ABattleManager::SpawnAndStartBattle()
 		
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 		
+		// 배틀 맵에 중속되도록 스폰
+		SpawnParams.OverrideLevel = GetLevel();
+		
 		ABattlePlayerCharacter* Player = GetWorld()->SpawnActor<ABattlePlayerCharacter>(
 			Data.CharacterClass,
 			SpawnPoint->GetActorLocation(),
@@ -224,8 +227,6 @@ void ABattleManager::SpawnAndStartBattle()
 			SpawnLoc.Y += StartOffset + (i * EnemySpacing);
 
 			FActorSpawnParameters SpawnParams;
-			//배틀 맵에 종속되도록 스폰
-			SpawnParams.OverrideLevel = GetLevel();
 			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 			ABattleEnemyCharacter* Enemy = GetWorld()->SpawnActor<ABattleEnemyCharacter>(

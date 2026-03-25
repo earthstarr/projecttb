@@ -100,8 +100,8 @@ void APortalBase::PortalActivate()
 		UE_LOG(LogTemp, Log, TEXT("PortalMoveCount: %d"), GI->GetPortalMoveCount());
 	}
 	
-	// 포탈 이동 시 파티 HP/MP를 회복한 뒤 레벨 로딩 요청
-	PortalManager->OnPortalTravelStarted(SelectedRoomHandle);
+	//레벨 로딩 요청
+	PortalManager->OnLevelLoadStarted(SelectedRoomHandle);
 }
 
 void APortalBase::CleanRoom()
