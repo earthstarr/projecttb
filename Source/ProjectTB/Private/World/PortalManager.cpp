@@ -374,11 +374,13 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 	switch (RoomType)
 	{
 	case ERoomType::Battle:
+		TBHUD->ShowPortalFloorWidget();
 		TBHUD->EnterBattleMode();
 		PC->SetInputModeBattle();
 		StartBattleManagerSearch();
 		break;
 	case ERoomType::MainMenu:
+		TBHUD->RemovePortalFloorWidget();
 		// 패배 위젯이 남아있으면 제거
 		if (TBHUD->DefeatWidget && TBHUD->DefeatWidget->IsInViewport())
 		{
@@ -389,10 +391,12 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		TBHUD->ShowMainMenu();
 		break;
 	case ERoomType::World:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 		break;
 	case ERoomType::Event:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 		//이벤트 맵 입장
@@ -400,10 +404,12 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		//
 		break;
 	case ERoomType::Shop:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 		break;
 	case ERoomType::Boss:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 	default:

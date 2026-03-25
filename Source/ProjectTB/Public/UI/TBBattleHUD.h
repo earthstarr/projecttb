@@ -12,6 +12,7 @@ class UBattleMenuWidget;
 class UCharacterStatusWidget;
 class UVictoryWidget;
 class ULevelUpWidget;
+class UPortalFloorWidget;
 
 /**
  * 배틀 씬 HUD.
@@ -37,6 +38,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Widgets")
 	void ShowMainMenu();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void ShowPortalFloorWidget();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void RemovePortalFloorWidget();
 	
 	
 	
@@ -74,6 +81,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> DefeatWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UPortalFloorWidget> PortalFloorWidgetClass;
+
 	// ─── 생성된 위젯 참조 ────────────────────────────────────────────────────
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UTurnOrderWidget> TurnOrderWidget;
@@ -95,6 +105,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UUserWidget> DefeatWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UPortalFloorWidget> PortalFloorWidget;
 
 	// ─── Victory/LevelUp 함수 ────────────────────────────────────────────────
 
