@@ -413,9 +413,20 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		TBHUD->EnterBattleMode();
 		PC->SetInputModeBattle();
 		StartBattleManagerSearch();
-		// 일반 전투 BGM 재생
-		if (GI && GI->BattleBGM)
-			GI->PlayBGM(GI->BattleBGM, 0.7f, 1.0f);
+		
+		if (RoomData->ThemeType == EThemeType::Earth)
+		{
+			// 일반 전투 BGM 재생
+			if (GI && GI->BattleBGM)
+				GI->PlayBGM(GI->BattleBGM, 0.7f, 1.0f);
+		}
+		else if (RoomData->ThemeType == EThemeType::AncientTempleRuins)
+		{
+			// 보스 BGM 재생
+			if (GI && GI->BossBGM)
+				GI->PlayBGM(GI->BossBGM, 0.7f, 1.5f);
+		}
+
 		break;
 	case ERoomType::MainMenu:
 		TBHUD->RemovePortalFloorWidget();
@@ -462,9 +473,6 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
-		// 보스 BGM 재생
-		if (GI && GI->BossBGM)
-			GI->PlayBGM(GI->BossBGM, 0.7f, 1.5f);
 		break;
 	default:
 		break;

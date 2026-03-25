@@ -21,6 +21,7 @@ enum class EThemeType : uint8
 	Earth,
 	Water,
 	Lightning,
+	AncientTempleRuins
 };
 
 UENUM(BlueprintType)
