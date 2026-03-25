@@ -351,6 +351,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|BGM")
 	TObjectPtr<USoundBase> BossBGM;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|BGM")
+	TObjectPtr<USoundBase> ShopBGM;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|BGM")
+	TObjectPtr<USoundBase> EventBGM;
+	
 	UPROPERTY()
 	TObjectPtr<UAudioComponent> BGMAudioComponent;
 

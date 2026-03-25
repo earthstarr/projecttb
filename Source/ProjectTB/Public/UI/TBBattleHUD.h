@@ -13,6 +13,7 @@ class UCharacterStatusWidget;
 class UVictoryWidget;
 class ULevelUpWidget;
 class UPortalFloorWidget;
+class UScreenFadeBlockerWidget;
 
 /**
  * 배틀 씬 HUD.
@@ -44,6 +45,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Widgets")
 	void RemovePortalFloorWidget();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void ShowScreenFadeBlocker();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void HideScreenFadeBlocker();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void RemoveScreenFadeBlockerImmediately();
 	
 	
 	
@@ -56,8 +66,8 @@ public:
 	
 	float TransitionStartTime;
 	
-	void StartFadeOut(float Duration = 0.2f) const;
-	void StartFadeIn(float Duration = 0.2f) const;
+	void StartFadeOut(float Duration = 0.2f);
+	void StartFadeIn(float Duration = 0.2f);
 	
 	// ─── 위젯 클래스 (Blueprint에서 지정) ────────────────────────────────────
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
@@ -83,6 +93,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UPortalFloorWidget> PortalFloorWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UScreenFadeBlockerWidget> ScreenFadeBlockerWidgetClass;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> FinalVictoryWidgetClass;
@@ -114,6 +127,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UPortalFloorWidget> PortalFloorWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UScreenFadeBlockerWidget> ScreenFadeBlockerWidget;
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UUserWidget> FinalVictoryWidget;
