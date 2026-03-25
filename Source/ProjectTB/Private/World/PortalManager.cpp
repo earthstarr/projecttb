@@ -397,8 +397,15 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 	}
 	ATBBattleHUD* TBHUD = Cast<ATBBattleHUD>(PC->GetHUD());
 	if (TBHUD == nullptr) return;
-	
-	
+
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetWorld()->GetGameInstance());
+
+	// 맵 이동 시 항상 기존 BGM 정지
+	if (GI)
+	{
+		GI->StopBGM(1.0f);
+	}
+
 	switch (RoomType)
 	{
 	case ERoomType::Battle:
@@ -406,6 +413,9 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		TBHUD->EnterBattleMode();
 		PC->SetInputModeBattle();
 		StartBattleManagerSearch();
+		// 일반 전투 BGM 재생
+		if (GI && GI->BattleBGM)
+			GI->PlayBGM(GI->BattleBGM, 0.7f, 1.0f);
 		break;
 	case ERoomType::MainMenu:
 		TBHUD->RemovePortalFloorWidget();
@@ -417,11 +427,17 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		}
 		PC->SetInputModeUIOnly();
 		TBHUD->ShowMainMenu();
+		// 메인 메뉴 BGM 재생
+		if (GI && GI->MainMenuBGM)
+			GI->PlayBGM(GI->MainMenuBGM, 0.5f, 2.0f);
 		break;
 	case ERoomType::World:
 		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
+		// 월드 맵 BGM 재생
+		if (GI && GI->WorldMapBGM)
+			GI->PlayBGM(GI->WorldMapBGM, 0.6f, 1.5f);
 		break;
 	case ERoomType::Event:
 		TBHUD->ShowPortalFloorWidget();
@@ -430,16 +446,26 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		//이벤트 맵 입장
 		//월드랑 동일
 		//
+		// 월드 맵 BGM 재생 (이벤트도 동일)
+		if (GI && GI->WorldMapBGM)
+			GI->PlayBGM(GI->WorldMapBGM, 0.6f, 1.5f);
 		break;
 	case ERoomType::Shop:
 		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
+		// 월드 맵 BGM 재생 (상점도 동일)
+		if (GI && GI->WorldMapBGM)
+			GI->PlayBGM(GI->WorldMapBGM, 0.6f, 1.5f);
 		break;
 	case ERoomType::Boss:
 		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
+		// 보스 BGM 재생
+		if (GI && GI->BossBGM)
+			GI->PlayBGM(GI->BossBGM, 0.7f, 1.5f);
+		break;
 	default:
 		break;
 	}

@@ -70,8 +70,8 @@ void ABattleManager::WarmUpEffects()
 {
 	// 카메라 뒤쪽 바닥 아래
 	FVector WarmupPos = GetActorLocation();
-	WarmupPos.X -= 500.f;
-	WarmupPos.Z -= 600.f;
+	WarmupPos.X -= 5000.f;
+	WarmupPos.Z -= 6000.f;
 	
 	TSet<UNiagaraSystem*> SeenFX;
 	
