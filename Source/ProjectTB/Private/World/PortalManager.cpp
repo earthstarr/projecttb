@@ -105,6 +105,7 @@ void UPortalManager::OnLevelLoadStarted(const FDataTableRowHandle& SelectedRoomH
 	PendingRoomHandle = SelectedRoomHandle;
 	bPendingPlayerTeleport = false;
 	bPendingRoomActivation = false;
+	bWaitingForPreviousLevelHidden = false;
 	GetWorld()->GetTimerManager().ClearTimer(FadeInTimerHandle);
 	GetWorld()->GetTimerManager().SetTimer(FadeInTimerHandle, this, &UPortalManager::OnFadeInFinished, 0.5f, false);
 }
@@ -241,6 +242,20 @@ void UPortalManager::OnLevelShown()
 		TryGeneratePortalForCurrentRoom();
 	}
 
+	TryActivateRoomMode();
+}
+
+void UPortalManager::OnPendingLevelHidden()
+{
+	if (PendingUnloadLevelInstance != nullptr)
+	{
+		PendingUnloadLevelInstance->OnLevelHidden.RemoveDynamic(this, &UPortalManager::OnPendingLevelHidden);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("UPortalManager::OnPendingLevelHidden - Previous level is no longer visible"));
+
+	PendingUnloadLevelInstance = nullptr;
+	bWaitingForPreviousLevelHidden = false;
 	TryActivateRoomMode();
 }
 
@@ -387,11 +402,13 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 	switch (RoomType)
 	{
 	case ERoomType::Battle:
+		TBHUD->ShowPortalFloorWidget();
 		TBHUD->EnterBattleMode();
 		PC->SetInputModeBattle();
 		StartBattleManagerSearch();
 		break;
 	case ERoomType::MainMenu:
+		TBHUD->RemovePortalFloorWidget();
 		// 패배 위젯이 남아있으면 제거
 		if (TBHUD->DefeatWidget && TBHUD->DefeatWidget->IsInViewport())
 		{
@@ -402,10 +419,12 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		TBHUD->ShowMainMenu();
 		break;
 	case ERoomType::World:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 		break;
 	case ERoomType::Event:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 		//이벤트 맵 입장
@@ -413,10 +432,12 @@ void UPortalManager::ActivateHUDMode(const ERoomType RoomType)
 		//
 		break;
 	case ERoomType::Shop:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 		break;
 	case ERoomType::Boss:
+		TBHUD->ShowPortalFloorWidget();
 		PC->SetInputModeWorld();
 		TBHUD->StartFadeIn();
 	default:
@@ -788,9 +809,11 @@ void UPortalManager::UnloadPendingLevelInstance()
 		return;
 	}
 
+	PendingUnloadLevelInstance->OnLevelHidden.RemoveDynamic(this, &UPortalManager::OnPendingLevelHidden);
+	PendingUnloadLevelInstance->OnLevelHidden.AddDynamic(this, &UPortalManager::OnPendingLevelHidden);
+	bWaitingForPreviousLevelHidden = true;
 	PendingUnloadLevelInstance->SetIsRequestingUnloadAndRemoval(true);
 	UE_LOG(LogTemp, Log, TEXT("이전 레벨 언로드 요청됨"));
-	PendingUnloadLevelInstance = nullptr;
 }
 
 void UPortalManager::TryTeleportDeferredPlayer()
@@ -814,6 +837,12 @@ void UPortalManager::TryActivateRoomMode()
 	if (bPendingPlayerTeleport)
 	{
 		UE_LOG(LogTemp, Log, TEXT("UPortalManager::TryActivateRoomMode - Waiting for deferred teleport"));
+		return;
+	}
+
+	if (bWaitingForPreviousLevelHidden)
+	{
+		UE_LOG(LogTemp, Log, TEXT("UPortalManager::TryActivateRoomMode - Waiting for previous level hidden"));
 		return;
 	}
 

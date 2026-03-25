@@ -32,6 +32,7 @@ struct FBattleTransitionData
 // 레벨업 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPartyMemberLevelUp, const FLevelUpInfo&, LevelUpInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOwnedArtifactsChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPortalMoveCountChanged, int32, NewPortalMoveCount);
 
 /**
  * GAS 전역 초기화 및 레벨 간 데이터 유지 담당.
@@ -68,6 +69,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="Artifact")
 	FOnOwnedArtifactsChanged OnOwnedArtifactsChanged;
+
+	UPROPERTY(BlueprintAssignable, Category="Portal")
+	FOnPortalMoveCountChanged OnPortalMoveCountChanged;
 
 	// ─── 파티 관리 함수 ───────────────────────────────────────────────────────
 
@@ -199,7 +203,11 @@ public:
 	}
 	
 	UFUNCTION(BlueprintCallable, Category="Portal")
-	void IncreasePortalMoveCount() { ++PortalMoveCount; }
+	void IncreasePortalMoveCount()
+	{
+		++PortalMoveCount;
+		OnPortalMoveCountChanged.Broadcast(PortalMoveCount);
+	}
 
 	UFUNCTION(BlueprintCallable, Category="Portal")
 	void DecreasePortalMoveCount()

@@ -6,6 +6,7 @@
 #include "UI/CharacterStatusWidget.h"
 #include "UI/VictoryWidget.h"
 #include "UI/LevelUpWidget.h"
+#include "UI/PortalFloorWidget.h"
 #include "Battle/BattleCombatant.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Abilities/TBGameplayAbility.h"
@@ -453,6 +454,40 @@ void ATBBattleHUD::ShowMainMenu()
 	StartFadeIn();
 }
 
+void ATBBattleHUD::ShowPortalFloorWidget()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !PortalFloorWidgetClass)
+	{
+		return;
+	}
+
+	if (!PortalFloorWidget)
+	{
+		PortalFloorWidget = CreateWidget<UPortalFloorWidget>(PC, PortalFloorWidgetClass);
+	}
+
+	if (PortalFloorWidget && !PortalFloorWidget->IsInViewport())
+	{
+		PortalFloorWidget->AddToViewport(5);
+	}
+}
+
+void ATBBattleHUD::RemovePortalFloorWidget()
+{
+	if (!PortalFloorWidget)
+	{
+		return;
+	}
+
+	if (PortalFloorWidget->IsInViewport())
+	{
+		PortalFloorWidget->RemoveFromParent();
+	}
+
+	PortalFloorWidget = nullptr;
+}
+
 void ATBBattleHUD::ShowDefeatWidget()
 {
 	APlayerController* PC = GetOwningPlayerController();
@@ -548,6 +583,7 @@ void ATBBattleHUD::ShowFinalVictorySecondWidget()
 
 void ATBBattleHUD::ReturnToMainMenu()
 {
+	RemovePortalFloorWidget();
 	// 게임 일시정지 해제
 	UGameplayStatics::SetGamePaused(GetWorld(), false);
 

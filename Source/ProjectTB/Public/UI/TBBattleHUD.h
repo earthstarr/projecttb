@@ -12,6 +12,7 @@ class UBattleMenuWidget;
 class UCharacterStatusWidget;
 class UVictoryWidget;
 class ULevelUpWidget;
+class UPortalFloorWidget;
 
 /**
  * 배틀 씬 HUD.
@@ -37,6 +38,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Widgets")
 	void ShowMainMenu();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void ShowPortalFloorWidget();
+
+	UFUNCTION(BlueprintCallable, Category="Widgets")
+	void RemovePortalFloorWidget();
 	
 	
 	
@@ -75,6 +82,9 @@ public:
 	TSubclassOf<UUserWidget> DefeatWidgetClass;
 
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UPortalFloorWidget> PortalFloorWidgetClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> FinalVictoryWidgetClass;
 
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
@@ -103,11 +113,13 @@ public:
 	TObjectPtr<UUserWidget> DefeatWidget;
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
+	TObjectPtr<UPortalFloorWidget> PortalFloorWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UUserWidget> FinalVictoryWidget;
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UUserWidget> FinalVictorySecondWidget;
-
 	// ─── Victory/LevelUp 함수 ────────────────────────────────────────────────
 
 	/** 승리 위젯 표시 */
