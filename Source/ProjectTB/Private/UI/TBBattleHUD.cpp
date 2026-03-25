@@ -7,6 +7,7 @@
 #include "UI/VictoryWidget.h"
 #include "UI/LevelUpWidget.h"
 #include "UI/PortalFloorWidget.h"
+#include "UI/ScreenFadeBlockerWidget.h"
 #include "Battle/BattleCombatant.h"
 #include "Battle/BattlePlayerCharacter.h"
 #include "Abilities/TBGameplayAbility.h"
@@ -58,7 +59,7 @@ void ATBBattleHUD::ExitBattleMode()
 	GI->BattleTransitionData = FBattleTransitionData();
 }
 
-void ATBBattleHUD::StartFadeOut(float Duration) const
+void ATBBattleHUD::StartFadeOut(float Duration)
 {
 	
 	if (APlayerController* PC = GetOwningPlayerController())
@@ -71,8 +72,10 @@ void ATBBattleHUD::StartFadeOut(float Duration) const
 	}
 }
 
-void ATBBattleHUD::StartFadeIn(float Duration) const
+void ATBBattleHUD::StartFadeIn(float Duration)
 {
+	HideScreenFadeBlocker();
+
 	if (APlayerController* PC = GetOwningPlayerController())
 	{
 		if (APlayerCameraManager* PlayerCameraManager = PC->PlayerCameraManager)
@@ -452,6 +455,53 @@ void ATBBattleHUD::ShowMainMenu()
 	}
 
 	StartFadeIn();
+}
+
+void ATBBattleHUD::ShowScreenFadeBlocker()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !ScreenFadeBlockerWidgetClass)
+	{
+		return;
+	}
+
+	if (!ScreenFadeBlockerWidget)
+	{
+		ScreenFadeBlockerWidget = CreateWidget<UScreenFadeBlockerWidget>(PC, ScreenFadeBlockerWidgetClass);
+	}
+
+	if (ScreenFadeBlockerWidget && !ScreenFadeBlockerWidget->IsInViewport())
+	{
+		ScreenFadeBlockerWidget->AddToViewport(200);
+	}
+}
+
+void ATBBattleHUD::HideScreenFadeBlocker()
+{
+	if (!ScreenFadeBlockerWidget)
+	{
+		return;
+	}
+
+	UScreenFadeBlockerWidget* WidgetToHide = ScreenFadeBlockerWidget;
+	ScreenFadeBlockerWidget = nullptr;
+
+	if (WidgetToHide->IsInViewport())
+	{
+		WidgetToHide->PlayFadeOutAndRemove();
+	}
+}
+
+void ATBBattleHUD::RemoveScreenFadeBlockerImmediately()
+{
+	if (!ScreenFadeBlockerWidget)
+	{
+		return;
+	}
+
+	UScreenFadeBlockerWidget* WidgetToRemove = ScreenFadeBlockerWidget;
+	ScreenFadeBlockerWidget = nullptr;
+	WidgetToRemove->RemoveImmediately();
 }
 
 void ATBBattleHUD::ShowPortalFloorWidget()

@@ -197,6 +197,17 @@ void UPortalManager::OnFadeInFinished()
 		UE_LOG(LogTemp, Error, TEXT("UPortalManager::OnFadeInFinished 의 RoomData가 nullptr 입니다."));
 		return;
 	}
+
+	ATBBattleHUD* TBHUD = nullptr;
+	if (PC != nullptr)
+	{
+		TBHUD = Cast<ATBBattleHUD>(PC->GetHUD());
+	}
+
+	if (TBHUD)
+	{
+		TBHUD->ShowScreenFadeBlocker();
+	}
 	
 	bool bSuccess = false;
 	ULevelStreamingDynamic* StreamingLevel = ULevelStreamingDynamic::LoadLevelInstanceBySoftObjectPtr(
@@ -207,6 +218,10 @@ void UPortalManager::OnFadeInFinished()
 		// 로딩이 완료되면 아래 OnLevelLoaded 함수가 실행되도록 예약
 		//StreamingLevel->OnLevelLoaded.AddDynamic(this, &UPortalManager::OnLevelLoadFinished);	// 데이터상 로딩 완료 말고 객체 생성까지 마친 LevelShown으로 변경
 		StreamingLevel->OnLevelShown.AddDynamic(this, &UPortalManager::OnLevelShown);
+	}
+	else if (TBHUD)
+	{
+		TBHUD->RemoveScreenFadeBlockerImmediately();
 	}
 	
 	NextLevelInstance = StreamingLevel;
