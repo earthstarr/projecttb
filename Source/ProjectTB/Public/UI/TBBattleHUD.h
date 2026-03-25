@@ -83,6 +83,8 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UPortalFloorWidget> PortalFloorWidgetClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> FinalVictoryWidgetClass;
 
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
@@ -113,6 +115,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UPortalFloorWidget> PortalFloorWidget;
 
+	UPROPERTY(BlueprintReadOnly, Category="Widgets")
 	TObjectPtr<UUserWidget> FinalVictoryWidget;
 
 	UPROPERTY(BlueprintReadOnly, Category="Widgets")
