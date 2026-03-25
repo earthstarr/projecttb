@@ -123,7 +123,15 @@ float ABattleCombatant::GetSpeed() const
 		Base *= 0.7f;
 	return Base;
 }
-bool  ABattleCombatant::IsDead()        const { return GetHP() <= 0.f; }
+
+bool  ABattleCombatant::IsDead() const
+{
+	// 턴 오더로직에서 IsDead체크할 때 GetHP의 Attribute가 간헐적으로 nullptr -> AttributeSet 먼저 체크
+	if (!AttributeSet || !IsValid(AttributeSet))
+		return true;
+	
+	return GetHP() <= 0.f;
+}
 
 TArray<UTBGameplayAbility*> ABattleCombatant::GetGrantedAbilities() const
 {
