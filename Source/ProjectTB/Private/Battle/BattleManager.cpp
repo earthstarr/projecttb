@@ -66,6 +66,66 @@ void ABattleManager::Tick(float DeltaTime)
 	}
 }
 
+void ABattleManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	UE_LOG(LogTemp, Warning, TEXT("BattleManager::EndPlay - 정리 시작 (Reason: %d)"), static_cast<int32>(EndPlayReason));
+
+	// ─── 1. 모든 타이머 클리어 ───────────────────────────────────────
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearAllTimersForObject(this);
+	}
+
+	// ─── 2. 델리게이트 언바인딩 ──────────────────────────────────────
+	for (ABattlePlayerCharacter* P : PlayerParty)
+	{
+		if (IsValid(P))
+		{
+			P->OnDeath.RemoveDynamic(this, &ABattleManager::OnCombatantDied);
+			P->OnDamageReceived.RemoveDynamic(this, &ABattleManager::OnCombatantDamaged);
+			P->OnHealReceived.RemoveDynamic(this, &ABattleManager::OnCombatantHealed);
+		}
+	}
+
+	for (ABattleEnemyCharacter* E : EnemyParty)
+	{
+		if (IsValid(E))
+		{
+			E->OnDeath.RemoveDynamic(this, &ABattleManager::OnCombatantDied);
+			E->OnDamageReceived.RemoveDynamic(this, &ABattleManager::OnCombatantDamaged);
+			E->OnHealReceived.RemoveDynamic(this, &ABattleManager::OnCombatantHealed);
+		}
+	}
+
+	// ─── 3. ActionCamera 어태치 해제 ─────────────────────────────────
+	if (ActionCamera)
+	{
+		ActionCamera->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	}
+
+	// ─── 4. AudioComponent 정리 ──────────────────────────────────────
+	if (DiceRollingAudioComponent && IsValid(DiceRollingAudioComponent))
+	{
+		DiceRollingAudioComponent->Stop();
+		DiceRollingAudioComponent->DestroyComponent();
+		DiceRollingAudioComponent = nullptr;
+	}
+
+	// ─── 5. 배열 정리 ────────────────────────────────────────────────
+	PlayerParty.Empty();
+	EnemyParty.Empty();
+
+	// ─── 6. 참조 초기화 ──────────────────────────────────────────────
+	CurrentActor = nullptr;
+	PendingTarget = nullptr;
+	PendingCaster = nullptr;
+	PendingAbilityClass = nullptr;
+
+	UE_LOG(LogTemp, Warning, TEXT("BattleManager::EndPlay - 정리 완료"));
+}
+
 void ABattleManager::WarmUpEffects()
 {
 	// 카메라 뒤쪽 바닥 아래
