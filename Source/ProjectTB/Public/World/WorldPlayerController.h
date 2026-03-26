@@ -39,6 +39,15 @@ public:
 
 	UFUNCTION(Exec)
 	void PortalPrintCount() const;
+
+	// 치트키
+protected:
+	virtual void SetupInputComponent() override;
+
+private:
+	void CheatSetAllLevel9();
+	void CheatAddGold10000();
+	void CheatSetPortalCount13();
 	
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI", Meta = (AllowPrivateAccess = true))

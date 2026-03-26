@@ -210,6 +210,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Battle|Dice")
 	float GetPendingDiceMultiplier() const { return PendingDiceMultiplier; }
 
+	UFUNCTION(BlueprintCallable, Category="Battle|Dice")
+	int32 GetDiceFaceBonus() const { return DiceModifier.FaceBonus; }
+
 	// 현재 시전자의 장착 주사위 반환 (UI 표시용)
 	UFUNCTION(BlueprintCallable, Category="Battle|Dice")
 	FDiceData GetCurrentCasterDice() const;
@@ -227,7 +230,10 @@ private:
 	EBattlePhase CurrentPhase = EBattlePhase::None;
 
 	// 파티
+	UPROPERTY()
 	TArray<ABattlePlayerCharacter*> PlayerParty;
+	
+	UPROPERTY()
 	TArray<ABattleEnemyCharacter*>  EnemyParty;
 
 	// ATB 시스템: 현재 행동 중인 캐릭터

@@ -96,9 +96,15 @@ void UTBAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		}
 	}
 	// ─── MP/Stamina 직접 변경 (코스트 GE 등) → 즉시 UI 갱신 ────────────────
-	else if (Data.EvaluatedData.Attribute == GetMPAttribute() ||
-	         Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	else if (Data.EvaluatedData.Attribute == GetMPAttribute())
 	{
+		SetMP(FMath::Clamp(GetMP(), 0.f, GetMaxMP()));
+		if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
+			Combatant->OnStatChangedInternal();
+	}
+	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	{
+		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
 		if (ABattleCombatant* Combatant = Cast<ABattleCombatant>(GetOwningActor()))
 			Combatant->OnStatChangedInternal();
 	}
