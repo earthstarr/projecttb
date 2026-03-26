@@ -5,6 +5,7 @@
 #include "Battle/BattleImpactActor.h"
 #include "Abilities/TBGameplayAbility.h"
 #include "AbilitySystemComponent.h"
+#include "Attributes/TBAttributeSet.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraActor.h"
 #include "GameFramework/PlayerController.h"
@@ -1525,39 +1526,73 @@ void ABattleManager::ApplyArtifactRowToCombatant(FName ArtifactID, const FArtifa
 	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
 	if (TargetASC == nullptr) return;
 
-	// GE 생성
-	UGameplayEffect* GEObj = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
-	GEObj->DurationPolicy = EGameplayEffectDurationType::Infinite;
 	FGameplayTagContainer ArtifactTraits = ArtifactRow.Traits;
-	
-	// 태그 전달
-	FInheritedTagContainer GrantedTagChanges;
-	GrantedTagChanges.Added = ArtifactTraits;
-	
-	// GE Modifier 설정
+
+	UGameplayEffect* PersistentGEObj = nullptr;
+	UGameplayEffect* CurrentResourceGEObj = nullptr;
+
+	auto IsCurrentResourceAttribute = [](const FGameplayAttribute& Attribute)
+	{
+		return Attribute == UTBAttributeSet::GetHPAttribute()
+			|| Attribute == UTBAttributeSet::GetMPAttribute()
+			|| Attribute == UTBAttributeSet::GetStaminaAttribute();
+	};
+
+	auto EnsureEffect = [](UGameplayEffect*& GEObj, EGameplayEffectDurationType DurationPolicy)
+	{
+		if (GEObj == nullptr)
+		{
+			GEObj = NewObject<UGameplayEffect>(GetTransientPackage(), NAME_None);
+			GEObj->DurationPolicy = DurationPolicy;
+		}
+	};
+
+	// MaxHP 같은 지속 스탯은 Infinite GE로 유지하고,
+	// HP/MP/Stamina 같은 현재 자원 증가는 전투 시작 시 한 번만 적용한다.
 	for (const FArtifactStatModifier& Modifier : ArtifactRow.StatModifiers)
 	{
+		UGameplayEffect*& TargetGEObj = IsCurrentResourceAttribute(Modifier.Attribute)
+			? CurrentResourceGEObj
+			: PersistentGEObj;
+
+		EnsureEffect(
+			TargetGEObj,
+			IsCurrentResourceAttribute(Modifier.Attribute)
+				? EGameplayEffectDurationType::Instant
+				: EGameplayEffectDurationType::Infinite);
+
 		FGameplayModifierInfo ModInfo;
 		ModInfo.Attribute = Modifier.Attribute;
 		ModInfo.ModifierOp = Modifier.ModifierOp;
 		ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(Modifier.Value);
-		GEObj->Modifiers.Add(ModInfo);
+		TargetGEObj->Modifiers.Add(ModInfo);
 	}
-	
-	// 태그 목록을 GE에 삽입
-	if (GrantedTagChanges.Added.IsEmpty() == false)
+
+	// 태그는 지속 효과 쪽에만 부여한다.
+	if (ArtifactTraits.IsEmpty() == false)
 	{
-		UTargetTagsGameplayEffectComponent& TargetTagsComp = GEObj->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
+		EnsureEffect(PersistentGEObj, EGameplayEffectDurationType::Infinite);
+
+		FInheritedTagContainer GrantedTagChanges;
+		GrantedTagChanges.Added = ArtifactTraits;
+
+		UTargetTagsGameplayEffectComponent& TargetTagsComp = PersistentGEObj->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
 
 		TargetTagsComp.SetAndApplyTargetTagChanges(GrantedTagChanges);
 	}
-	
-	// GE Spec 생성, 적용
-	FGameplayEffectSpec Spec(GEObj, TargetASC->MakeEffectContext(), 1.f);
-	FActiveGameplayEffectHandle Handle = TargetASC->ApplyGameplayEffectSpecToSelf(Spec);
 
-	// 아티팩트의 GE와 Tag를 캐릭터에게 전달
-	Target->RegisterArtifactEffectHandle(Handle, ArtifactTraits);
+	if (PersistentGEObj != nullptr)
+	{
+		FGameplayEffectSpec Spec(PersistentGEObj, TargetASC->MakeEffectContext(), 1.f);
+		FActiveGameplayEffectHandle Handle = TargetASC->ApplyGameplayEffectSpecToSelf(Spec);
+		Target->RegisterArtifactEffectHandle(Handle, ArtifactTraits);
+	}
+
+	if (CurrentResourceGEObj != nullptr)
+	{
+		FGameplayEffectSpec Spec(CurrentResourceGEObj, TargetASC->MakeEffectContext(), 1.f);
+		TargetASC->ApplyGameplayEffectSpecToSelf(Spec);
+	}
 }
 
 float ABattleManager::CalculateEnemyFloorMultiplier() const
