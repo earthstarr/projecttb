@@ -329,6 +329,46 @@ void AWorldPlayerController::TogglePartyStatus()
 	SetIgnoreLookInput(false);
 }
 
+void AWorldPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	InputComponent->BindKey(EKeys::Eight, IE_Pressed, this, &AWorldPlayerController::CheatSetAllLevel9);
+	InputComponent->BindKey(EKeys::Nine,  IE_Pressed, this, &AWorldPlayerController::CheatAddGold10000);
+	InputComponent->BindKey(EKeys::Zero,  IE_Pressed, this, &AWorldPlayerController::CheatSetPortalCount13);
+}
+
+void AWorldPlayerController::CheatSetAllLevel9()
+{
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	for (FPartyMemberData& Member : GI->PartyData)
+	{
+		Member.Level = 9;
+		Member.CurrentExp = 0;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[Cheat] All party members set to Level 9"));
+}
+
+void AWorldPlayerController::CheatAddGold10000()
+{
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	GI->AddMoney(10000);
+	UE_LOG(LogTemp, Warning, TEXT("[Cheat] Added 10000 gold. Total: %d"), GI->GetCurrentMoney());
+}
+
+void AWorldPlayerController::CheatSetPortalCount13()
+{
+	UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	GI->SetPortalMoveCount(13);
+	UE_LOG(LogTemp, Warning, TEXT("[Cheat] PortalMoveCount set to 13"));
+}
+
 void AWorldPlayerController::PortalSetCount(int32 NewCount)
 {
 	if (UTBGameInstance* GI = Cast<UTBGameInstance>(GetGameInstance()))

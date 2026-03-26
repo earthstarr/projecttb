@@ -210,7 +210,7 @@ protected:
 
 	// Blueprint에서 오버레이 위젯 표시/숨김 구현
 	UFUNCTION(BlueprintImplementableEvent, Category="Dice")
-	void ShowDiceResultOverlay(int32 FaceValue, float Multiplier);
+	void ShowDiceResultOverlay(int32 FaceValue, float Multiplier, int32 BonusFace);
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Dice")
 	void HideDiceResultOverlay();

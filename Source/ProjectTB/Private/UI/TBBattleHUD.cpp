@@ -267,6 +267,7 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 		break;
 
 	case EBattlePhase::PlayerTurn:
+		HideDiceResultOverlay();
 		if (BattleMenuWidget)
 		{
 			BattleMenuWidget->ShowMainMenu(BattleManager->GetCurrentActor());
@@ -323,6 +324,7 @@ void ATBBattleHUD::HandlePhaseChanged(EBattlePhase NewPhase)
 		break;
 
 	case EBattlePhase::EnemyTurn:
+		HideDiceResultOverlay();
 		if (BattleMenuWidget)
 			BattleMenuWidget->HideMenu();
 		// 플레이어 액션 완료 후 MP/Stamina 반영 (ExecutingAction → EnemyTurn 전환 시점)
@@ -401,8 +403,8 @@ void ATBBattleHUD::HandleBattleReady()
 void ATBBattleHUD::HandleDiceRolled(int32 FaceValue, float Multiplier)
 {
 	GetWorldTimerManager().ClearTimer(DiceOverlayTimer);
-	ShowDiceResultOverlay(FaceValue, Multiplier);
-	GetWorldTimerManager().SetTimer(DiceOverlayTimer, this, &ATBBattleHUD::HideDiceResultOverlay, 2.0f, false);
+	const int32 BonusFace = BattleManager ? BattleManager->GetDiceFaceBonus() : 0;
+	ShowDiceResultOverlay(FaceValue, Multiplier, BonusFace);
 }
 
 // ─── Victory/LevelUp ──────────────────────────────────────────────────────────
@@ -412,6 +414,7 @@ void ATBBattleHUD::ShowVictoryWidget(const TArray<FCharacterExpData>& BeforeExpD
                                       const TArray<FLevelUpDisplayData>& LevelUpData,
                                       int32 RewardMoney)
 {
+	HideDiceResultOverlay();
 	APlayerController* PC = GetOwningPlayerController();
 	if (!PC || !VictoryWidgetClass) return;
 
@@ -548,6 +551,7 @@ void ATBBattleHUD::RemovePortalFloorWidget()
 
 void ATBBattleHUD::ShowDefeatWidget()
 {
+	HideDiceResultOverlay();
 	APlayerController* PC = GetOwningPlayerController();
 	if (!PC || !DefeatWidgetClass) return;
 
@@ -578,6 +582,7 @@ void ATBBattleHUD::ShowDefeatWidget()
 
 void ATBBattleHUD::ShowFinalVictoryWidget()
 {
+	HideDiceResultOverlay();
 	APlayerController* PC = GetOwningPlayerController();
 	if (!PC || !FinalVictoryWidgetClass) return;
 
